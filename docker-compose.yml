@@ -1,0 +1,6 @@
+services:
+  kickify.api:
+    image: ${DOCKER_REGISTRY-}kickifyapi
+    build:
+      context: .
+      dockerfile: Kickify.Api/Dockerfile

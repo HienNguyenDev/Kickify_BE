@@ -1,0 +1,49 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36401.2
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kickify.Domain", "Kickify.Domain\Kickify.Domain.csproj", "{97543254-3F97-4FCC-B7DE-A4130B99CDCA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kickify.Application", "Kickify.Application\Kickify.Application.csproj", "{2182428F-6D0A-4C63-8C98-CA6776CC7047}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kickify.Infrastructure", "Kickify.Infrastructure\Kickify.Infrastructure.csproj", "{80141D1F-58B6-4A90-A8FD-00489A62E98D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kickify.Api", "Kickify.Api\Kickify.Api.csproj", "{77F49A93-38BE-449C-A1FF-94E27FDBA0F3}"
+EndProject
+Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{81DDED9D-158B-E303-5F62-77A2896D2A5A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{97543254-3F97-4FCC-B7DE-A4130B99CDCA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{97543254-3F97-4FCC-B7DE-A4130B99CDCA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{97543254-3F97-4FCC-B7DE-A4130B99CDCA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{97543254-3F97-4FCC-B7DE-A4130B99CDCA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2182428F-6D0A-4C63-8C98-CA6776CC7047}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2182428F-6D0A-4C63-8C98-CA6776CC7047}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2182428F-6D0A-4C63-8C98-CA6776CC7047}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2182428F-6D0A-4C63-8C98-CA6776CC7047}.Release|Any CPU.Build.0 = Release|Any CPU
+		{80141D1F-58B6-4A90-A8FD-00489A62E98D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{80141D1F-58B6-4A90-A8FD-00489A62E98D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{80141D1F-58B6-4A90-A8FD-00489A62E98D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{80141D1F-58B6-4A90-A8FD-00489A62E98D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{77F49A93-38BE-449C-A1FF-94E27FDBA0F3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{77F49A93-38BE-449C-A1FF-94E27FDBA0F3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{77F49A93-38BE-449C-A1FF-94E27FDBA0F3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{77F49A93-38BE-449C-A1FF-94E27FDBA0F3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{81DDED9D-158B-E303-5F62-77A2896D2A5A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{81DDED9D-158B-E303-5F62-77A2896D2A5A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{81DDED9D-158B-E303-5F62-77A2896D2A5A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{81DDED9D-158B-E303-5F62-77A2896D2A5A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {A59DCE57-3863-4C70-9BBA-1BB3B95A04B4}
+	EndGlobalSection
+EndGlobal
