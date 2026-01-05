@@ -1,8 +1,8 @@
 # Base Stage - Minimal Runtime
 FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine-amd64 AS base
 
-# Install only essential dependencies
-RUN apk add --no-cache icu-libs tzdata \
+# Install essential dependencies + curl for healthcheck
+RUN apk add --no-cache icu-libs tzdata curl \
     && rm -rf /var/cache/apk/* /tmp/* /var/tmp/*
 
 # Create non-root user
@@ -21,11 +21,10 @@ COPY *.sln ./
 COPY */*.csproj ./
 RUN for file in $(ls *.csproj); do mkdir -p ${file%.*}/ && mv $file ${file%.*}/; done
 
-# Restore with minimal output
+# Restore with correct RID (removed --locked-mode)
 RUN dotnet restore "Kickify.Api/Kickify.Api.csproj" \
-    --locked-mode \
-    --runtime alpine-x64 \
-    --verbosity quiet
+    --runtime linux-musl-x64 \
+    --verbosity minimal
 
 # Build Stage
 FROM restore AS build
@@ -41,8 +40,7 @@ RUN dotnet build "Kickify.Api.csproj" \
     -c $BUILD_CONFIGURATION \
     -o /app/build \
     --no-restore \
-    --runtime alpine-x64 \
-    /p:TreatWarningsAsErrors=true \
+    --runtime linux-musl-x64 \
     /p:DebugType=None \
     /p:DebugSymbols=false
 
@@ -57,21 +55,13 @@ RUN dotnet publish "Kickify.Api.csproj" \
     -o /app/publish \
     --no-restore \
     --no-build \
-    --runtime alpine-x64 \
+    --runtime linux-musl-x64 \
     --self-contained false \
     /p:UseAppHost=false \
     /p:DebugType=None \
     /p:DebugSymbols=false \
-    /p:PublishTrimmed=true \
-    /p:PublishSingleFile=false \
-    /p:EnableCompressionInSingleFile=true \
-    /p:TrimMode=link \
-    /p:IlcOptimizationPreference=Size \
-    /p:IlcGenerateStackTraceData=false \
     && find /app/publish -type f \( -name "*.pdb" -o -name "*.xml" \) -delete \
-    && find /app/publish -type f -name "*Development.json" -delete \
-    && rm -rf /app/publish/refs \
-    && rm -rf /app/publish/runtimes/*/native/*.a
+    && find /app/publish -type f -name "*Development.json" -delete
 
 # Final Stage - Ultra Lightweight
 FROM base AS final
@@ -90,8 +80,8 @@ ENV ASPNETCORE_ENVIRONMENT=Production \
     COMPlus_EnableDiagnostics=0 \
     ASPNETCORE_HTTP_PORTS=8080
 
-# Lightweight health check without wget
+# Health check using curl
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-    CMD dotnet --info > /dev/null 2>&1 || exit 1
+    CMD curl -f http://localhost:8080/health || exit 1
 
 ENTRYPOINT ["dotnet", "Kickify.Api.dll"]
