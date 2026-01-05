@@ -14,7 +14,7 @@ services:
       - Authentication__TokenUri=${TOKEN_URI}
       - Authentication__SecretKey=${JWT_SECRET_KEY}
     env_file:
-      - /var/jenkins_home/secrets/.env
+      - /var/lib/jenkins/secrets/.env.production
     networks:
       - kickify-network
     healthcheck:
