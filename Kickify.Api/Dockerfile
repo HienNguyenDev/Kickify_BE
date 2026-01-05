@@ -1,5 +1,5 @@
 # Base Stage - Minimal Runtime
-FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine-amd64 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS base
 
 # Install essential dependencies + curl for healthcheck
 RUN apk add --no-cache icu-libs tzdata curl \
@@ -12,7 +12,7 @@ WORKDIR /app
 EXPOSE 8080
 
 # Restore Stage - Dependencies Only
-FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine-amd64 AS restore
+FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS restore
 
 WORKDIR /src
 
@@ -21,7 +21,7 @@ COPY *.sln ./
 COPY */*.csproj ./
 RUN for file in $(ls *.csproj); do mkdir -p ${file%.*}/ && mv $file ${file%.*}/; done
 
-# Restore with correct RID (removed --locked-mode)
+# Restore with correct RID
 RUN dotnet restore "Kickify.Api/Kickify.Api.csproj" \
     --runtime linux-musl-x64 \
     --verbosity minimal
@@ -35,12 +35,10 @@ ARG BUILD_CONFIGURATION=Release
 COPY . .
 WORKDIR "/src/Kickify.Api"
 
-# Build with optimization flags
+# Build
 RUN dotnet build "Kickify.Api.csproj" \
     -c $BUILD_CONFIGURATION \
-    -o /app/build \
     --no-restore \
-    --runtime linux-musl-x64 \
     /p:DebugType=None \
     /p:DebugSymbols=false
 
@@ -49,19 +47,20 @@ FROM build AS publish
 
 ARG BUILD_CONFIGURATION=Release
 
-# Publish with maximum optimizations
+# Publish
 RUN dotnet publish "Kickify.Api.csproj" \
     -c $BUILD_CONFIGURATION \
     -o /app/publish \
     --no-restore \
-    --no-build \
     --runtime linux-musl-x64 \
     --self-contained false \
     /p:UseAppHost=false \
     /p:DebugType=None \
-    /p:DebugSymbols=false \
-    && find /app/publish -type f \( -name "*.pdb" -o -name "*.xml" \) -delete \
-    && find /app/publish -type f -name "*Development.json" -delete
+    /p:DebugSymbols=false
+
+# Clean up unnecessary files
+RUN find /app/publish -type f \( -name "*.pdb" -o -name "*.xml" \) -delete && \
+    find /app/publish -type f -name "*Development.json" -delete
 
 # Final Stage - Ultra Lightweight
 FROM base AS final
