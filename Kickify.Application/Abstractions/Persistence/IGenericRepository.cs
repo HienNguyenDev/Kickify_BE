@@ -14,8 +14,8 @@ namespace Kickify.Application.Abstractions.Persistence
         Task<IEnumerable<T>> GetAllAsync();
         Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> expression);
         Task AddAsync(T entity);
-        Task UpdateAsync(T entity);
-        Task RemoveAsync(T entity);
+        void Update(T entity);
+        void Remove(T entity);
         Task<(IEnumerable<T> Items, int Total)> GetPagedAsync(
             Expression<Func<T, bool>>? filter = null,
             Func<IQueryable<T>, IOrderedQueryable<T>>? orderBy = null,
