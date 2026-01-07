@@ -1,8 +1,8 @@
 # Base Stage - Minimal Runtime
-FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine-amd64 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS base
 
-# Install only essential dependencies
-RUN apk add --no-cache icu-libs tzdata \
+# Install essential dependencies + curl for healthcheck
+RUN apk add --no-cache icu-libs tzdata curl \
     && rm -rf /var/cache/apk/* /tmp/* /var/tmp/*
 
 # Create non-root user
@@ -12,7 +12,7 @@ WORKDIR /app
 EXPOSE 8080
 
 # Restore Stage - Dependencies Only
-FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine-amd64 AS restore
+FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS restore
 
 WORKDIR /src
 
@@ -21,11 +21,10 @@ COPY *.sln ./
 COPY */*.csproj ./
 RUN for file in $(ls *.csproj); do mkdir -p ${file%.*}/ && mv $file ${file%.*}/; done
 
-# Restore with minimal output
+# Restore with correct RID
 RUN dotnet restore "Kickify.Api/Kickify.Api.csproj" \
-    --locked-mode \
-    --runtime alpine-x64 \
-    --verbosity quiet
+    --runtime linux-musl-x64 \
+    --verbosity minimal
 
 # Build Stage
 FROM restore AS build
@@ -36,13 +35,10 @@ ARG BUILD_CONFIGURATION=Release
 COPY . .
 WORKDIR "/src/Kickify.Api"
 
-# Build with optimization flags
+# Build
 RUN dotnet build "Kickify.Api.csproj" \
     -c $BUILD_CONFIGURATION \
-    -o /app/build \
     --no-restore \
-    --runtime alpine-x64 \
-    /p:TreatWarningsAsErrors=true \
     /p:DebugType=None \
     /p:DebugSymbols=false
 
@@ -51,27 +47,20 @@ FROM build AS publish
 
 ARG BUILD_CONFIGURATION=Release
 
-# Publish with maximum optimizations
+# Publish
 RUN dotnet publish "Kickify.Api.csproj" \
     -c $BUILD_CONFIGURATION \
     -o /app/publish \
     --no-restore \
-    --no-build \
-    --runtime alpine-x64 \
+    --runtime linux-musl-x64 \
     --self-contained false \
     /p:UseAppHost=false \
     /p:DebugType=None \
-    /p:DebugSymbols=false \
-    /p:PublishTrimmed=true \
-    /p:PublishSingleFile=false \
-    /p:EnableCompressionInSingleFile=true \
-    /p:TrimMode=link \
-    /p:IlcOptimizationPreference=Size \
-    /p:IlcGenerateStackTraceData=false \
-    && find /app/publish -type f \( -name "*.pdb" -o -name "*.xml" \) -delete \
-    && find /app/publish -type f -name "*Development.json" -delete \
-    && rm -rf /app/publish/refs \
-    && rm -rf /app/publish/runtimes/*/native/*.a
+    /p:DebugSymbols=false
+
+# Clean up unnecessary files
+RUN find /app/publish -type f \( -name "*.pdb" -o -name "*.xml" \) -delete && \
+    find /app/publish -type f -name "*Development.json" -delete
 
 # Final Stage - Ultra Lightweight
 FROM base AS final
@@ -90,8 +79,8 @@ ENV ASPNETCORE_ENVIRONMENT=Production \
     COMPlus_EnableDiagnostics=0 \
     ASPNETCORE_HTTP_PORTS=8080
 
-# Lightweight health check without wget
+# Health check using curl
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-    CMD dotnet --info > /dev/null 2>&1 || exit 1
+    CMD curl -f http://localhost:8080/health || exit 1
 
 ENTRYPOINT ["dotnet", "Kickify.Api.dll"]

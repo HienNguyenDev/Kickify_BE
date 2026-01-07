@@ -121,5 +121,10 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .WithOne(pr => pr.Resolver)
             .HasForeignKey(pr => pr.ResolvedBy)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasMany(x => x.RefreshTokens)
+               .WithOne(rt => rt.User)
+               .HasForeignKey(rt => rt.UserId)
+               .OnDelete(DeleteBehavior.Cascade);
     }
 }

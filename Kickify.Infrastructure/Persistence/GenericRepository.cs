@@ -1,12 +1,7 @@
 ﻿using Kickify.Application.Abstractions.Persistence;
 using Kickify.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Kickify.Infrastructure.Persistence
 {
@@ -20,24 +15,20 @@ namespace Kickify.Infrastructure.Persistence
             _context = context;
             _dbSet = context.Set<T>();
         }
-        public async Task<T?> GetByIdAsync(Guid id)
-        {
-            return await _dbSet.FindAsync(id);
-        }
 
-        public async Task<T?> GetByIdAsync(int id)
+        public async Task<T?> GetByIdAsync(object id)
         {
             return await _dbSet.FindAsync(id);
         }
 
         public async Task<IEnumerable<T>> GetAllAsync()
         {
-            return await _dbSet.ToListAsync();
+            return await _dbSet.AsNoTracking().ToListAsync();
         }
 
         public async Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> expression)
         {
-            return await _dbSet.Where(expression).ToListAsync();
+            return await _dbSet.AsNoTracking().Where(expression).ToListAsync();
         }
 
         public async Task AddAsync(T entity)
@@ -45,14 +36,14 @@ namespace Kickify.Infrastructure.Persistence
             await _dbSet.AddAsync(entity);
         }
 
-        public async Task UpdateAsync(T entity)
+        public void Update(T entity)
         {
-            await Task.Run(() => _dbSet.Update(entity));
+            _dbSet.Update(entity);
         }
 
-        public async Task RemoveAsync(T entity)
+        public void Remove(T entity)
         {
-            await Task.Run(() => _dbSet.Remove(entity));
+            _dbSet.Remove(entity);
         }
 
         public async Task<(IEnumerable<T> Items, int Total)> GetPagedAsync(
@@ -61,7 +52,7 @@ namespace Kickify.Infrastructure.Persistence
             int page = 1,
             int pageSize = 10)
         {
-            IQueryable<T> query = _dbSet;
+            IQueryable<T> query = _dbSet.AsNoTracking();
 
             if (filter != null)
                 query = query.Where(filter);
