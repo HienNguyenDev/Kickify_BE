@@ -45,4 +45,5 @@ public class User : BaseEntity
     public ICollection<Comment> Comments { get; set; } = new List<Comment>();
     public ICollection<CommentLike> CommentLikes { get; set; } = new List<CommentLike>();
     public ICollection<EloConfiguration> EloConfigurations { get; set; } = new List<EloConfiguration>();
+    public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
 }

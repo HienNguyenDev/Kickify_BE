@@ -1,5 +1,10 @@
-﻿using Kickify.Application.Abstractions.Persistence;
+﻿using BrewView.Infrastructure.Authentication;
+using Kickify.Application.Abstractions.Authentication;
+using Kickify.Application.Abstractions.Persistence;
+using Kickify.Application.Abstractions.Repositories;
 using Kickify.Infrastructure.Database;
+using Kickify.Infrastructure.Persistence;
+using Kickify.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,7 +20,9 @@ namespace Kickify.Infrastructure
     {
         public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration) =>
         services
-            .AddDatabase(configuration);
+            .AddDatabase(configuration)
+            .AddService()
+            .AddRepository();    
 
         private static IServiceCollection AddDatabase(this IServiceCollection services, IConfiguration configuration)
         {
@@ -36,6 +43,22 @@ namespace Kickify.Infrastructure
             services.AddScoped<IApplicationDbContext>(provider =>
                 provider.GetRequiredService<ApplicationDbContext>());
 
+            return services;
+        }
+        private static IServiceCollection AddService(this IServiceCollection services)
+        {
+            services.AddScoped<IUnitOfWork, UnitOfWork>();
+            services.AddScoped<IUserContext, UserContext>();
+            services.AddScoped<IJwtProvider, JwtProvider>();
+            services.AddScoped<IPasswordHasher, PasswordHasher>();
+            services.AddHttpContextAccessor();
+            return services;
+        }
+        private static IServiceCollection AddRepository(this IServiceCollection services)
+        {
+            services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+            services.AddScoped<IUserRepository, UserRepository>();
+            services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
             return services;
         }
     }

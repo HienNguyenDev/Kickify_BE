@@ -22,6 +22,7 @@ namespace Kickify.Infrastructure.Database
         public DbSet<NotificationPreference> NotificationPreferences { get; set; }
         public DbSet<Achievement> Achievements { get; set; }
         public DbSet<PlayerAchievement> PlayerAchievements { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
 
         // Venue Schema
         public DbSet<Venue> Venues { get; set; }
