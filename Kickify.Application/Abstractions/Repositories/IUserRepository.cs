@@ -12,5 +12,6 @@ namespace Kickify.Application.Abstractions.Repositories
     {
         Task<User?> GetByEmailAsync(string email);
         Task<bool> IsEmailExistsAsync(string email);
+        Task<User?> GetByEmailWithRoleAsync(string email, CancellationToken cancellationToken = default);
     }
 }

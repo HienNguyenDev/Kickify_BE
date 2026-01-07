@@ -1,6 +1,7 @@
 ﻿using Kickify.Api.Extensions;
 using Kickify.Api.Requests;
 using Kickify.Application.Features.Auth.Commands.Login;
+using Kickify.Application.Features.Auth.Commands.RegisterPlayer;
 using Kickify.Domain.Common;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -28,6 +29,30 @@ namespace Kickify.Api.Controllers
             };
             Result<LoginCommandResponse> result = await _mediator.Send(command, cancellationToken);
             return result.MatchOk();
+        }
+
+        [HttpPost("auth/firebase/login")]
+        public async Task<IResult> LoginWithFirebase([FromBody] LoginWithFirebaseRequest request, CancellationToken cancellationToken)
+        {
+            LoginWithFirebaseCommand command = new LoginWithFirebaseCommand
+            {
+                Uid = request.Uid
+            };
+            Result<LoginWithFirebaseCommandResponse> result = await _mediator.Send(command, cancellationToken);
+            return result.MatchOk();
+        }
+
+        [HttpPost("auth/register-player")]
+        public async Task<IResult> RegisterPlayer([FromBody] RegisterPlayerRequest request, CancellationToken cancellationToken)
+        {
+            RegisterPlayerCommand command = new RegisterPlayerCommand
+            {
+                Email = request.Email,
+                Password = request.Password,
+                FullName = request.FullName
+            };
+            Result<RegisterPlayerCommandResponse> result = await _mediator.Send(command, cancellationToken);
+            return result.MatchCreated(id => $"/user/{id}");
         }
     }
 }

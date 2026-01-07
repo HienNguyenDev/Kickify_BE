@@ -78,8 +78,8 @@ namespace Kickify.Application.Features.Auth.Commands.Login
                 Role = user.Role.ToString(),
                 IsEmailVerified = user.IsEmailVerified,
                 IsActive = user.IsActive,
-                accessToken = token,
-                refreshToken = refreshToken.Token,
+                AccessToken = token,
+                RefreshToken = refreshToken.Token,
             };
 
             return Result.Success(response);
