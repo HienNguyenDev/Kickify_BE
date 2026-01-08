@@ -1,5 +1,6 @@
 ﻿using Kickify.Application.Abstractions.Authentication;
 using Kickify.Domain.Entities;
+using Kickify.Domain.Enums;
 using Kickify.Infrastructure.Database;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
@@ -30,15 +31,11 @@ namespace BrewView.Infrastructure.Authentication
 
         public async Task<string> GetForCredentialsAsync(string email)
         {
-            var user = await _dbContext.Users.Include(r => r.Role).FirstOrDefaultAsync(u => u.Email == email);
-            var id = user.UserId;
-            var name = user.FullName;
-            var role = user.Role.ToString();
-            var identityId = "";
-            return (GenerateBackendJwt(email, role, name, id, identityId));
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == email);
+            return GenerateBackendJwt(user);
         }
 
-        private string GenerateBackendJwt(string email, string role, string name, Guid id, string identityId)
+        private string GenerateBackendJwt(string email, UserRole role, string name, Guid id, string identityId)
         {
             var secretKey = _configuration["Authentication:SecretKey"]!;
             var issuer = _configuration["Authentication:Issuer"]!;
@@ -50,7 +47,7 @@ namespace BrewView.Infrastructure.Authentication
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.Email, email),
-                new Claim(ClaimTypes.Role, role),
+                new Claim(ClaimTypes.Role, role.ToString()),
                 new Claim(ClaimTypes.Name, name),
                 new Claim(ClaimTypes.NameIdentifier, id.ToString())
             };
@@ -77,7 +74,7 @@ namespace BrewView.Infrastructure.Authentication
 
         public string GenerateBackendJwt(User user)
         {
-            return GenerateBackendJwt(user.Email, user.Role.ToString(), user.FullName, user.UserId, user.IdentityId);
+            return GenerateBackendJwt(user.Email, user.Role, user.FullName ?? string.Empty, user.UserId, user.IdentityId ?? string.Empty);
         }
 
         public string GenerateRefreshToken()

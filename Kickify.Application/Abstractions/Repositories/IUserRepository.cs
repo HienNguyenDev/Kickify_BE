@@ -10,8 +10,7 @@ namespace Kickify.Application.Abstractions.Repositories
 {
     public interface IUserRepository : IGenericRepository<User>
     {
-        Task<User?> GetByEmailAsync(string email);
+        Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);
         Task<bool> IsEmailExistsAsync(string email);
-        Task<User?> GetByEmailWithRoleAsync(string email, CancellationToken cancellationToken = default);
     }
 }

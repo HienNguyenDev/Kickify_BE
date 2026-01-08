@@ -17,18 +17,11 @@ namespace Kickify.Infrastructure.Repositories
         {
         }
 
-        public async Task<User?> GetByEmailAsync(string email)
+        public async Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken)
         {
             return await _dbSet
                 .AsNoTracking()
                 .FirstOrDefaultAsync(u => u.Email == email);
-        }
-
-        public async Task<User?> GetByEmailWithRoleAsync(string email, CancellationToken cancellationToken = default)
-        {
-            return await _context.Users
-                .Include(u => u.Role)
-                .SingleOrDefaultAsync(u => u.Email == email, cancellationToken);
         }
         public async Task<bool> IsEmailExistsAsync(string email)
         {
