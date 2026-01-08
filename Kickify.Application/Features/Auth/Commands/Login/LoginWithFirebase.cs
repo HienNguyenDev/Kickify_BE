@@ -38,7 +38,7 @@ namespace Kickify.Application.Features.Auth.Commands.Login
             string name = userRecord.DisplayName;
             string identityId = userRecord.Uid;
 
-            var user = await _userRepository.GetByEmailWithRoleAsync(email, cancellationToken);
+            var user = await _userRepository.GetByEmailAsync(email, cancellationToken);
             if (user == null)
             {
                 user = new User
