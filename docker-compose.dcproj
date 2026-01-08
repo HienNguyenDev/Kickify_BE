@@ -9,6 +9,22 @@
     <DockerServiceUrl>{Scheme}://localhost:{ServicePort}/swagger</DockerServiceUrl>
     <DockerServiceName>kickify.api</DockerServiceName>
   </PropertyGroup>
+
+  <!-- Default Configuration -->
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <BuildDockerImageOnBuild>false</BuildDockerImageOnBuild>
+    <DockerComposeUpOnBuild>false</DockerComposeUpOnBuild>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <BuildDockerImageOnBuild>true</BuildDockerImageOnBuild>
+    <DockerComposeUpOnBuild>true</DockerComposeUpOnBuild>
+  </PropertyGroup>
+
   <ItemGroup>
     <None Include="docker-compose.override.yml">
       <DependentUpon>docker-compose.yml</DependentUpon>

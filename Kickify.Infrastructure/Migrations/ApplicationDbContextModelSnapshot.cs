@@ -1143,6 +1143,33 @@ namespace Kickify.Infrastructure.Migrations
                     b.ToTable("PostMedia", "social");
                 });
 
+            modelBuilder.Entity("Kickify.Domain.Entities.RefreshToken", b =>
+                {
+                    b.Property<Guid>("TokenId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("TokenId");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("RefreshTokens", "identity");
+                });
+
             modelBuilder.Entity("Kickify.Domain.Entities.RoomInvitation", b =>
                 {
                     b.Property<Guid>("InvitationId")
@@ -1997,6 +2024,17 @@ namespace Kickify.Infrastructure.Migrations
                     b.Navigation("Post");
                 });
 
+            modelBuilder.Entity("Kickify.Domain.Entities.RefreshToken", b =>
+                {
+                    b.HasOne("Kickify.Domain.Entities.User", "User")
+                        .WithMany("RefreshTokens")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Kickify.Domain.Entities.RoomInvitation", b =>
                 {
                     b.HasOne("Kickify.Domain.Entities.User", "Invitee")
@@ -2232,6 +2270,8 @@ namespace Kickify.Infrastructure.Migrations
                     b.Navigation("ReceivedFeedbacks");
 
                     b.Navigation("ReceivedInvitations");
+
+                    b.Navigation("RefreshTokens");
 
                     b.Navigation("ReportsMade");
 

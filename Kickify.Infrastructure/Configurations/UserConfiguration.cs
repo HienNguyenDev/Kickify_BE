@@ -1,7 +1,10 @@
 using Kickify.Domain.Entities;
+using Kickify.Domain.Enums;
 using Kickify.Infrastructure.Database;
+using Kickify.Infrastructure.Persistence.Converter;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Kickify.Infrastructure.Configurations;
 
@@ -40,10 +43,10 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.Property(u => u.Gender)
             .HasConversion<string>();
-
+ 
         builder.Property(u => u.Role)
             .HasConversion<string>()
-            .IsRequired();
+             .IsRequired();
 
         builder.Property(u => u.IdentityId)
             .HasMaxLength(255);
@@ -121,5 +124,10 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .WithOne(pr => pr.Resolver)
             .HasForeignKey(pr => pr.ResolvedBy)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasMany(x => x.RefreshTokens)
+               .WithOne(rt => rt.User)
+               .HasForeignKey(rt => rt.UserId)
+               .OnDelete(DeleteBehavior.Cascade);
     }
 }
