@@ -1,4 +1,4 @@
-﻿using Kickify.Application.Abstractions.Repositories;
+using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
 using Kickify.Infrastructure.Database;
@@ -18,7 +18,7 @@ namespace Kickify.Infrastructure.Repositories
         {
         }
 
-        public async Task<User?> GetByEmailAsync(string email)
+        public async Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken)
         {
             return await _dbSet
                 .AsNoTracking()
