@@ -42,11 +42,11 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .HasColumnType("date");
 
         builder.Property(u => u.Gender)
-            .HasConversion(EnumSchemasConverters.GenderConverter);
-
+            .HasConversion<string>();
+ 
         builder.Property(u => u.Role)
-            .HasConversion(EnumSchemasConverters.UserRoleConverter)
-            .IsRequired();
+            .HasConversion<string>()
+             .IsRequired();
 
         builder.Property(u => u.IdentityId)
             .HasMaxLength(255);
