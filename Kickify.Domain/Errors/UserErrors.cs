@@ -32,5 +32,41 @@ namespace Kickify.Domain.Errors
         public static readonly Error InActive = Error.Conflict(
             "Users.InActive",
             "The user is inactive");
+
+        public static readonly Error InvalidEmail = Error.Problem(
+            "Users.InvalidEmail",
+            "The email format is invalid");
+
+        public static readonly Error InvalidPassword = Error.Problem(
+            "Users.InvalidPassword",
+            "The password does not meet the requirements");
+
+        public static readonly Error InvalidPhoneNumber = Error.Problem(
+            "Users.InvalidPhoneNumber",
+            "The phone number format is invalid");
+
+        public static readonly Error InvalidDateOfBirth = Error.Problem(
+            "Users.InvalidDateOfBirth",
+            "The date of birth is invalid");
+
+        public static readonly Error UserAlreadyDeleted = Error.Conflict(
+            "Users.AlreadyDeleted",
+            "The user has already been deleted");
+
+        public static readonly Error CannotDeleteActiveUser = Error.Conflict(
+            "Users.CannotDeleteActive",
+            "Cannot delete an active user. Deactivate the user first.");
+
+        public static readonly Error UpdateFailed = Error.Problem(
+            "Users.UpdateFailed",
+            "Failed to update user information");
+
+        public static readonly Error CreateFailed = Error.Problem(
+            "Users.CreateFailed",
+            "Failed to create user");
+
+        public static readonly Error DeleteFailed = Error.Problem(
+            "Users.DeleteFailed",
+            "Failed to delete user");
     }
 }

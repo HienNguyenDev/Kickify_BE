@@ -1,4 +1,5 @@
 ﻿using Kickify.Api.Infrastructure;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Kickify.Api
@@ -14,6 +15,8 @@ namespace Kickify.Api
                     .AddJsonOptions(opts =>
                     {
                         opts.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+                        opts.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+                        opts.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.Never;
                         //opts.JsonSerializerOptions.Converters.Add(new TimeOnlyJsonConverter());
                     }); ;
 

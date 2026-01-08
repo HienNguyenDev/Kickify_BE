@@ -1,7 +1,10 @@
 using Kickify.Domain.Entities;
+using Kickify.Domain.Enums;
 using Kickify.Infrastructure.Database;
+using Kickify.Infrastructure.Persistence.Converter;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Kickify.Infrastructure.Configurations;
 
@@ -39,10 +42,10 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .HasColumnType("date");
 
         builder.Property(u => u.Gender)
-            .HasConversion<string>();
+            .HasConversion(EnumSchemasConverters.GenderConverter);
 
         builder.Property(u => u.Role)
-            .HasConversion<string>()
+            .HasConversion(EnumSchemasConverters.UserRoleConverter)
             .IsRequired();
 
         builder.Property(u => u.IdentityId)
