@@ -6,7 +6,6 @@ public class PlayerProfile : BaseEntity
 {
     public Guid ProfileId { get; set; }
     public Guid UserId { get; set; }
-    public string? PreferredPositions { get; set; } // JSON array: ["ST", "CM", "CB"]
     public int CurrentElo { get; set; } = 1000;
     public decimal TrustScore { get; set; } = 100.00m;
     public int TotalMatches { get; set; } = 0;

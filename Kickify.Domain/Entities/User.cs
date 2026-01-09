@@ -3,7 +3,7 @@ using Kickify.Domain.Enums;
 
 namespace Kickify.Domain.Entities;
 
-public class User : BaseEntity
+public class User : Entity
 {
     public Guid UserId { get; set; }
     public string Email { get; set; } = string.Empty;
@@ -15,6 +15,9 @@ public class User : BaseEntity
     public DateTime? DateOfBirth { get; set; }
     public Gender? Gender { get; set; }
     public UserRole Role { get; set; }
+    public string? Positions { get; set; }
+    public int? ShirtNumber { get; set; }
+    public string? PreferredFoot { get; set; }
     public string? IdentityId { get; set; }
     public bool IsEmailVerified { get; set; } = false;
     public bool IsActive { get; set; } = true;

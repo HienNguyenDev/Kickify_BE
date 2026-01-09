@@ -2,17 +2,23 @@
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
 using Kickify.Application.Abstractions.Authentication;
+using Kickify.Application.Abstractions.OTP;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
+using Kickify.Application.Abstractions.Services;
 using Kickify.Infrastructure.Authentication;
 using Kickify.Infrastructure.Database;
+using Kickify.Infrastructure.Mail;
 using Kickify.Infrastructure.Persistence;
+using Kickify.Infrastructure.Redis;
 using Kickify.Infrastructure.Repositories;
+using Kickify.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using StackExchange.Redis;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -27,9 +33,10 @@ namespace Kickify.Infrastructure
         services
             .AddAuthenticationInternal(configuration)
             .AddDatabase(configuration)
-            .AddService()
+            .AddService(configuration)
             .AddRepository()
-            .AddFirebase();
+            .AddFirebase()
+            .AddRedisStore(configuration);
 
         private static IServiceCollection AddAuthenticationInternal(this IServiceCollection services, IConfiguration configuration)
         {
@@ -72,13 +79,18 @@ namespace Kickify.Infrastructure
 
             return services;
         }
-        private static IServiceCollection AddService(this IServiceCollection services)
+        private static IServiceCollection AddService(this IServiceCollection services, IConfiguration configuration)
         {
+            services.Configure<EmailSettings>(configuration.GetSection("Email"));
             services.AddScoped<IAuthenticationServices, AuthenticationServices>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<IUserContext, UserContext>();
             services.AddScoped<IJwtProvider, JwtProvider>();
             services.AddScoped<IPasswordHasher, PasswordHasher>();
+            services.AddScoped<EmailTemplateService>();
+            services.AddScoped<IMailService, MailService>();
+            services.AddScoped<IOtpGenerator, OtpGenerator>();
+            services.AddScoped<IRedisOtpStore, RedisOtpStore>();
             return services;
         }
         private static IServiceCollection AddRepository(this IServiceCollection services)
@@ -94,6 +106,12 @@ namespace Kickify.Infrastructure
             {
                 Credential = GoogleCredential.FromFile("firebase.json"),
             });
+            return services;
+        }
+        private static IServiceCollection AddRedisStore(this IServiceCollection services, IConfiguration configuration)
+        {
+            services.AddSingleton<IConnectionMultiplexer>(sp => ConnectionMultiplexer.Connect(configuration.GetConnectionString("Redis")))
+                    .AddTransient<IRedisOtpStore, RedisOtpStore>();
             return services;
         }
     }
