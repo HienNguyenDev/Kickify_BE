@@ -10,5 +10,6 @@ namespace Kickify.Application.Features.Users.Queries.GetAllUsers
         public UserRole? Role { get; set; }
         public bool? IsActive { get; set; }
         public string? SearchTerm { get; set; }
+        public bool IncludeDeleted { get; set; }
     }
 }
