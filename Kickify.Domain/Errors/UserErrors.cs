@@ -81,7 +81,7 @@ namespace Kickify.Domain.Errors
             "Token reuse detected. All sessions have been revoked for security reasons.");
         public static readonly Error OtpExpired = Error.Conflict(
             "Users.OtpExpired",
-            "The OTP code has expired");
+            "The OTP code not found or expired");
         public static readonly Error WrongOtp = Error.Conflict(
             "Users.OtpNotFound",
             "The OTP code is wrong");
