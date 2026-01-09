@@ -12,5 +12,7 @@ namespace Kickify.Application.Abstractions.Repositories
     {
         Task<List<RefreshToken>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
         void RemoveRange(List<RefreshToken> tokens);
+        Task<RefreshToken?> GetByTokenWithUserAsync(string token, CancellationToken cancellationToken = default);
+        Task RevokeAllUserTokensAsync(Guid userId, CancellationToken cancellationToken = default);
     }
 }

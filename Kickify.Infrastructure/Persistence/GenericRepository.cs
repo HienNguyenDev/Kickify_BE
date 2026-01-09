@@ -18,7 +18,7 @@ namespace Kickify.Infrastructure.Persistence
 
         public async Task<T?> GetByIdAsync(object id)
         {
-            return await _dbSet.FindAsync(id);
+            return await _dbSet.FirstOrDefaultAsync(e => EF.Property<object>(e, "Id").Equals(id));
         }
 
         public async Task<IEnumerable<T>> GetAllAsync()
@@ -43,7 +43,7 @@ namespace Kickify.Infrastructure.Persistence
 
         public void Remove(T entity)
         {
-            _dbSet.Remove(entity);
+            _context.Entry(entity).State = EntityState.Deleted;
         }
 
         public async Task<(IEnumerable<T> Items, int Total)> GetPagedAsync(

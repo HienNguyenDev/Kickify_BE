@@ -43,10 +43,19 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.Property(u => u.Gender)
             .HasConversion<string>();
- 
+
         builder.Property(u => u.Role)
             .HasConversion<string>()
-             .IsRequired();
+            .IsRequired();
+
+        builder.Property(p => p.Positions)
+            .HasMaxLength(255)
+            .HasComment("JSON array: [\"ST\", \"CM\", \"CB\"]");
+
+        builder.Property(u => u.ShirtNumber);
+
+        builder.Property(u => u.PreferredFoot)
+            .HasMaxLength(20);
 
         builder.Property(u => u.IdentityId)
             .HasMaxLength(255);
@@ -57,14 +66,12 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.IsActive)
             .HasDefaultValue(true);
 
-        // Indexes
         builder.HasIndex(u => u.Email)
             .IsUnique();
 
         builder.HasIndex(u => u.IdentityId)
             .IsUnique();
 
-        // Relationships
         builder.HasOne(u => u.PlayerProfile)
             .WithOne(p => p.User)
             .HasForeignKey<PlayerProfile>(p => p.UserId)
@@ -85,9 +92,24 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .HasForeignKey(v => v.OwnerId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.HasMany(u => u.VenueReviews)
+            .WithOne(vr => vr.User)
+            .HasForeignKey(vr => vr.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasMany(u => u.HostedRooms)
             .WithOne(mr => mr.Host)
             .HasForeignKey(mr => mr.HostId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasMany(u => u.MatchPresets)
+            .WithOne(mp => mp.User)
+            .HasForeignKey(mp => mp.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(u => u.RoomParticipations)
+            .WithOne(rp => rp.User)
+            .HasForeignKey(rp => rp.UserId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasMany(u => u.SentInvitations)
@@ -100,6 +122,11 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .HasForeignKey(ri => ri.InviteeId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.HasMany(u => u.ChatMessages)
+            .WithOne(cm => cm.Sender)
+            .HasForeignKey(cm => cm.SenderId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasMany(u => u.GivenFeedbacks)
             .WithOne(mf => mf.Reviewer)
             .HasForeignKey(mf => mf.ReviewerId)
@@ -109,6 +136,11 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .WithOne(mf => mf.Reviewee)
             .HasForeignKey(mf => mf.RevieweeId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasMany(u => u.EloHistories)
+            .WithOne(eh => eh.User)
+            .HasForeignKey(eh => eh.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasMany(u => u.ReportsMade)
             .WithOne(pr => pr.Reporter)
@@ -125,9 +157,39 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .HasForeignKey(pr => pr.ResolvedBy)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasMany(x => x.RefreshTokens)
-               .WithOne(rt => rt.User)
-               .HasForeignKey(rt => rt.UserId)
-               .OnDelete(DeleteBehavior.Cascade);
+        builder.HasMany(u => u.SystemLogs)
+            .WithOne(sl => sl.User)
+            .HasForeignKey(sl => sl.UserId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasMany(u => u.Notifications)
+            .WithOne(n => n.User)
+            .HasForeignKey(n => n.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(u => u.Posts)
+            .WithOne(p => p.User)
+            .HasForeignKey(p => p.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasMany(u => u.PostLikes)
+            .WithOne(pl => pl.User)
+            .HasForeignKey(pl => pl.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(u => u.Comments)
+            .WithOne(c => c.User)
+            .HasForeignKey(c => c.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasMany(u => u.CommentLikes)
+            .WithOne(cl => cl.User)
+            .HasForeignKey(cl => cl.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(u => u.RefreshTokens)
+            .WithOne(rt => rt.User)
+            .HasForeignKey(rt => rt.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

@@ -25,13 +25,6 @@ namespace Kickify.Infrastructure.Repositories
                 .FirstOrDefaultAsync(u => u.Email == email);
         }
 
-        public async Task<User?> GetByEmailWithRoleAsync(string email, CancellationToken cancellationToken = default)
-        {
-            return await _context.Users
-                .Include(u => u.Role)
-                .SingleOrDefaultAsync(u => u.Email == email, cancellationToken);
-        }
-
         public async Task<bool> IsEmailExistsAsync(string email)
         {
             return await _dbSet
@@ -44,21 +37,26 @@ namespace Kickify.Infrastructure.Repositories
             string? searchTerm = null,
             int page = 1,
             int pageSize = 10,
+            bool includeDeleted = false,
             CancellationToken cancellationToken = default)
         {
             // Note: Global query filter already excludes soft-deleted users (DeletedAt == null)
-            var query = _dbSet.AsNoTracking().AsQueryable();
+            //var query = _dbSet.AsNoTracking().AsQueryable();
+            IQueryable<User> query = _dbSet.AsNoTracking();
+
+
 
             // Filter by role
             if (role.HasValue)
             {
+
                 query = query.Where(u => u.Role == role.Value);
             }
 
             // Filter by active status
             if (isActive.HasValue)
             {
-                query = query.Where(u => u.IsActive == isActive.Value);
+                query = query.IgnoreQueryFilters().Where(u => u.IsActive == isActive.Value);
             }
 
             // Search by email, full name, or phone
