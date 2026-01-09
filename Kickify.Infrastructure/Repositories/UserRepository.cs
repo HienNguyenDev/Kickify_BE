@@ -44,21 +44,26 @@ namespace Kickify.Infrastructure.Repositories
             string? searchTerm = null,
             int page = 1,
             int pageSize = 10,
+            bool includeDeleted = false,
             CancellationToken cancellationToken = default)
         {
             // Note: Global query filter already excludes soft-deleted users (DeletedAt == null)
-            var query = _dbSet.AsNoTracking().AsQueryable();
+            //var query = _dbSet.AsNoTracking().AsQueryable();
+            IQueryable<User> query = _dbSet.AsNoTracking();
+
+
 
             // Filter by role
             if (role.HasValue)
             {
+
                 query = query.Where(u => u.Role == role.Value);
             }
 
             // Filter by active status
             if (isActive.HasValue)
             {
-                query = query.Where(u => u.IsActive == isActive.Value);
+                query = query.IgnoreQueryFilters().Where(u => u.IsActive == isActive.Value);
             }
 
             // Search by email, full name, or phone

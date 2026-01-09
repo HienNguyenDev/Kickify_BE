@@ -20,6 +20,7 @@ namespace Kickify.Application.Abstractions.Repositories
             string? searchTerm = null,
             int page = 1,
             int pageSize = 10,
+            bool includeDeleted = false,
             CancellationToken cancellationToken = default);
         Task<User?> GetUserWithDetailsAsync(Guid userId, CancellationToken cancellationToken = default);
     }
