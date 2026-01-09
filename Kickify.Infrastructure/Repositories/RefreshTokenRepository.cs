@@ -28,5 +28,26 @@ namespace Kickify.Infrastructure.Repositories
         {
             _context.RefreshTokens.RemoveRange(tokens);
         }
+
+        public async Task<RefreshToken?> GetByTokenWithUserAsync(string token, CancellationToken cancellationToken = default)
+        {
+            return await _dbSet
+                .Include(r => r.User)
+                .FirstOrDefaultAsync(t => t.Token == token, cancellationToken);
+        }
+
+        public async Task RevokeAllUserTokensAsync(Guid userId, CancellationToken cancellationToken = default)
+        {
+            var activeTokens = await _dbSet
+                .Where(t => t.UserId == userId && t.RevokedAt == null)
+                .ToListAsync(cancellationToken);
+
+            var revokedAt = DateTime.UtcNow;
+
+            foreach (var token in activeTokens)
+            {
+                token.RevokedAt = revokedAt;
+            }
+        }
     }
 }

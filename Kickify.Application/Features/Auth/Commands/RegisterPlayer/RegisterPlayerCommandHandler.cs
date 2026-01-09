@@ -1,11 +1,13 @@
 ﻿using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
+using Kickify.Application.Abstractions.OTP;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
 using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
 using Kickify.Domain.Errors;
+using Kickify.Domain.Event;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,13 +22,16 @@ namespace Kickify.Application.Features.Auth.Commands.RegisterPlayer
         private readonly IAuthenticationServices _authenticationServices;
         private readonly IPasswordHasher _passwordHasher;
         private readonly IUnitOfWork _unitOfWork;
-
-        public RegisterPlayerCommandHandler(IUserRepository userRepository, IAuthenticationServices authenticationServices, IPasswordHasher passwordHasher, IUnitOfWork unitOfWork)
+        private readonly IOtpGenerator _otpGenerator;
+        private readonly IRedisOtpStore _otpStore;
+        public RegisterPlayerCommandHandler(IUserRepository userRepository, IAuthenticationServices authenticationServices, IPasswordHasher passwordHasher, IUnitOfWork unitOfWork, IOtpGenerator otpGenerator, IRedisOtpStore otpStore)
         {
             _userRepository = userRepository;
             _authenticationServices = authenticationServices;
             _passwordHasher = passwordHasher;
             _unitOfWork = unitOfWork;
+            _otpGenerator = otpGenerator;
+            _otpStore = otpStore;
         }
 
         public async Task<Result<RegisterPlayerCommandResponse>> Handle(RegisterPlayerCommand request, CancellationToken cancellationToken)
@@ -48,11 +53,15 @@ namespace Kickify.Application.Features.Auth.Commands.RegisterPlayer
                 Role = UserRole.Player,
                 IdentityId = identityId,
                 IsActive = true,
-                IsEmailVerified = true,
-                CreatedAt = DateTime.UtcNow
+                IsEmailVerified = false,
             };  
 
             await _userRepository.AddAsync(user);
+
+            var otp = _otpGenerator.Generate6Digits();
+            await _otpStore.StoreAsync(user.UserId, otp, TimeSpan.FromMinutes(2), cancellationToken);
+            user.Raise(new RegisterPlayerDomainEvent(user.UserId, user.Email, otp));
+
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             var response = new RegisterPlayerCommandResponse

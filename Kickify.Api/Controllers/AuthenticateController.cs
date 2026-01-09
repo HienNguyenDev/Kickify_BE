@@ -54,5 +54,16 @@ namespace Kickify.Api.Controllers
             Result<RegisterPlayerCommandResponse> result = await _mediator.Send(command, cancellationToken);
             return result.MatchCreated(id => $"/user/{id}");
         }
+
+        [HttpPost("auth/login-with-refresh-token")]
+        public async Task<IResult> LoginWithRefreshToken([FromBody] LoginWithRefreshTokenRequest request, CancellationToken cancellationToken)
+        {
+            LoginWithRefreshTokenCommand command = new LoginWithRefreshTokenCommand
+            {
+                RefreshToken = request.RefreshToken
+            };
+            Result<LoginWithRefreshTokenCommandResponse> result = await _mediator.Send(command, cancellationToken);
+            return result.MatchOk();
+        }
     }
 }

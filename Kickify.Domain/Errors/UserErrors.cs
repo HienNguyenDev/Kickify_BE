@@ -68,5 +68,16 @@ namespace Kickify.Domain.Errors
         public static readonly Error DeleteFailed = Error.Problem(
             "Users.DeleteFailed",
             "Failed to delete user");
+        public static readonly Error InvalidRefreshToken = Error.Problem(
+            "User.InvalidRefreshToken",
+            "Invalid refresh token");
+
+        public static readonly Error RefreshTokenExpired = Error.Problem(
+            "User.RefreshTokenExpired",
+            "Refresh token has expired");
+
+        public static readonly Error TokenReuseDetected = Error.Problem(
+            "User.TokenReuseDetected",
+            "Token reuse detected. All sessions have been revoked for security reasons.");
     }
 }

@@ -1,6 +1,6 @@
 namespace Kickify.Domain.Common;
 
-public abstract class Entity
+public abstract class Entity : BaseEntity
 {
     private readonly List<IDomainEvent> _domainEvents = [];
 
