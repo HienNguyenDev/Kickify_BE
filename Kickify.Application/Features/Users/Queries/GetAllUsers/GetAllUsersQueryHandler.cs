@@ -37,7 +37,23 @@ namespace Kickify.Application.Features.Users.Queries.GetAllUsers
                 Role = u.Role,
                 IsEmailVerified = u.IsEmailVerified,
                 IsActive = u.IsActive,
-                CreatedAt = u.CreatedAt
+                CreatedAt = u.CreatedAt,
+                PlayerProfile = u.PlayerProfile != null ? new PlayerProfileDto
+                {
+                    ProfileId = u.PlayerProfile.ProfileId,
+                    CurrentElo = u.PlayerProfile.CurrentElo,
+                    TrustScore = u.PlayerProfile.TrustScore,
+                    TotalMatches = u.PlayerProfile.TotalMatches,
+                    Wins = u.PlayerProfile.Wins,
+                    Losses = u.PlayerProfile.Losses,
+                    Draws = u.PlayerProfile.Draws,
+                    MvpCount = u.PlayerProfile.MvpCount,
+                    WinStreak = u.PlayerProfile.WinStreak,
+                    MaxWinStreak = u.PlayerProfile.MaxWinStreak,
+                    AfkCount = u.PlayerProfile.AfkCount,
+                    ReportCount = u.PlayerProfile.ReportCount,
+                    PreferredPositions = u.PlayerProfile.PreferredPositions
+                } : null
             }).ToList();
 
             var response = new GetAllUsersQueryResponse
