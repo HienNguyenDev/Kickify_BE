@@ -8,7 +8,8 @@ namespace Kickify.Api.Extensions
         public void Apply(OpenApiOperation operation, OperationFilterContext context)
         {
             var fileParams = context.MethodInfo.GetParameters()
-                                  .Where(p => p.ParameterType == typeof(IFormFile))
+                                  .Where(p => p.ParameterType == typeof(IFormFile)
+                                  || p.ParameterType == typeof(List<IFormFile>))  
                                   .ToList();
             if (!fileParams.Any())
                 return;
