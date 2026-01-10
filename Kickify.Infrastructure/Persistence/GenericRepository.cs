@@ -18,7 +18,7 @@ namespace Kickify.Infrastructure.Persistence
 
         public async Task<T?> GetByIdAsync(object id)
         {
-            return await _dbSet.FirstOrDefaultAsync(e => EF.Property<object>(e, "Id").Equals(id));
+            return await _dbSet.FindAsync(id);
         }
 
         public async Task<IEnumerable<T>> GetAllAsync()
