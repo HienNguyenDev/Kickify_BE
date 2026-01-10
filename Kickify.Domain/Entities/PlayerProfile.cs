@@ -17,6 +17,7 @@ public class PlayerProfile : BaseEntity
     public int MaxWinStreak { get; set; } = 0;
     public int AfkCount { get; set; } = 0;
     public int ReportCount { get; set; } = 0;
+    public string? PreferredPositions { get; set; }
 
     // Navigation properties
     public User User { get; set; } = null!;

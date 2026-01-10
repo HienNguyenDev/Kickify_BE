@@ -3,6 +3,7 @@ using System;
 using Kickify.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Kickify.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260110043939_AddPreferredPositionsToPlayerProfile")]
+    partial class AddPreferredPositionsToPlayerProfile
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1092,24 +1095,7 @@ namespace Kickify.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("BucketName")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasDefaultValue("kickify-media")
-                        .HasComment("MinIO bucket name");
-
-                    b.Property<string>("ContentType")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasComment("MIME type (e.g., image/jpeg, video/mp4)");
-
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("DisplayOrder")
@@ -1119,80 +1105,42 @@ namespace Kickify.Infrastructure.Migrations
 
                     b.Property<int?>("Duration")
                         .HasColumnType("integer")
-                        .HasComment("Video duration in seconds");
+                        .HasComment("For videos (seconds)");
 
-                    b.Property<string>("FileName")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<long>("FileSize")
+                    b.Property<long?>("FileSize")
                         .HasColumnType("bigint")
-                        .HasComment("File size in bytes");
+                        .HasComment("In bytes");
 
                     b.Property<int?>("Height")
                         .HasColumnType("integer")
-                        .HasComment("Media height in pixels");
-
-                    b.Property<bool>("IsProcessed")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true)
-                        .HasComment("Processing status for async video encoding");
+                        .HasComment("For images/videos");
 
                     b.Property<string>("MediaType")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
+                        .HasColumnType("text");
+
+                    b.Property<string>("MediaUrl")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<Guid>("PostId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("PublicUrl")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)")
-                        .HasComment("Full CDN URL for client access");
-
-                    b.Property<string>("StoragePath")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasComment("MinIO object path (e.g., images/2024/01/15/abc123.jpg)");
-
-                    b.Property<string>("ThumbnailStoragePath")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasComment("MinIO path for video thumbnail");
-
                     b.Property<string>("ThumbnailUrl")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)")
-                        .HasComment("Full CDN URL for video thumbnail");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasComment("For videos");
 
                     b.Property<int?>("Width")
                         .HasColumnType("integer")
-                        .HasComment("Media width in pixels");
+                        .HasComment("For images/videos");
 
                     b.HasKey("MediaId");
 
-                    b.HasIndex("IsProcessed")
-                        .HasDatabaseName("IX_PostMedia_IsProcessed");
+                    b.HasIndex("DisplayOrder");
 
-                    b.HasIndex("MediaType")
-                        .HasDatabaseName("IX_PostMedia_MediaType");
-
-                    b.HasIndex("PostId")
-                        .HasDatabaseName("IX_PostMedia_PostId");
-
-                    b.HasIndex("StoragePath")
-                        .HasDatabaseName("IX_PostMedia_StoragePath");
-
-                    b.HasIndex("PostId", "DisplayOrder")
-                        .HasDatabaseName("IX_PostMedia_PostId_DisplayOrder");
+                    b.HasIndex("PostId");
 
                     b.ToTable("PostMedia", "social");
                 });
