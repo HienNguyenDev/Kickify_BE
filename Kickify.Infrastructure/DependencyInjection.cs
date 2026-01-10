@@ -13,11 +13,13 @@ using Kickify.Infrastructure.Persistence;
 using Kickify.Infrastructure.Redis;
 using Kickify.Infrastructure.Repositories;
 using Kickify.Infrastructure.Services;
+using Kickify.Infrastructure.Settings;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using Minio;
 using StackExchange.Redis;
 using System;
 using System.Collections.Generic;
@@ -36,7 +38,8 @@ namespace Kickify.Infrastructure
             .AddService(configuration)
             .AddRepository()
             .AddFirebase()
-            .AddRedisStore(configuration);
+            .AddRedisStore(configuration)
+            .AddMinioStorage(configuration);
 
         private static IServiceCollection AddAuthenticationInternal(this IServiceCollection services, IConfiguration configuration)
         {
@@ -98,6 +101,7 @@ namespace Kickify.Infrastructure
             services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+            services.AddScoped<IPostRepository, PostRepository>();
             services.AddScoped<IPlayerProfileRepository, PlayerProfileRepository>();
             return services;
         }
@@ -113,6 +117,30 @@ namespace Kickify.Infrastructure
         {
             services.AddSingleton<IConnectionMultiplexer>(sp => ConnectionMultiplexer.Connect(configuration.GetConnectionString("Redis")))
                     .AddTransient<IRedisOtpStore, RedisOtpStore>();
+            return services;
+        }
+        private static IServiceCollection AddMinioStorage(this IServiceCollection services, IConfiguration configuration)
+        {
+            services.Configure<MinioSettings>(configuration.GetSection(MinioSettings.SectionName));
+
+            var minioSettings = configuration.GetSection(MinioSettings.SectionName).Get<MinioSettings>()!;
+
+            services.AddSingleton<IMinioClient>(_ =>
+            {
+                var client = new MinioClient()
+                    .WithEndpoint(minioSettings.Endpoint)
+                    .WithCredentials(minioSettings.AccessKey, minioSettings.SecretKey);
+
+                if (minioSettings.UseSSL)
+                {
+                    client.WithSSL();
+                }
+
+                return client.Build();
+            });
+
+            services.AddScoped<IStorageService, MinioStorageService>();
+
             return services;
         }
     }
