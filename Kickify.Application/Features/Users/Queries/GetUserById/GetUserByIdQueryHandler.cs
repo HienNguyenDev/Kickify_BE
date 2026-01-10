@@ -18,10 +18,16 @@ namespace Kickify.Application.Features.Users.Queries.GetUserById
             GetUserByIdQuery request,
             CancellationToken cancellationToken)
         {
-            var user = await _userRepository.GetByIdAsync(request.UserId);
+            // Use GetUserWithDetailsAsync to include PlayerProfile
+            var user = await _userRepository.GetUserWithDetailsAsync(request.UserId, cancellationToken);
 
-                //GetUserWithDetailsAsync(request.UserId);
             if (user is null)
+            {
+                return Result.Failure<GetUserByIdQueryResponse>(UserErrors.NotFound(request.UserId));
+            }
+
+            // Check if user is active, return 404 if not
+            if (!user.IsActive)
             {
                 return Result.Failure<GetUserByIdQueryResponse>(UserErrors.NotFound(request.UserId));
             }
@@ -40,7 +46,23 @@ namespace Kickify.Application.Features.Users.Queries.GetUserById
                 IsEmailVerified = user.IsEmailVerified,
                 IsActive = user.IsActive,
                 CreatedAt = user.CreatedAt,
-                UpdatedAt = user.UpdatedAt
+                UpdatedAt = user.UpdatedAt,
+                PlayerProfile = user.PlayerProfile != null ? new PlayerProfileDto
+                {
+                    ProfileId = user.PlayerProfile.ProfileId,
+                    CurrentElo = user.PlayerProfile.CurrentElo,
+                    TrustScore = user.PlayerProfile.TrustScore,
+                    TotalMatches = user.PlayerProfile.TotalMatches,
+                    Wins = user.PlayerProfile.Wins,
+                    Losses = user.PlayerProfile.Losses,
+                    Draws = user.PlayerProfile.Draws,
+                    MvpCount = user.PlayerProfile.MvpCount,
+                    WinStreak = user.PlayerProfile.WinStreak,
+                    MaxWinStreak = user.PlayerProfile.MaxWinStreak,
+                    AfkCount = user.PlayerProfile.AfkCount,
+                    ReportCount = user.PlayerProfile.ReportCount,
+                    PreferredPositions = user.PlayerProfile.PreferredPositions
+                } : null
             };
 
             return Result.Success(response);

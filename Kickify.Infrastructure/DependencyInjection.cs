@@ -98,6 +98,7 @@ namespace Kickify.Infrastructure
             services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+            services.AddScoped<IPlayerProfileRepository, PlayerProfileRepository>();
             return services;
         }
         private static IServiceCollection AddFirebase(this IServiceCollection services)

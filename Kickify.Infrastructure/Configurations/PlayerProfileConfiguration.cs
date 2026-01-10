@@ -52,5 +52,8 @@ public class PlayerProfileConfiguration : IEntityTypeConfiguration<PlayerProfile
 
         builder.Property(p => p.ReportCount)
             .HasDefaultValue(0);
+
+        builder.Property(p => p.PreferredPositions)
+            .HasMaxLength(255);
     }
 }

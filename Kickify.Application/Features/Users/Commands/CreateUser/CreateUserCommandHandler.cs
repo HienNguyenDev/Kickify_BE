@@ -11,15 +11,18 @@ namespace Kickify.Application.Features.Users.Commands.CreateUser
     public class CreateUserCommandHandler : ICommandHandler<CreateUserCommand, CreateUserCommandResponse>
     {
         private readonly IUserRepository _userRepository;
+        private readonly IPlayerProfileRepository _playerProfileRepository;
         private readonly IPasswordHasher _passwordHasher;
         private readonly IUnitOfWork _unitOfWork;
 
         public CreateUserCommandHandler(
             IUserRepository userRepository,
+            IPlayerProfileRepository playerProfileRepository,
             IPasswordHasher passwordHasher,
             IUnitOfWork unitOfWork)
         {
             _userRepository = userRepository;
+            _playerProfileRepository = playerProfileRepository;
             _passwordHasher = passwordHasher;
             _unitOfWork = unitOfWork;
         }
@@ -55,6 +58,26 @@ namespace Kickify.Application.Features.Users.Commands.CreateUser
             };
 
             await _userRepository.AddAsync(user);
+
+            // Automatically create empty PlayerProfile for the new user
+            var playerProfile = new PlayerProfile
+            {
+                ProfileId = Guid.NewGuid(),
+                UserId = user.UserId,
+                CurrentElo = 1000,
+                TrustScore = 100.00m,
+                TotalMatches = 0,
+                Wins = 0,
+                Losses = 0,
+                Draws = 0,
+                MvpCount = 0,
+                WinStreak = 0,
+                MaxWinStreak = 0,
+                AfkCount = 0,
+                ReportCount = 0
+            };
+
+            await _playerProfileRepository.AddAsync(playerProfile);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             var response = new CreateUserCommandResponse
