@@ -29,5 +29,10 @@ namespace Kickify.Infrastructure.Services
         {
             return await _razorEngine.CompileRenderAsync("OtpEmail.cshtml", otp);
         }
+
+        public async Task<string> RenderResetPasswordEmailAsync(string newPassword)
+        {
+            return await _razorEngine.CompileRenderAsync("ResetPasswordEmail.cshtml", newPassword);
+        }
     }
 }

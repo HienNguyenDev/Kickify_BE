@@ -59,7 +59,7 @@ namespace Kickify.Application.Features.Auth.Commands.RegisterPlayer
             await _userRepository.AddAsync(user);
 
             var otp = _otpGenerator.Generate6Digits();
-            await _otpStore.StoreAsync(user.UserId, otp, TimeSpan.FromMinutes(2), cancellationToken);
+            await _otpStore.StoreAsync(user.UserId, otp, TimeSpan.FromMinutes(5), cancellationToken);
             user.Raise(new RegisterPlayerDomainEvent(user.UserId, user.Email, otp));
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);

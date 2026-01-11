@@ -73,6 +73,7 @@ namespace Kickify.Infrastructure.Repositories
             var total = await query.CountAsync(cancellationToken);
 
             var users = await query
+                .Include(u => u.PlayerProfile)
                 .OrderByDescending(u => u.CreatedAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)

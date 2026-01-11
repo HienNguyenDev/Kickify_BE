@@ -85,5 +85,8 @@ namespace Kickify.Domain.Errors
         public static readonly Error WrongOtp = Error.Conflict(
             "Users.OtpNotFound",
             "The OTP code is wrong");
+        public static readonly Error UserAlreadyVerified = Error.Conflict(
+            "Users.UserAlreadyVerified",
+            "The user has already verified");
     }
 }
