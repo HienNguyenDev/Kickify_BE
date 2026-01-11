@@ -1,7 +1,11 @@
 ﻿using Kickify.Api.Extensions;
 using Kickify.Api.Requests;
+using Kickify.Application.Features.Auth.Commands.ChangePassword;
+using Kickify.Application.Features.Auth.Commands.ForgotPassword;
 using Kickify.Application.Features.Auth.Commands.Login;
 using Kickify.Application.Features.Auth.Commands.RegisterPlayer;
+using Kickify.Application.Features.Auth.Commands.RegisterVenueOwner;
+using Kickify.Application.Features.Auth.Commands.ResendOtp;
 using Kickify.Application.Features.Auth.Commands.VerifyMail;
 using Kickify.Domain.Common;
 using MediatR;
@@ -56,6 +60,19 @@ namespace Kickify.Api.Controllers
             return result.MatchCreated(id => $"/user/{id}");
         }
 
+        [HttpPost("auth/register-venue-owner")]
+        public async Task<IResult> RegisterVenueOwner([FromBody] RegisterVenueOwnerRequest request, CancellationToken cancellationToken)
+        {
+            var command = new RegisterVenueOwnerCommand
+            {
+                Email = request.Email,
+                Password = request.Password,
+                FullName = request.FullName
+            };
+            Result<RegisterVenueOwnerCommandResponse> result = await _mediator.Send(command, cancellationToken);
+            return result.MatchCreated(id => $"/user/{id}");
+        }
+
         [HttpPost("auth/login-with-refresh-token")]
         public async Task<IResult> LoginWithRefreshToken([FromBody] LoginWithRefreshTokenRequest request, CancellationToken cancellationToken)
         {
@@ -76,6 +93,41 @@ namespace Kickify.Api.Controllers
                 Otp = request.Otp
             };
             Result<VerifyMailCommandResponse> result = await _mediator.Send(command, cancellationToken);
+            return result.MatchOk();
+        }
+
+        [HttpPost("auth/resend-otp")]
+        public async Task<IResult> ResendOtp([FromBody] ResendOtpRequest request, CancellationToken cancellationToken)
+        {
+            var command = new ResendOtpCommand
+            {
+                UserId = request.UserId
+            };
+            Result<ResendOtpCommandResponse> result = await _mediator.Send(command, cancellationToken);
+            return result.MatchOk();
+        }
+
+        [HttpPost("auth/forgot-password")]
+        public async Task<IResult> ForgotPassword([FromBody] ForgotPasswordRequest request, CancellationToken cancellationToken)
+        {
+            var command = new ForgotPasswordCommand
+            {
+                Email = request.Email
+            };
+            Result<ForgotPasswordCommandResponse> result = await _mediator.Send(command, cancellationToken);
+            return result.MatchOk();
+        }
+
+        [HttpPost("auth/change-password")]
+        public async Task<IResult> ChangePassword([FromBody] ChangePasswordRequest request, CancellationToken cancellationToken)
+        {
+            var command = new ChangePasswordCommand
+            {
+                Email = request.Email,
+                CurrentPassword = request.CurrentPassword,
+                NewPassword = request.NewPassword
+            };
+            Result<ChangePasswordCommandResponse> result = await _mediator.Send(command, cancellationToken);
             return result.MatchOk();
         }
     }

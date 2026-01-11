@@ -7,7 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Features\Auth\Commands\RegisterVenueOwner\" />
     <Folder Include="Features\Comments\" />
     <Folder Include="Features\Posts\Queries\" />
     <Folder Include="Features\Users\Commands\" />

@@ -25,7 +25,7 @@ namespace Kickify.Application.Features.Auth.Commands.RegisterPlayer
 
         public async Task Handle(RegisterPlayerDomainEvent notification, CancellationToken cancellationToken)
         {
-            await _otpStore.StoreAsync(notification.UserId,notification.OtpCode,TimeSpan.FromMinutes(2),cancellationToken);
+            await _otpStore.StoreAsync(notification.UserId,notification.OtpCode,TimeSpan.FromMinutes(5),cancellationToken);
 
             await _mailService.SendOtpAsync(notification.Email, notification.OtpCode);
         }
