@@ -94,6 +94,7 @@ namespace Kickify.Infrastructure
             services.AddScoped<IMailService, MailService>();
             services.AddScoped<IOtpGenerator, OtpGenerator>();
             services.AddScoped<IRedisOtpStore, RedisOtpStore>();
+            services.AddTransient<IResetPasswordGenerator, ResetPasswordGenerator>();
             return services;
         }
         private static IServiceCollection AddRepository(this IServiceCollection services)

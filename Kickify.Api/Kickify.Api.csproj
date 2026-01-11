@@ -39,4 +39,10 @@
     <ProjectReference Include="..\Kickify.Infrastructure\Kickify.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Update="EmailTemplates\ResetPasswordEmail.cshtml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

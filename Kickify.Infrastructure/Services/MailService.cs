@@ -43,5 +43,17 @@ namespace Kickify.Infrastructure.Services
 
             await _smtp.SendMailAsync(msg);
         }
+
+        public async Task SendResetPasswordAsync(string toEmail, string newPassword)
+        {
+            var htmlBody = await _emailTemplateService.RenderResetPasswordEmailAsync(newPassword);
+            var msg = new MailMessage(_options.From, toEmail)
+            {
+                Subject = "[Kickify] Đặt lại mật khẩu",
+                Body = htmlBody,
+                IsBodyHtml = true
+            };
+            await _smtp.SendMailAsync(msg);
+        }
     }
 }
