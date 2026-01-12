@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Kickify.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260106154415_AddRefreshToken2")]
-    partial class AddRefreshToken2
+    [Migration("20260111163823_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -890,8 +890,7 @@ namespace Kickify.Infrastructure.Migrations
 
                     b.Property<string>("PreferredPositions")
                         .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasComment("JSON array: [\"ST\", \"CM\", \"CB\"]");
+                        .HasColumnType("character varying(255)");
 
                     b.Property<int>("ReportCount")
                         .ValueGeneratedOnAdd()
@@ -1096,7 +1095,24 @@ namespace Kickify.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("BucketName")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasDefaultValue("kickify-media")
+                        .HasComment("MinIO bucket name");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasComment("MIME type (e.g., image/jpeg, video/mp4)");
+
                     b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("DisplayOrder")
@@ -1106,42 +1122,80 @@ namespace Kickify.Infrastructure.Migrations
 
                     b.Property<int?>("Duration")
                         .HasColumnType("integer")
-                        .HasComment("For videos (seconds)");
+                        .HasComment("Video duration in seconds");
 
-                    b.Property<long?>("FileSize")
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<long>("FileSize")
                         .HasColumnType("bigint")
-                        .HasComment("In bytes");
+                        .HasComment("File size in bytes");
 
                     b.Property<int?>("Height")
                         .HasColumnType("integer")
-                        .HasComment("For images/videos");
+                        .HasComment("Media height in pixels");
+
+                    b.Property<bool>("IsProcessed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasComment("Processing status for async video encoding");
 
                     b.Property<string>("MediaType")
                         .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("MediaUrl")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<Guid>("PostId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("ThumbnailUrl")
+                    b.Property<string>("PublicUrl")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasComment("Full CDN URL for client access");
+
+                    b.Property<string>("StoragePath")
+                        .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)")
-                        .HasComment("For videos");
+                        .HasComment("MinIO object path (e.g., images/2024/01/15/abc123.jpg)");
+
+                    b.Property<string>("ThumbnailStoragePath")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasComment("MinIO path for video thumbnail");
+
+                    b.Property<string>("ThumbnailUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasComment("Full CDN URL for video thumbnail");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int?>("Width")
                         .HasColumnType("integer")
-                        .HasComment("For images/videos");
+                        .HasComment("Media width in pixels");
 
                     b.HasKey("MediaId");
 
-                    b.HasIndex("DisplayOrder");
+                    b.HasIndex("IsProcessed")
+                        .HasDatabaseName("IX_PostMedia_IsProcessed");
 
-                    b.HasIndex("PostId");
+                    b.HasIndex("MediaType")
+                        .HasDatabaseName("IX_PostMedia_MediaType");
+
+                    b.HasIndex("PostId")
+                        .HasDatabaseName("IX_PostMedia_PostId");
+
+                    b.HasIndex("StoragePath")
+                        .HasDatabaseName("IX_PostMedia_StoragePath");
+
+                    b.HasIndex("PostId", "DisplayOrder")
+                        .HasDatabaseName("IX_PostMedia_PostId_DisplayOrder");
 
                     b.ToTable("PostMedia", "social");
                 });
@@ -1153,6 +1207,12 @@ namespace Kickify.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ReplacedByToken")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("RevokedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Token")
@@ -1387,9 +1447,21 @@ namespace Kickify.Infrastructure.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<string>("Positions")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasComment("JSON array: [\"ST\", \"CM\", \"CB\"]");
+
+                    b.Property<string>("PreferredFoot")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<string>("Role")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<int?>("ShirtNumber")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -1746,7 +1818,7 @@ namespace Kickify.Infrastructure.Migrations
                     b.HasOne("Kickify.Domain.Entities.User", "Sender")
                         .WithMany("ChatMessages")
                         .HasForeignKey("SenderId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("MatchRoom");
@@ -1770,7 +1842,7 @@ namespace Kickify.Infrastructure.Migrations
                     b.HasOne("Kickify.Domain.Entities.User", "User")
                         .WithMany("Comments")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("ParentComment");
@@ -1991,7 +2063,7 @@ namespace Kickify.Infrastructure.Migrations
                     b.HasOne("Kickify.Domain.Entities.User", "User")
                         .WithMany("Posts")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("User");
@@ -2076,7 +2148,7 @@ namespace Kickify.Infrastructure.Migrations
                     b.HasOne("Kickify.Domain.Entities.User", "User")
                         .WithMany("RoomParticipations")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("MatchRoom");
@@ -2088,7 +2160,8 @@ namespace Kickify.Infrastructure.Migrations
                 {
                     b.HasOne("Kickify.Domain.Entities.User", "User")
                         .WithMany("SystemLogs")
-                        .HasForeignKey("UserId");
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("User");
                 });
@@ -2137,7 +2210,7 @@ namespace Kickify.Infrastructure.Migrations
                     b.HasOne("Kickify.Domain.Entities.User", "User")
                         .WithMany("VenueReviews")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Kickify.Domain.Entities.Venue", "Venue")

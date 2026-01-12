@@ -1,0 +1,21 @@
+using Kickify.Application.Abstractions.Persistence;
+using Kickify.Domain.Entities;
+using Kickify.Domain.Enums;
+
+namespace Kickify.Application.Abstractions.Repositories
+{
+    public interface IVenueRepository : IGenericRepository<Venue>
+    {
+        Task<Venue?> GetVenueWithDetailsAsync(Guid venueId, CancellationToken cancellationToken = default);
+        Task<bool> IsOwnerAsync(Guid venueId, Guid userId, CancellationToken cancellationToken = default);
+        Task<(IEnumerable<Venue> Venues, int Total)> SearchVenuesAsync(
+            decimal? latitude = null,
+            decimal? longitude = null,
+            double? radiusKm = null,
+            DateTime? date = null,
+            FieldType? sportType = null,
+            int page = 1,
+            int pageSize = 10,
+            CancellationToken cancellationToken = default);
+    }
+}

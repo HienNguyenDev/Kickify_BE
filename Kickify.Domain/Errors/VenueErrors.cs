@@ -1,0 +1,31 @@
+using Kickify.Domain.Common;
+
+namespace Kickify.Domain.Errors
+{
+    public static class VenueErrors
+    {
+        public static Error NotFound(Guid? venueId) => Error.NotFound(
+            "Venues.NotFound",
+            $"The venue with Id = '{venueId}' was not found");
+
+        public static readonly Error OwnerNotFound = Error.NotFound(
+            "Venues.OwnerNotFound",
+            "The venue owner was not found");
+
+        public static readonly Error InvalidLocation = Error.Problem(
+            "Venues.InvalidLocation",
+            "Invalid latitude or longitude coordinates");
+
+        public static readonly Error InvalidOperatingHours = Error.Problem(
+            "Venues.InvalidOperatingHours",
+            "Invalid operating hours. Check day of week and time values");
+
+        public static readonly Error NoFieldsProvided = Error.Problem(
+            "Venues.NoFieldsProvided",
+            "At least one field must be provided when creating a venue");
+
+        public static readonly Error Unauthorized = Error.Problem(
+            "Venues.Unauthorized",
+            "You are not authorized to perform this action on this venue");
+    }
+}

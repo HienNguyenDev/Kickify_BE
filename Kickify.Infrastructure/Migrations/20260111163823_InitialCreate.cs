@@ -64,6 +64,9 @@ namespace Kickify.Infrastructure.Migrations
                     DateOfBirth = table.Column<DateTime>(type: "date", nullable: true),
                     Gender = table.Column<string>(type: "text", nullable: true),
                     Role = table.Column<string>(type: "text", nullable: false),
+                    Positions = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true, comment: "JSON array: [\"ST\", \"CM\", \"CB\"]"),
+                    ShirtNumber = table.Column<int>(type: "integer", nullable: true),
+                    PreferredFoot = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
                     IdentityId = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     IsEmailVerified = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
@@ -233,7 +236,6 @@ namespace Kickify.Infrastructure.Migrations
                 {
                     ProfileId = table.Column<Guid>(type: "uuid", nullable: false),
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
-                    PreferredPositions = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true, comment: "JSON array: [\"ST\", \"CM\", \"CB\"]"),
                     CurrentElo = table.Column<int>(type: "integer", nullable: false, defaultValue: 1000),
                     TrustScore = table.Column<decimal>(type: "numeric(5,2)", nullable: false, defaultValue: 100.00m),
                     TotalMatches = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
@@ -245,6 +247,7 @@ namespace Kickify.Infrastructure.Migrations
                     MaxWinStreak = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
                     AfkCount = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
                     ReportCount = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    PreferredPositions = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     DeletedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
@@ -289,6 +292,30 @@ namespace Kickify.Infrastructure.Migrations
                         principalSchema: "identity",
                         principalTable: "Users",
                         principalColumn: "UserId",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RefreshTokens",
+                schema: "identity",
+                columns: table => new
+                {
+                    TokenId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Token = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    RevokedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    ReplacedByToken = table.Column<string>(type: "text", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RefreshTokens", x => x.TokenId);
+                    table.ForeignKey(
+                        name: "FK_RefreshTokens_Users_UserId",
+                        column: x => x.UserId,
+                        principalSchema: "identity",
+                        principalTable: "Users",
+                        principalColumn: "UserId",
                         onDelete: ReferentialAction.Cascade);
                 });
 
@@ -317,7 +344,8 @@ namespace Kickify.Infrastructure.Migrations
                         column: x => x.UserId,
                         principalSchema: "identity",
                         principalTable: "Users",
-                        principalColumn: "UserId");
+                        principalColumn: "UserId",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -396,7 +424,7 @@ namespace Kickify.Infrastructure.Migrations
                         principalSchema: "identity",
                         principalTable: "Users",
                         principalColumn: "UserId",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -435,15 +463,23 @@ namespace Kickify.Infrastructure.Migrations
                 {
                     MediaId = table.Column<Guid>(type: "uuid", nullable: false),
                     PostId = table.Column<Guid>(type: "uuid", nullable: false),
-                    MediaUrl = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
-                    MediaType = table.Column<string>(type: "text", nullable: false),
-                    ThumbnailUrl = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true, comment: "For videos"),
-                    FileSize = table.Column<long>(type: "bigint", nullable: true, comment: "In bytes"),
-                    Duration = table.Column<int>(type: "integer", nullable: true, comment: "For videos (seconds)"),
-                    Width = table.Column<int>(type: "integer", nullable: true, comment: "For images/videos"),
-                    Height = table.Column<int>(type: "integer", nullable: true, comment: "For images/videos"),
+                    FileName = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                    StoragePath = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false, comment: "MinIO object path (e.g., images/2024/01/15/abc123.jpg)"),
+                    PublicUrl = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: false, comment: "Full CDN URL for client access"),
+                    ContentType = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false, comment: "MIME type (e.g., image/jpeg, video/mp4)"),
+                    BucketName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false, defaultValue: "kickify-media", comment: "MinIO bucket name"),
+                    MediaType = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    FileSize = table.Column<long>(type: "bigint", nullable: false, comment: "File size in bytes"),
+                    ThumbnailStoragePath = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true, comment: "MinIO path for video thumbnail"),
+                    ThumbnailUrl = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true, comment: "Full CDN URL for video thumbnail"),
+                    Duration = table.Column<int>(type: "integer", nullable: true, comment: "Video duration in seconds"),
+                    Width = table.Column<int>(type: "integer", nullable: true, comment: "Media width in pixels"),
+                    Height = table.Column<int>(type: "integer", nullable: true, comment: "Media height in pixels"),
                     DisplayOrder = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    IsProcessed = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true, comment: "Processing status for async video encoding"),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    DeletedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -794,7 +830,7 @@ namespace Kickify.Infrastructure.Migrations
                         principalSchema: "identity",
                         principalTable: "Users",
                         principalColumn: "UserId",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -1010,7 +1046,7 @@ namespace Kickify.Infrastructure.Migrations
                         principalSchema: "identity",
                         principalTable: "Users",
                         principalColumn: "UserId",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -1044,7 +1080,7 @@ namespace Kickify.Infrastructure.Migrations
                         principalSchema: "identity",
                         principalTable: "Users",
                         principalColumn: "UserId",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_VenueReviews_Venues_VenueId",
                         column: x => x.VenueId,
@@ -1350,16 +1386,34 @@ namespace Kickify.Infrastructure.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_PostMedia_DisplayOrder",
+                name: "IX_PostMedia_IsProcessed",
                 schema: "social",
                 table: "PostMedia",
-                column: "DisplayOrder");
+                column: "IsProcessed");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PostMedia_MediaType",
+                schema: "social",
+                table: "PostMedia",
+                column: "MediaType");
 
             migrationBuilder.CreateIndex(
                 name: "IX_PostMedia_PostId",
                 schema: "social",
                 table: "PostMedia",
                 column: "PostId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PostMedia_PostId_DisplayOrder",
+                schema: "social",
+                table: "PostMedia",
+                columns: new[] { "PostId", "DisplayOrder" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PostMedia_StoragePath",
+                schema: "social",
+                table: "PostMedia",
+                column: "StoragePath");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Posts_CreatedAt",
@@ -1377,6 +1431,19 @@ namespace Kickify.Infrastructure.Migrations
                 name: "IX_Posts_UserId",
                 schema: "social",
                 table: "Posts",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RefreshTokens_Token",
+                schema: "identity",
+                table: "RefreshTokens",
+                column: "Token",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RefreshTokens_UserId",
+                schema: "identity",
+                table: "RefreshTokens",
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
@@ -1583,6 +1650,10 @@ namespace Kickify.Infrastructure.Migrations
             migrationBuilder.DropTable(
                 name: "PostMedia",
                 schema: "social");
+
+            migrationBuilder.DropTable(
+                name: "RefreshTokens",
+                schema: "identity");
 
             migrationBuilder.DropTable(
                 name: "RoomInvitations",
