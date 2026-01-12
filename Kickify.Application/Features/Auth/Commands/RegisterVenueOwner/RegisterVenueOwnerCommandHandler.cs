@@ -38,8 +38,8 @@ namespace Kickify.Application.Features.Auth.Commands.RegisterVenueOwner
 
         public async Task<Result<RegisterVenueOwnerCommandResponse>> Handle(RegisterVenueOwnerCommand request, CancellationToken cancellationToken)
         {
-            var userExist = await _userRepository.IsEmailExistsAsync(request.Email);
-            if (userExist)
+            var userExist = await _userRepository.GetUserByEmailIgnoreFilterAsync(request.Email);
+            if (userExist?.DeletedAt == null)
             {
                 return Result.Failure<RegisterVenueOwnerCommandResponse>(UserErrors.EmailAlreadyExists);
             }

@@ -22,5 +22,6 @@ namespace Kickify.Application.Abstractions.Repositories
             bool includeDeleted = false,
             CancellationToken cancellationToken = default);
         Task<User?> GetUserWithDetailsAsync(Guid userId, CancellationToken cancellationToken = default);
+        Task<User?> GetUserByEmailIgnoreFilterAsync(string email);
     }
 }
