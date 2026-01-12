@@ -91,6 +91,13 @@ namespace Kickify.Infrastructure.Repositories
                 .Include(u => u.NotificationPreference)
                 .FirstOrDefaultAsync(u => u.UserId == userId, cancellationToken);
         }
+
+        public async Task<User?> GetUserByEmailIgnoreFilterAsync(string email)
+        {
+            return await _dbSet
+                .IgnoreQueryFilters()  
+                .FirstOrDefaultAsync(u => u.Email == email);
+        }
     }
 }
 
