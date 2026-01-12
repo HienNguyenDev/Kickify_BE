@@ -37,7 +37,7 @@ namespace Kickify.Application.Features.Auth.Commands.ForgotPassword
             }
 
             user.PasswordHash = _resetPasswordGenerator.GenerateRandomPassword();
-
+            _userRepository.Update(user);
             user.Raise(new ForgotPasswordDomainEvent(user.Email, user.PasswordHash));
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 

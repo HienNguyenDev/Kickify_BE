@@ -30,19 +30,14 @@ namespace Kickify.Application.Features.Users.Commands.DeleteUser
                 return Result.Failure<DeleteUserCommandResponse>(UserErrors.NotFound(request.UserId));
             }
 
-            // Soft delete
-            user.DeletedAt = DateTime.UtcNow;
-            user.IsActive = false;
-            user.UpdatedAt = DateTime.UtcNow;
-
-            _userRepository.Update(user);
+            _userRepository.Remove(user);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             var response = new DeleteUserCommandResponse
             {
                 UserId = user.UserId,
                 DeletedAt = user.DeletedAt.Value
-            };
+            };  
 
             return Result.Success(response);
         }
