@@ -21,5 +21,10 @@ namespace Kickify.Infrastructure.Authentication
 
             return userRecord.Uid;
         }
+
+        public async Task DeleteUserAsync(string identityId)
+        {
+            await FirebaseAuth.DefaultInstance.DeleteUserAsync(identityId);
+        }
     }
 }

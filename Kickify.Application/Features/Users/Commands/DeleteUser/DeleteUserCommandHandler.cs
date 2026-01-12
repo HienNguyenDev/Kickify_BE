@@ -1,3 +1,4 @@
+using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
@@ -10,13 +11,16 @@ namespace Kickify.Application.Features.Users.Commands.DeleteUser
     {
         private readonly IUserRepository _userRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IAuthenticationServices _authenticationServices;
 
         public DeleteUserCommandHandler(
             IUserRepository userRepository,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            IAuthenticationServices authenticationServices)
         {
             _userRepository = userRepository;
             _unitOfWork = unitOfWork;
+            _authenticationServices = authenticationServices;
         }
 
         public async Task<Result<DeleteUserCommandResponse>> Handle(
@@ -30,19 +34,15 @@ namespace Kickify.Application.Features.Users.Commands.DeleteUser
                 return Result.Failure<DeleteUserCommandResponse>(UserErrors.NotFound(request.UserId));
             }
 
-            // Soft delete
-            user.DeletedAt = DateTime.UtcNow;
-            user.IsActive = false;
-            user.UpdatedAt = DateTime.UtcNow;
-
-            _userRepository.Update(user);
+            _userRepository.Remove(user);
+            await _authenticationServices.DeleteUserAsync(user.IdentityId);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             var response = new DeleteUserCommandResponse
             {
                 UserId = user.UserId,
                 DeletedAt = user.DeletedAt.Value
-            };
+            };  
 
             return Result.Success(response);
         }
