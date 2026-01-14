@@ -37,9 +37,12 @@ namespace Kickify.Application.Features.Auth.Commands.RegisterPlayer
         public async Task<Result<RegisterPlayerCommandResponse>> Handle(RegisterPlayerCommand request, CancellationToken cancellationToken)
         {
             var userExist = await _userRepository.GetUserByEmailIgnoreFilterAsync(request.Email);
-            if (userExist?.DeletedAt == null)
+            if (userExist != null)
             {
-                return Result.Failure<RegisterPlayerCommandResponse>(UserErrors.EmailAlreadyExists);
+                if (userExist?.DeletedAt == null)
+                {
+                    return Result.Failure<RegisterPlayerCommandResponse>(UserErrors.EmailAlreadyExists);
+                }
             }
 
             var identityId = await _authenticationServices.RegisterAsync(request.Email, request.Password);
