@@ -19,10 +19,6 @@ public class PlayerProfileConfiguration : IEntityTypeConfiguration<PlayerProfile
         builder.Property(pp => pp.UserId)
             .IsRequired();
 
-        builder.Property(p => p.PreferredPositions)
-            .HasMaxLength(255)
-            .HasComment("JSON array: [\"ST\", \"CM\", \"CB\"]");
-
         builder.Property(p => p.CurrentElo)
             .HasDefaultValue(1000);
 
@@ -56,5 +52,8 @@ public class PlayerProfileConfiguration : IEntityTypeConfiguration<PlayerProfile
 
         builder.Property(p => p.ReportCount)
             .HasDefaultValue(0);
+
+        builder.Property(p => p.PreferredPositions)
+            .HasMaxLength(255);
     }
 }

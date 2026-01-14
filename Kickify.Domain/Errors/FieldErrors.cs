@@ -1,0 +1,27 @@
+using Kickify.Domain.Common;
+
+namespace Kickify.Domain.Errors
+{
+    public static class FieldErrors
+    {
+        public static Error NotFound(Guid? fieldId) => Error.NotFound(
+            "Fields.NotFound",
+            $"The field with Id = '{fieldId}' was not found");
+
+        public static readonly Error VenueNotFound = Error.NotFound(
+            "Fields.VenueNotFound",
+            "The venue associated with this field was not found");
+
+        public static readonly Error InvalidHourlyRate = Error.Problem(
+            "Fields.InvalidHourlyRate",
+            "Hourly rate must be greater than zero");
+
+        public static readonly Error FieldInactive = Error.Problem(
+            "Fields.FieldInactive",
+            "This field is currently inactive and cannot be booked");
+
+        public static readonly Error NotAvailable = Error.Conflict(
+            "Fields.NotAvailable",
+            "The field is not available for the requested time slot");
+    }
+}

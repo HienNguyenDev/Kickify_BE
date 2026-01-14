@@ -43,7 +43,7 @@ namespace Kickify.Infrastructure.Persistence
 
         public void Remove(T entity)
         {
-            _dbSet.Remove(entity);
+            _context.Entry(entity).State = EntityState.Deleted;
         }
 
         public async Task<(IEnumerable<T> Items, int Total)> GetPagedAsync(
