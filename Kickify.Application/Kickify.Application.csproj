@@ -7,8 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Features\Comments\" />
-    <Folder Include="Features\Posts\Queries\" />
+    <Folder Include="Features\Comments\Commands\" />
+    <Folder Include="Features\Comments\Queries\" />
     <Folder Include="Features\Users\Commands\" />
     <Folder Include="Features\Users\Queries\" />
   </ItemGroup>
