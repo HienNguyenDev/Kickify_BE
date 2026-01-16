@@ -14,7 +14,7 @@ builder.Host.UseSerilog((context, loggerConfig) => loggerConfig.ReadFrom.Configu
 builder.Services.AddSwaggerGenWithAuth();
 builder.Services
             .AddApplication()
-            .AddPresentation()
+            .AddPresentation(builder.Configuration, builder.Environment)
             .AddInfrastructure(builder.Configuration);
 builder.Services.AddHealthChecks();
 builder.WebHost.ConfigureKestrel(options =>
