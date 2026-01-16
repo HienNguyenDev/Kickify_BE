@@ -1,4 +1,8 @@
 ﻿using Kickify.Api.Infrastructure;
+using Kickify.Api.Services;
+using Kickify.Application.Abstractions.Services;
+using Microsoft.Extensions.Configuration;
+using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -6,7 +10,8 @@ namespace Kickify.Api
 {
     public static class DependencyInjection
     {
-        public static IServiceCollection AddPresentation(this IServiceCollection services)
+        public static IServiceCollection AddPresentation(this IServiceCollection services, IConfiguration configuration,
+        IWebHostEnvironment environment)
         {
             services.AddEndpointsApiExplorer();
             services.AddSwaggerGen();
@@ -17,7 +22,6 @@ namespace Kickify.Api
                         opts.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
                         opts.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
                         opts.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.Never;
-                        //opts.JsonSerializerOptions.Converters.Add(new TimeOnlyJsonConverter());
                     }); ;
 
             services.AddExceptionHandler<GlobalExceptionHandler>();
@@ -25,13 +29,33 @@ namespace Kickify.Api
 
             services.AddCors(options =>
             {
-                options.AddPolicy("AllowAll", builder =>
+                options.AddPolicy("AllowAll", policy =>
                 {
-                    builder.AllowAnyOrigin()
-                           .AllowAnyMethod()
-                           .AllowAnyHeader();
+                    if (environment.IsDevelopment())
+                    {
+                        policy
+                            .SetIsOriginAllowed(_ => true)
+                            .AllowAnyMethod()
+                            .AllowAnyHeader()
+                            .AllowCredentials();
+                    }
+                    else
+                    {
+                        var allowedOrigins = configuration
+                            .GetSection("AllowedOrigins")
+                            .Get<string[]>() ?? Array.Empty<string>();
+
+                        policy
+                            .WithOrigins(allowedOrigins)
+                            .AllowAnyMethod()
+                            .AllowAnyHeader()
+                            .AllowCredentials();
+                    }
                 });
             });
+
+            services.AddScoped<IChatHubService, ChatHubService>();
+
             return services;
         }
     }

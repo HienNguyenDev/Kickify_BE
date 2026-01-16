@@ -1,6 +1,7 @@
 using HealthChecks.UI.Client;
 using Kickify.Api;
 using Kickify.Api.Extensions;
+using Kickify.Api.Hubs;
 using Kickify.Application;
 using Kickify.Infrastructure;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -13,7 +14,7 @@ builder.Host.UseSerilog((context, loggerConfig) => loggerConfig.ReadFrom.Configu
 builder.Services.AddSwaggerGenWithAuth();
 builder.Services
             .AddApplication()
-            .AddPresentation()
+            .AddPresentation(builder.Configuration, builder.Environment)
             .AddInfrastructure(builder.Configuration);
 builder.Services.AddHealthChecks();
 builder.WebHost.ConfigureKestrel(options =>
@@ -42,10 +43,14 @@ app.UseExceptionHandler();
 
 app.UseHttpsRedirection();
 
+app.UseStaticFiles();
+
 app.UseAuthentication();
 
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.MapHub<ChatHub>("/hubs/chat");
 
 app.Run();
