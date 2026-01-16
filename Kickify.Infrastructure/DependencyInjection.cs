@@ -26,6 +26,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Kickify.Infrastructure.ChatConnection;
 
 namespace Kickify.Infrastructure
 {
@@ -39,7 +40,8 @@ namespace Kickify.Infrastructure
             .AddRepository()
             .AddFirebase()
             .AddRedisStore(configuration)
-            .AddMinioStorage(configuration);
+            .AddMinioStorage(configuration)
+            .AddSignalRServices();
 
         private static IServiceCollection AddAuthenticationInternal(this IServiceCollection services, IConfiguration configuration)
         {
@@ -110,6 +112,7 @@ namespace Kickify.Infrastructure
             services.AddScoped<IVenueWalletRepository, VenueWalletRepository>();
             services.AddScoped<IMatchRoomRepository, MatchRoomRepository>();
             services.AddScoped<IPostLikeRepository, PostLikeRepository>();
+            services.AddScoped<IChatMessageRepository, ChatMessageRepository>();
             return services;
         }
         private static IServiceCollection AddFirebase(this IServiceCollection services)
@@ -148,6 +151,13 @@ namespace Kickify.Infrastructure
 
             services.AddScoped<IStorageService, MinioStorageService>();
 
+            return services;
+        }
+
+        private static IServiceCollection AddSignalRServices(this IServiceCollection services)
+        {
+            services.AddSignalR();
+            services.AddSingleton<ConnectionMapping>();
             return services;
         }
     }

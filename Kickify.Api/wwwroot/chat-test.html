@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Kickify Chat Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #1a1f2e; color: #fff; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .section { background: #2a3545; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        h2 { color: #7fff6f; margin-top: 0; }
+        input, button, textarea { padding: 10px; margin: 5px 0; border-radius: 4px; border: 1px solid #3a4555; }
+        input, textarea { background: #1a1f2e; color: #fff; width: 100%; box-sizing: border-box; }
+        button { background: #7fff6f; color: #1a1f2e; cursor: pointer; font-weight: bold; }
+        button:hover { background: #5fdf4f; }
+        button:disabled { background: #555; cursor: not-allowed; }
+        .status { padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .connected { background: #2a5530; }
+        .disconnected { background: #553030; }
+        .messages { height: 300px; overflow-y: auto; background: #1a1f2e; padding: 10px; border-radius: 4px; }
+        .message { padding: 8px; margin: 5px 0; border-radius: 4px; }
+        .message.sent { background: #7fff6f; color: #1a1f2e; text-align: right; }
+        .message.received { background: #3a4555; }
+        .message.system { background: #ffd700; color: #1a1f2e; text-align: center; font-style: italic; }
+        .log { font-size: 12px; color: #888; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>?? Kickify Chat Test</h1>
+        
+        <div class="section">
+            <h2>1. Authentication</h2>
+            <input type="text" id="accessToken" placeholder="Paste your JWT Access Token here" />
+            <input type="text" id="hubUrl" value="https://localhost:7109/hubs/chat" placeholder="Hub URL" />
+            <br/>
+            <button id="connectBtn" onclick="connect()">Connect</button>
+            <button id="disconnectBtn" onclick="disconnect()" disabled>Disconnect</button>
+            <div id="connectionStatus" class="status disconnected">Disconnected</div>
+        </div>
+
+        <div class="section">
+            <h2>2. Send Message</h2>
+            <input type="text" id="receiverId" placeholder="Receiver User ID (GUID)" />
+            <textarea id="messageText" placeholder="Your message..." rows="3"></textarea>
+            <select id="messageType">
+                <option value="0">Text</option>
+                <option value="1">Emoji</option>
+                <option value="2">System</option>
+            </select>
+            <button onclick="sendMessage()" id="sendBtn" disabled>Send Message</button>
+        </div>
+
+        <div class="section">
+            <h2>3. Actions</h2>
+            <button onclick="getOnlineUsers()" id="onlineBtn" disabled>Get Online Users</button>
+            <button onclick="getConversation()" id="convBtn" disabled>Get Conversation</button>
+            <input type="text" id="otherUserId" placeholder="Other User ID for conversation" />
+        </div>
+
+        <div class="section">
+            <h2>4. Messages</h2>
+            <div id="messages" class="messages"></div>
+        </div>
+
+        <div class="section">
+            <h2>5. Logs</h2>
+            <div id="logs" class="messages log"></div>
+        </div>
+    </div>
+
+    <script>
+        let connection = null;
+
+        function log(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const time = new Date().toLocaleTimeString();
+            logsDiv.innerHTML += `<div>[${time}] ${message}</div>`;
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+
+        function addMessage(content, type = 'received') {
+            const messagesDiv = document.getElementById('messages');
+            messagesDiv.innerHTML += `<div class="message ${type}">${content}</div>`;
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function updateConnectionStatus(connected) {
+            const status = document.getElementById('connectionStatus');
+            status.className = `status ${connected ? 'connected' : 'disconnected'}`;
+            status.textContent = connected ? 'Connected ?' : 'Disconnected';
+            
+            document.getElementById('connectBtn').disabled = connected;
+            document.getElementById('disconnectBtn').disabled = !connected;
+            document.getElementById('sendBtn').disabled = !connected;
+            document.getElementById('onlineBtn').disabled = !connected;
+            document.getElementById('convBtn').disabled = !connected;
+        }
+
+        async function connect() {
+            const token = document.getElementById('accessToken').value;
+            const hubUrl = document.getElementById('hubUrl').value;
+
+            if (!token) {
+                alert('Please enter your JWT token');
+                return;
+            }
+
+            connection = new signalR.HubConnectionBuilder()
+                .withUrl(hubUrl, {
+                    accessTokenFactory: () => token
+                })
+                .withAutomaticReconnect()
+                .configureLogging(signalR.LogLevel.Information)
+                .build();
+
+            // Event handlers
+            connection.on("ReceiveMessage", (message) => {
+                log(`ReceiveMessage: ${JSON.stringify(message)}`);
+                addMessage(`<b>${message.senderName}:</b> ${message.messageText}`, 'received');
+            });
+
+            connection.on("UserOnlineStatus", (data) => {
+                log(`UserOnlineStatus: ${JSON.stringify(data)}`);
+                addMessage(`User ${data.userId} is ${data.isOnline ? 'online' : 'offline'}`, 'system');
+            });
+
+            connection.on("OnlineUsers", (users) => {
+                log(`OnlineUsers: ${JSON.stringify(users)}`);
+                addMessage(`Online users: ${users.length > 0 ? users.join(', ') : 'None'}`, 'system');
+            });
+
+            connection.on("UserTyping", (data) => {
+                log(`UserTyping: ${JSON.stringify(data)}`);
+                addMessage(`${data.userName} is typing...`, 'system');
+            });
+
+            connection.on("UserStopTyping", (data) => {
+                log(`UserStopTyping: ${JSON.stringify(data)}`);
+            });
+
+            connection.on("MessagesRead", (data) => {
+                log(`MessagesRead: ${JSON.stringify(data)}`);
+                addMessage(`Messages read by ${data.byUserId}`, 'system');
+            });
+
+            connection.on("ReceiveConversation", (data) => {
+                log(`ReceiveConversation: ${JSON.stringify(data)}`);
+                addMessage(`Conversation with ${data.otherUserName}: ${data.messages.length} messages`, 'system');
+                data.messages.forEach(m => {
+                    addMessage(`<b>${m.senderName}:</b> ${m.messageText}`, m.isMine ? 'sent' : 'received');
+                });
+            });
+
+            connection.on("Error", (error) => {
+                log(`Error: ${JSON.stringify(error)}`, 'error');
+                addMessage(`Error: ${error.message}`, 'system');
+            });
+
+            connection.onclose((error) => {
+                log(`Connection closed: ${error || 'No error'}`);
+                updateConnectionStatus(false);
+            });
+
+            connection.onreconnecting((error) => {
+                log(`Reconnecting: ${error || 'No error'}`);
+            });
+
+            connection.onreconnected((connectionId) => {
+                log(`Reconnected: ${connectionId}`);
+                updateConnectionStatus(true);
+            });
+
+            try {
+                await connection.start();
+                log('Connected to SignalR hub');
+                updateConnectionStatus(true);
+            } catch (err) {
+                log(`Connection error: ${err}`);
+                console.error(err);
+            }
+        }
+
+        async function disconnect() {
+            if (connection) {
+                await connection.stop();
+                log('Disconnected');
+                updateConnectionStatus(false);
+            }
+        }
+
+        async function sendMessage() {
+            const receiverId = document.getElementById('receiverId').value;
+            const messageText = document.getElementById('messageText').value;
+            const messageType = parseInt(document.getElementById('messageType').value);
+
+            if (!receiverId || !messageText) {
+                alert('Please enter receiver ID and message');
+                return;
+            }
+
+            try {
+                await connection.invoke("SendPrivateMessage", receiverId, messageText, messageType);
+                log(`Message sent to ${receiverId}`);
+                addMessage(`<b>You:</b> ${messageText}`, 'sent');
+                document.getElementById('messageText').value = '';
+            } catch (err) {
+                log(`Send error: ${err}`);
+            }
+        }
+
+        async function getOnlineUsers() {
+            try {
+                await connection.invoke("GetOnlineUsers");
+                log('Requested online users');
+            } catch (err) {
+                log(`Error: ${err}`);
+            }
+        }
+
+        async function getConversation() {
+            const otherUserId = document.getElementById('otherUserId').value;
+            if (!otherUserId) {
+                alert('Please enter other user ID');
+                return;
+            }
+
+            try {
+                await connection.invoke("GetConversation", otherUserId, 1, 50);
+                log(`Requested conversation with ${otherUserId}`);
+            } catch (err) {
+                log(`Error: ${err}`);
+            }
+        }
+
+        // Typing indicator
+        let typingTimeout;
+        document.getElementById('messageText').addEventListener('input', async () => {
+            const receiverId = document.getElementById('receiverId').value;
+            if (connection && receiverId) {
+                await connection.invoke("Typing", receiverId);
+                clearTimeout(typingTimeout);
+                typingTimeout = setTimeout(async () => {
+                    await connection.invoke("StopTyping", receiverId);
+                }, 2000);
+            }
+        });
+    </script>
+</body>
+</html>
