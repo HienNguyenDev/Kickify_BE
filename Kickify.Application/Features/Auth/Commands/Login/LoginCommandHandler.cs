@@ -46,12 +46,12 @@ namespace Kickify.Application.Features.Auth.Commands.Login
             {
                 return Result.Failure<LoginCommandResponse>(UserErrors.WrongPassword);
             }
-            if (user.IsActive == false)
+            if (!user.IsActive)
             {
                 return Result.Failure<LoginCommandResponse>(UserErrors.InActive);
             }
 
-            if (user.IsEmailVerified == false)
+            if (!user.IsEmailVerified)
             {
                 return Result.Failure<LoginCommandResponse>(UserErrors.IsNotVerified);
             }
