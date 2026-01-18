@@ -1,0 +1,156 @@
+using Kickify.Api.Extensions;
+using Kickify.Api.Infrastructure;
+using Kickify.Api.Requests;
+using Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom;
+using Kickify.Application.Features.MatchRooms.Commands.JoinRoom;
+using Kickify.Application.Features.MatchRooms.Commands.LeaveRoom;
+using Kickify.Application.Features.MatchRooms.Commands.UpdateParticipant;
+using Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById;
+using Kickify.Application.Features.MatchRooms.Queries.GetMatchRooms;
+using MediatR;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+
+namespace Kickify.Api.Controllers
+{
+    [ApiController]
+    [Route("api/match-rooms")]
+    [Authorize]
+    public class MatchRoomsController : ControllerBase
+    {
+        private readonly ISender _sender;
+        private readonly ILogger<MatchRoomsController> _logger;
+
+        public MatchRoomsController(ISender sender, ILogger<MatchRoomsController> logger)
+        {
+            _sender = sender;
+            _logger = logger;
+        }
+
+        /// <summary>
+        /// Create a new match room
+        /// </summary>
+        [HttpPost]
+        public async Task<IResult> CreateRoom([FromBody] CreateMatchRoomRequest request, CancellationToken cancellationToken)
+        {
+            var userId = GetCurrentUserId();
+
+            var command = new CreateMatchRoomCommand(
+                userId,
+                request.FieldId,
+                request.MatchDate,
+                request.StartTime,
+                request.DurationMinutes,
+                request.MatchFormat,
+                request.Description,
+                request.Rules,
+                request.DepositPerPerson
+            );
+
+            var result = await _sender.Send(command, cancellationToken);
+
+            if (result.IsSuccess)
+            {
+                return Results.Created($"/api/match-rooms/{result.Value.RoomId}", ApiResult<CreateMatchRoomResponse>.Success(result.Value));
+            }
+
+            return CustomResults.Problem(result);
+        }
+
+        /// <summary>
+        /// Get room detail by ID
+        /// </summary>
+        [HttpGet("{id}")]
+        public async Task<IResult> GetRoomById(Guid id, CancellationToken cancellationToken)
+        {
+            var query = new GetMatchRoomByIdQuery(id);
+
+            var result = await _sender.Send(query, cancellationToken);
+
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Search/Filter rooms
+        /// </summary>
+        [HttpGet]
+        public async Task<IResult> GetRooms(
+            [FromQuery] DateTime? date,
+            [FromQuery] string? matchFormat,
+            [FromQuery] bool? availableOnly,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
+            CancellationToken cancellationToken = default)
+        {
+            var query = new GetMatchRoomsQuery(date, matchFormat, availableOnly, page, pageSize);
+
+            var result = await _sender.Send(query, cancellationToken);
+
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Join a room
+        /// </summary>
+        [HttpPost("{id}/join")]
+        public async Task<IResult> JoinRoom(Guid id, CancellationToken cancellationToken)
+        {
+            var userId = GetCurrentUserId();
+
+            var command = new JoinRoomCommand(userId, id);
+
+            var result = await _sender.Send(command, cancellationToken);
+
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Leave a room
+        /// </summary>
+        [HttpPost("{id}/leave")]
+        public async Task<IResult> LeaveRoom(Guid id, CancellationToken cancellationToken)
+        {
+            var userId = GetCurrentUserId();
+
+            var command = new LeaveRoomCommand(userId, id);
+
+            var result = await _sender.Send(command, cancellationToken);
+
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Update participant's team and position
+        /// </summary>
+        [HttpPut("{id}/participants/me")]
+        public async Task<IResult> UpdateParticipant(
+            Guid id,
+            [FromBody] UpdateParticipantRequest request,
+            CancellationToken cancellationToken)
+        {
+            var userId = GetCurrentUserId();
+
+            var command = new UpdateParticipantCommand(
+                userId,
+                id,
+                request.TeamAssignment,
+                request.Position
+            );
+
+            var result = await _sender.Send(command, cancellationToken);
+
+            return result.MatchOk();
+        }
+
+        private Guid GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            {
+                throw new UnauthorizedAccessException("User ID not found in token");
+            }
+            return userId;
+        }
+    }
+}
