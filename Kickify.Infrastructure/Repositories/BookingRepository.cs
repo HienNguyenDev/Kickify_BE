@@ -44,5 +44,30 @@ namespace Kickify.Infrastructure.Repositories
                 .Select(b => new ValueTuple<TimeSpan, TimeSpan>(b.StartTime, b.EndTime))
                 .ToListAsync(cancellationToken);
         }
+
+        /// <summary>
+        /// Check if a time slot overlaps with any existing bookings
+        /// Returns true if available (no overlap), false if overlaps
+        /// </summary>
+        public async Task<bool> IsTimeSlotAvailableAsync(
+            Guid fieldId,
+            DateTime date,
+            TimeSpan startTime,
+            TimeSpan endTime,
+            CancellationToken cancellationToken = default)
+        {
+            // Check for any overlapping bookings
+            // Two time slots overlap if: startTime1 < endTime2 AND endTime1 > startTime2
+            var hasOverlap = await _dbSet
+                .AsNoTracking()
+                .AnyAsync(b => 
+                    b.FieldId == fieldId && 
+                    b.BookingDate == date &&
+                    b.StartTime < endTime &&
+                    b.EndTime > startTime,
+                    cancellationToken);
+
+            return !hasOverlap; // Available if no overlap
+        }
     }
 }

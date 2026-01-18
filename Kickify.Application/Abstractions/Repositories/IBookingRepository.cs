@@ -14,5 +14,15 @@ namespace Kickify.Application.Abstractions.Repositories
             Guid fieldId,
             DateTime date,
             CancellationToken cancellationToken = default);
+        
+        /// <summary>
+        /// Check if a time slot overlaps with any existing bookings
+        /// </summary>
+        Task<bool> IsTimeSlotAvailableAsync(
+            Guid fieldId,
+            DateTime date,
+            TimeSpan startTime,
+            TimeSpan endTime,
+            CancellationToken cancellationToken = default);
     }
 }

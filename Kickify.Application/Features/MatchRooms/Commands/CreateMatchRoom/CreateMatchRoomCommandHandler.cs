@@ -14,6 +14,8 @@ namespace Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom
         private readonly IMatchRoomRepository _matchRoomRepository;
         private readonly IFieldRepository _fieldRepository;
         private readonly IUserRepository _userRepository;
+        private readonly IBookingRepository _bookingRepository;
+        private readonly IRoomParticipantRepository _roomParticipantRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<CreateMatchRoomCommandHandler> _logger;
 
@@ -21,12 +23,16 @@ namespace Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom
             IMatchRoomRepository matchRoomRepository,
             IFieldRepository fieldRepository,
             IUserRepository userRepository,
+            IBookingRepository bookingRepository,
+            IRoomParticipantRepository roomParticipantRepository,
             IUnitOfWork unitOfWork,
             ILogger<CreateMatchRoomCommandHandler> logger)
         {
             _matchRoomRepository = matchRoomRepository;
             _fieldRepository = fieldRepository;
             _userRepository = userRepository;
+            _bookingRepository = bookingRepository;
+            _roomParticipantRepository = roomParticipantRepository;
             _unitOfWork = unitOfWork;
             _logger = logger;
         }
@@ -40,11 +46,53 @@ namespace Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom
                 return Result.Failure<CreateMatchRoomResponse>(UserErrors.NotFound(request.UserId));
             }
 
-            // Verify field exists
-            var field = await _fieldRepository.GetByIdAsync(request.FieldId);
+            // Verify field exists and get venue with operating hours
+            var field = await _fieldRepository.GetFieldWithVenueAsync(request.FieldId, cancellationToken);
             if (field == null)
             {
                 return Result.Failure<CreateMatchRoomResponse>(FieldErrors.NotFound(request.FieldId));
+            }
+
+            // Calculate end time for validation
+            var endTime = request.StartTime.Add(TimeSpan.FromMinutes(request.DurationMinutes));
+
+            // VALIDATION #1: Check if venue is open on this day
+            var dayOfWeek = (DayOfWeekEnum)request.MatchDate.DayOfWeek;
+            var operatingHour = field.Venue.VenueOperatingHours
+                .FirstOrDefault(oh => oh.DayOfWeek == dayOfWeek);
+
+            if (operatingHour == null || operatingHour.IsClosed)
+            {
+                return Result.Failure<CreateMatchRoomResponse>(
+                    new Error("MatchRoom.VenueClosed", $"Venue is closed on {request.MatchDate:dddd}", ErrorType.Validation));
+            }
+
+            // VALIDATION #2: Check if time slot is within operating hours
+            var openTime = operatingHour.OpenTime ?? TimeSpan.Zero;
+            var closeTime = operatingHour.CloseTime ?? TimeSpan.Zero;
+
+            if (request.StartTime < openTime || endTime > closeTime)
+            {
+                return Result.Failure<CreateMatchRoomResponse>(
+                    new Error("MatchRoom.OutsideOperatingHours", 
+                        $"Requested time ({request.StartTime:hh\\:mm} - {endTime:hh\\:mm}) is outside operating hours ({openTime:hh\\:mm} - {closeTime:hh\\:mm})", 
+                        ErrorType.Validation));
+            }
+
+            // VALIDATION #3: Check if time slot is available (not already booked)
+            bool isSlotAvailable = await _bookingRepository.IsTimeSlotAvailableAsync(
+                request.FieldId,
+                request.MatchDate,
+                request.StartTime,
+                endTime,
+                cancellationToken);
+
+            if (!isSlotAvailable)
+            {
+                return Result.Failure<CreateMatchRoomResponse>(
+                    new Error("MatchRoom.SlotAlreadyBooked", 
+                        $"Time slot {request.StartTime:hh\\:mm} - {endTime:hh\\:mm} is already booked by another room", 
+                        ErrorType.Conflict));
             }
 
             // Parse MatchFormat enum
@@ -56,9 +104,6 @@ namespace Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom
 
             // RULE #1: Auto-calculate TotalSlots based on MatchFormat
             int totalSlots = CalculateTotalSlots(matchFormat);
-
-            // RULE #2: Auto-calculate EndTime
-            var endTime = request.StartTime.Add(TimeSpan.FromMinutes(request.DurationMinutes));
 
             try
             {
@@ -95,7 +140,9 @@ namespace Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom
                     DepositAmount = request.DepositPerPerson
                 };
 
-                room.RoomParticipants.Add(hostParticipant);
+                // Add host participant via repository
+                await _roomParticipantRepository.AddAsync(hostParticipant);
+                await _matchRoomRepository.AddAsync(room);
 
                 // Save all changes in transaction
                 await _unitOfWork.SaveChangesAsync(cancellationToken);

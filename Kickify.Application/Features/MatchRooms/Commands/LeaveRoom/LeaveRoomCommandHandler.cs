@@ -38,7 +38,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.LeaveRoom
                 return Result.Failure<LeaveRoomResponse>(UserErrors.NotFound(request.UserId));
             }
 
-            // Get room with participants
+            // Get room with participants (WITH TRACKING for update/delete)
             var room = await _matchRoomRepository.GetRoomWithParticipantsAsync(request.RoomId, cancellationToken);
             if (room == null)
             {

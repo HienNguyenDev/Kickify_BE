@@ -12,6 +12,7 @@ namespace Kickify.Application.Features.Bookings.Commands.ProcessPayment
     public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentCommand, Result<ProcessPaymentResponse>>
     {
         private readonly IMatchRoomRepository _matchRoomRepository;
+        private readonly IRoomParticipantRepository _roomParticipantRepository;
         private readonly IBookingRepository _bookingRepository;
         private readonly IFieldRepository _fieldRepository;
         private readonly IVenueWalletRepository _venueWalletRepository;
@@ -20,6 +21,7 @@ namespace Kickify.Application.Features.Bookings.Commands.ProcessPayment
 
         public ProcessPaymentCommandHandler(
             IMatchRoomRepository matchRoomRepository,
+            IRoomParticipantRepository roomParticipantRepository,
             IBookingRepository bookingRepository,
             IFieldRepository fieldRepository,
             IVenueWalletRepository venueWalletRepository,
@@ -27,6 +29,7 @@ namespace Kickify.Application.Features.Bookings.Commands.ProcessPayment
             ILogger<ProcessPaymentCommandHandler> logger)
         {
             _matchRoomRepository = matchRoomRepository;
+            _roomParticipantRepository = roomParticipantRepository;
             _bookingRepository = bookingRepository;
             _fieldRepository = fieldRepository;
             _venueWalletRepository = venueWalletRepository;
@@ -61,9 +64,10 @@ namespace Kickify.Application.Features.Bookings.Commands.ProcessPayment
 
             // Mark as paid
             participant.DepositPaid = true;
+            _roomParticipantRepository.Update(participant);
 
             // Check if all participants have paid
-            bool allPaid = room.RoomParticipants.All(p => p.DepositPaid);
+            bool allPaid = await _matchRoomRepository.AreAllParticipantsPaidAsync(request.RoomId, cancellationToken);
 
             if (allPaid)
             {

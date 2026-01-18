@@ -2,6 +2,7 @@ using Kickify.Api.Extensions;
 using Kickify.Api.Requests;
 using Kickify.Application.Features.Bookings.Commands.ProcessPayment;
 using Kickify.Application.Features.Bookings.Queries.CheckAvailability;
+using Kickify.Application.Features.Bookings.Queries.CheckConsecutiveSlots;
 using Kickify.Application.Features.Bookings.Queries.GetBookingPreview;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -20,7 +21,7 @@ namespace Kickify.Api.Controllers
         }
 
         /// <summary>
-        /// Check availability for a field on a specific date
+        /// Check availability for a field on a specific date (returns 30-minute slots)
         /// </summary>
         [HttpGet("availability")]
         public async Task<IResult> CheckAvailability(
@@ -35,6 +36,30 @@ namespace Kickify.Api.Controllers
         }
 
         /// <summary>
+        /// Check if consecutive time slots are available for a specific duration
+        /// Used when host selects start time + duration (60/90/120 minutes)
+        /// </summary>
+        [HttpGet("check-consecutive-slots")]
+        public async Task<IResult> CheckConsecutiveSlots(
+            [FromQuery] Guid fieldId,
+            [FromQuery] DateTime date,
+            [FromQuery] TimeSpan startTime,
+            [FromQuery] int durationMinutes,
+            CancellationToken cancellationToken)
+        {
+            var query = new CheckConsecutiveSlotsQuery(
+                fieldId,
+                date,
+                startTime,
+                durationMinutes
+            );
+
+            var result = await _sender.Send(query, cancellationToken);
+
+            return result.MatchOk();
+        }
+
+        /// <summary>
         /// Get booking preview with pricing calculation
         /// </summary>
         [HttpGet("preview")]
@@ -42,7 +67,7 @@ namespace Kickify.Api.Controllers
             [FromQuery] Guid fieldId,
             [FromQuery] DateTime date,
             [FromQuery] TimeSpan startTime,
-            [FromQuery] TimeSpan endTime,
+            [FromQuery] int durationMinutes,
             [FromQuery] int numberOfPlayers,
             CancellationToken cancellationToken)
         {
@@ -50,7 +75,7 @@ namespace Kickify.Api.Controllers
                 fieldId,
                 date,
                 startTime,
-                endTime,
+                durationMinutes,
                 numberOfPlayers
             );
 

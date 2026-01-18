@@ -20,6 +20,16 @@ namespace Kickify.Infrastructure.Repositories
                 .FirstOrDefaultAsync(r => r.RoomId == roomId, cancellationToken);
         }
 
+        /// <summary>
+        /// Get room with participants WITH TRACKING for update/delete operations
+        /// </summary>
+        public async Task<MatchRoom?> GetRoomWithParticipantsForUpdateAsync(Guid roomId, CancellationToken cancellationToken = default)
+        {
+            return await _dbSet
+                .Include(r => r.RoomParticipants)
+                .FirstOrDefaultAsync(r => r.RoomId == roomId, cancellationToken);
+        }
+
         public async Task<MatchRoom?> GetRoomWithDetailsAsync(Guid roomId, CancellationToken cancellationToken = default)
         {
             return await _dbSet

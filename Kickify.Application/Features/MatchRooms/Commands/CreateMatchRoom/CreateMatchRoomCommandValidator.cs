@@ -13,7 +13,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom
                 .NotEmpty().WithMessage("Field ID is required");
 
             RuleFor(x => x.MatchDate)
-                .GreaterThan(DateTime.UtcNow).WithMessage("Match date must be in the future");
+                .GreaterThanOrEqualTo(DateTime.UtcNow.Date).WithMessage("Match date cannot be in the past");
 
             RuleFor(x => x.StartTime)
                 .NotEmpty().WithMessage("Start time is required");

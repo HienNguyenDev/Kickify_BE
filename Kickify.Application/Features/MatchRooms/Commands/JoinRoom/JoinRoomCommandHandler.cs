@@ -41,8 +41,8 @@ namespace Kickify.Application.Features.MatchRooms.Commands.JoinRoom
                 return Result.Failure<JoinRoomResponse>(UserErrors.NotFound(request.UserId));
             }
 
-            // Get room with participants (for tracking)
-            var room = await _matchRoomRepository.GetRoomWithParticipantsAsync(request.RoomId, cancellationToken);
+            // Get room with participants (WITH TRACKING for FilledSlots update)
+            var room = await _matchRoomRepository.GetRoomWithParticipantsForUpdateAsync(request.RoomId, cancellationToken);
             if (room == null)
             {
                 return Result.Failure<JoinRoomResponse>(

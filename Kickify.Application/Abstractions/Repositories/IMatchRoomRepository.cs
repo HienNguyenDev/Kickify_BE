@@ -6,6 +6,7 @@ namespace Kickify.Application.Abstractions.Repositories
     public interface IMatchRoomRepository : IGenericRepository<MatchRoom>
     {
         Task<MatchRoom?> GetRoomWithParticipantsAsync(Guid roomId, CancellationToken cancellationToken = default);
+        Task<MatchRoom?> GetRoomWithParticipantsForUpdateAsync(Guid roomId, CancellationToken cancellationToken = default);
         Task<MatchRoom?> GetRoomWithDetailsAsync(Guid roomId, CancellationToken cancellationToken = default);
         Task<(IEnumerable<MatchRoom> Rooms, int Total)> SearchRoomsAsync(
             DateTime? date,
