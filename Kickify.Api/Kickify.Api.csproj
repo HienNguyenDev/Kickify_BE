@@ -30,19 +30,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="EmailTemplates\OtpEmail.cshtml">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
+	  <None Include="EmailTemplates\**\*.cshtml">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		  <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+	  </None>
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Kickify.Infrastructure\Kickify.Infrastructure.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Update="EmailTemplates\ResetPasswordEmail.cshtml">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
 
 </Project>
