@@ -1,0 +1,118 @@
+using Kickify.Application.Abstractions.Persistence;
+using Kickify.Application.Abstractions.Repositories;
+using Kickify.Domain.Common;
+using Kickify.Domain.Errors;
+using MediatR;
+using Microsoft.Extensions.Logging;
+
+namespace Kickify.Application.Features.MatchRooms.Commands.LeaveRoom
+{
+    public class LeaveRoomCommandHandler : IRequestHandler<LeaveRoomCommand, Result<LeaveRoomResponse>>
+    {
+        private readonly IMatchRoomRepository _matchRoomRepository;
+        private readonly IUserRepository _userRepository;
+        private readonly IRoomParticipantRepository _roomParticipantRepository;
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly ILogger<LeaveRoomCommandHandler> _logger;
+
+        public LeaveRoomCommandHandler(
+            IMatchRoomRepository matchRoomRepository,
+            IUserRepository userRepository,
+            IRoomParticipantRepository roomParticipantRepository,
+            IUnitOfWork unitOfWork,
+            ILogger<LeaveRoomCommandHandler> logger)
+        {
+            _matchRoomRepository = matchRoomRepository;
+            _userRepository = userRepository;
+            _roomParticipantRepository = roomParticipantRepository;
+            _unitOfWork = unitOfWork;
+            _logger = logger;
+        }
+
+        public async Task<Result<LeaveRoomResponse>> Handle(LeaveRoomCommand request, CancellationToken cancellationToken)
+        {
+            // Verify user exists
+            var user = await _userRepository.GetByIdAsync(request.UserId);
+            if (user == null)
+            {
+                return Result.Failure<LeaveRoomResponse>(UserErrors.NotFound(request.UserId));
+            }
+
+            // Get room with participants (WITH TRACKING for update/delete)
+            var room = await _matchRoomRepository.GetRoomWithParticipantsAsync(request.RoomId, cancellationToken);
+            if (room == null)
+            {
+                return Result.Failure<LeaveRoomResponse>(
+                    new Error("MatchRoom.NotFound", $"Room with ID {request.RoomId} not found", ErrorType.NotFound));
+            }
+
+            // Find participant
+            var participant = room.RoomParticipants.FirstOrDefault(p => p.UserId == request.UserId);
+            if (participant == null)
+            {
+                return Result.Failure<LeaveRoomResponse>(
+                    new Error("MatchRoom.NotParticipant", "User is not a participant of this room", ErrorType.NotFound));
+            }
+
+            try
+            {
+                // RULE #5: Check if user is host
+                bool isHost = room.HostId == request.UserId;
+                string message;
+
+                if (isHost && room.FilledSlots == 1)
+                {
+                    // Host is the only one left - delete the room
+                    _matchRoomRepository.Remove(room);
+                    message = "Room deleted as you were the last participant";
+
+                    _logger.LogInformation("Room {RoomId} deleted as host {UserId} was the last participant",
+                        request.RoomId, request.UserId);
+                }
+                else if (isHost && room.FilledSlots > 1)
+                {
+                    // Host leaves but others remain - reassign host to first non-host participant
+                    var newHost = room.RoomParticipants.FirstOrDefault(p => p.UserId != request.UserId);
+                    if (newHost != null)
+                    {
+                        room.HostId = newHost.UserId;
+                        _logger.LogInformation("Room {RoomId} host reassigned from {OldHostId} to {NewHostId}",
+                            request.RoomId, request.UserId, newHost.UserId);
+                    }
+
+                    // Remove participant
+                    _roomParticipantRepository.Remove(participant);
+                    room.FilledSlots--;
+                    _matchRoomRepository.Update(room);
+                    message = "You left the room. Host role transferred to another participant";
+                }
+                else
+                {
+                    // Regular participant leaves
+                    _roomParticipantRepository.Remove(participant);
+                    room.FilledSlots--;
+                    _matchRoomRepository.Update(room);
+                    message = "You left the room successfully";
+
+                    _logger.LogInformation("User {UserId} left room {RoomId}. Filled: {FilledSlots}/{TotalSlots}",
+                        request.UserId, request.RoomId, room.FilledSlots, room.TotalSlots);
+                }
+
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                return Result.Success(new LeaveRoomResponse(
+                    room.RoomId,
+                    request.UserId,
+                    room.FilledSlots,
+                    room.TotalSlots,
+                    message
+                ));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error leaving room");
+                throw;
+            }
+        }
+    }
+}

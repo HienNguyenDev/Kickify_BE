@@ -13,9 +13,9 @@ namespace Kickify.Application.Features.Bookings.Queries.GetBookingPreview
                 .GreaterThanOrEqualTo(DateTime.UtcNow.Date)
                 .WithMessage("Date must be today or in the future");
 
-            RuleFor(x => x.StartTime)
-                .LessThan(x => x.EndTime)
-                .WithMessage("StartTime must be before EndTime");
+            RuleFor(x => x.DurationMinutes)
+                .Must(d => d == 60 || d == 90 || d == 120)
+                .WithMessage("Duration must be 60, 90, or 120 minutes");
 
             RuleFor(x => x.NumberOfPlayers)
                 .GreaterThan(0).WithMessage("NumberOfPlayers must be greater than 0");

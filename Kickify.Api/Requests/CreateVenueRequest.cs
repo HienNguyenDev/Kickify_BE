@@ -2,7 +2,7 @@ namespace Kickify.Api.Requests
 {
     public record CreateVenueRequest
     {
-        public Guid OwnerId { get; init; }
+        // OwnerId is extracted from JWT token, not from request body
         public string Name { get; init; } = string.Empty;
         public string Address { get; init; } = string.Empty;
         public decimal Latitude { get; init; }

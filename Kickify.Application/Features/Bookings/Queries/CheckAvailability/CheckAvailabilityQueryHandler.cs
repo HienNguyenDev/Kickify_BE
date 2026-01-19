@@ -54,27 +54,26 @@ namespace Kickify.Application.Features.Bookings.Queries.CheckAvailability
                 request.Date,
                 cancellationToken);
 
-            // Generate available time slots (1-hour intervals)
+            // Generate available time slots (30-minute intervals)
             var availableSlots = new List<TimeSlotDto>();
             var currentTime = operatingHour.OpenTime ?? TimeSpan.Zero;
             var closeTime = operatingHour.CloseTime ?? TimeSpan.Zero;
 
-            while (currentTime.Add(TimeSpan.FromHours(1)) <= closeTime)
+            while (currentTime < closeTime)
             {
-                var endTime = currentTime.Add(TimeSpan.FromHours(1));
-
-                // Check if this slot overlaps with any booked slot
+                // Check if this 30-minute slot overlaps with any booked slot
+                // A slot is unavailable if it falls within any booked period
                 bool isBooked = bookedSlots.Any(booked =>
-                    currentTime < booked.Item2 && endTime > booked.Item1);
+                    currentTime >= booked.Item1 && currentTime < booked.Item2);
 
                 availableSlots.Add(new TimeSlotDto(
                     currentTime,
-                    endTime,
                     !isBooked,
                     field.HourlyRate
                 ));
 
-                currentTime = endTime;
+                // Move to next 30-minute slot
+                currentTime = currentTime.Add(TimeSpan.FromMinutes(30));
             }
 
             return Result.Success(new CheckAvailabilityResponse(
