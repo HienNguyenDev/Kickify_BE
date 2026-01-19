@@ -20,12 +20,14 @@ namespace Kickify.Application.Features.Auth.Commands.ForgotPassword
         private readonly IUserRepository _userRepository;
         private readonly IResetPasswordGenerator _resetPasswordGenerator;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IPasswordHasher _passwordHasher;
 
-        public ForgotPasswordCommandHandler(IUserRepository userRepository, IResetPasswordGenerator resetPasswordGenerator, IUnitOfWork unitOfWork)
+        public ForgotPasswordCommandHandler(IUserRepository userRepository, IResetPasswordGenerator resetPasswordGenerator, IUnitOfWork unitOfWork, IPasswordHasher passwordHasher) 
         {
             _userRepository = userRepository;
             _resetPasswordGenerator = resetPasswordGenerator;
             _unitOfWork = unitOfWork;
+            _passwordHasher = passwordHasher;
         }
 
         public async Task<Result<ForgotPasswordCommandResponse>> Handle(ForgotPasswordCommand command, CancellationToken cancellationToken)
@@ -36,9 +38,10 @@ namespace Kickify.Application.Features.Auth.Commands.ForgotPassword
                 return Result.Failure<ForgotPasswordCommandResponse>(UserErrors.NotFoundByEmail);
             }
 
-            user.PasswordHash = _resetPasswordGenerator.GenerateRandomPassword();
+            var newPassword = _resetPasswordGenerator.GenerateRandomPassword();
+            user.PasswordHash = _passwordHasher.Hash(newPassword);
             _userRepository.Update(user);
-            user.Raise(new ForgotPasswordDomainEvent(user.Email, user.PasswordHash));
+            user.Raise(new ForgotPasswordDomainEvent(user.Email, newPassword));
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             var response = new ForgotPasswordCommandResponse
