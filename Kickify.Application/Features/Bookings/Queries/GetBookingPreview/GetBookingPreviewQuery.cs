@@ -7,7 +7,7 @@ namespace Kickify.Application.Features.Bookings.Queries.GetBookingPreview
         Guid FieldId,
         DateTime Date,
         TimeSpan StartTime,
-        TimeSpan EndTime,
+        int DurationMinutes,
         int NumberOfPlayers
     ) : IRequest<Result<GetBookingPreviewResponse>>;
 }

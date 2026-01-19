@@ -111,8 +111,11 @@ namespace Kickify.Infrastructure
             services.AddScoped<IBookingRepository, BookingRepository>();
             services.AddScoped<IVenueWalletRepository, VenueWalletRepository>();
             services.AddScoped<IMatchRoomRepository, MatchRoomRepository>();
+            services.AddScoped<IRoomParticipantRepository, RoomParticipantRepository>();
             services.AddScoped<IPostLikeRepository, PostLikeRepository>();
             services.AddScoped<IChatMessageRepository, ChatMessageRepository>();
+            services.AddScoped<ICommentRepository, CommentRepository>();
+            services.AddScoped<ICommentLikeRepository, CommentLikeRepository>();
             return services;
         }
         private static IServiceCollection AddFirebase(this IServiceCollection services)

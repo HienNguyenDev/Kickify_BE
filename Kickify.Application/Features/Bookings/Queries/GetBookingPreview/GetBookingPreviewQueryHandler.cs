@@ -23,8 +23,11 @@ namespace Kickify.Application.Features.Bookings.Queries.GetBookingPreview
                 return Result.Failure<GetBookingPreviewResponse>(FieldErrors.NotFound(request.FieldId));
             }
 
+            // Calculate EndTime from StartTime + DurationMinutes
+            var endTime = request.StartTime.Add(TimeSpan.FromMinutes(request.DurationMinutes));
+
             // Validate time slot
-            if (request.StartTime >= request.EndTime)
+            if (request.StartTime >= endTime)
             {
                 return Result.Failure<GetBookingPreviewResponse>(
                     new Error("Booking.InvalidTimeSlot", "Start time must be before end time", ErrorType.Validation));
@@ -37,7 +40,7 @@ namespace Kickify.Application.Features.Bookings.Queries.GetBookingPreview
                 request.FieldId,
                 request.Date,
                 request.StartTime,
-                request.EndTime,
+                endTime,
                 cancellationToken);
 
             if (!isAvailable)
@@ -46,7 +49,7 @@ namespace Kickify.Application.Features.Bookings.Queries.GetBookingPreview
             }
 
             // Calculate duration in hours
-            var duration = request.EndTime - request.StartTime;
+            var duration = endTime - request.StartTime;
             var durationHours = (decimal)duration.TotalHours;
 
             // Calculate total amount
@@ -61,7 +64,7 @@ namespace Kickify.Application.Features.Bookings.Queries.GetBookingPreview
                 field.Venue.VenueName,
                 request.Date,
                 request.StartTime,
-                request.EndTime,
+                endTime,
                 durationHours,
                 field.HourlyRate,
                 totalAmount,

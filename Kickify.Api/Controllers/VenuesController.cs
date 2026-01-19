@@ -5,7 +5,9 @@ using Kickify.Application.Features.Venues.Commands.CreateVenue;
 using Kickify.Application.Features.Venues.Queries.GetAllVenues;
 using Kickify.Application.Features.Venues.Queries.GetVenueById;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Kickify.Api.Controllers
 {
@@ -23,11 +25,19 @@ namespace Kickify.Api.Controllers
         /// <summary>
         /// Create a new venue with fields and operating hours
         /// </summary>
+        [Authorize]
         [HttpPost]
         public async Task<IResult> CreateVenue([FromBody] CreateVenueRequest request, CancellationToken cancellationToken)
         {
+            // Extract ownerId from JWT token
+            var ownerIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(ownerIdClaim) || !Guid.TryParse(ownerIdClaim, out var ownerId))
+            {
+                return Results.Unauthorized();
+            }
+
             var command = new CreateVenueCommand(
-                request.OwnerId,
+                ownerId,
                 request.Name,
                 request.Address,
                 request.Latitude,
