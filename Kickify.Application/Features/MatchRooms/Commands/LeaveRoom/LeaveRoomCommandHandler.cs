@@ -39,19 +39,17 @@ namespace Kickify.Application.Features.MatchRooms.Commands.LeaveRoom
             }
 
             // Get room with participants (WITH TRACKING for update/delete)
-            var room = await _matchRoomRepository.GetRoomWithParticipantsAsync(request.RoomId, cancellationToken);
+            var room = await _matchRoomRepository.GetRoomWithParticipantsForUpdateAsync(request.RoomId, cancellationToken);
             if (room == null)
             {
-                return Result.Failure<LeaveRoomResponse>(
-                    new Error("MatchRoom.NotFound", $"Room with ID {request.RoomId} not found", ErrorType.NotFound));
+                return Result.Failure<LeaveRoomResponse>(MatchRoomErrors.NotFound(request.RoomId));
             }
 
             // Find participant
             var participant = room.RoomParticipants.FirstOrDefault(p => p.UserId == request.UserId);
             if (participant == null)
             {
-                return Result.Failure<LeaveRoomResponse>(
-                    new Error("MatchRoom.NotParticipant", "User is not a participant of this room", ErrorType.NotFound));
+                return Result.Failure<LeaveRoomResponse>(MatchRoomErrors.NotParticipant);
             }
 
             try

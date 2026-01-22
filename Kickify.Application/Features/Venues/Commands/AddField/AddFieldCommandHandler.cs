@@ -36,8 +36,7 @@ namespace Kickify.Application.Features.Venues.Commands.AddField
             // Parse field type
             if (!Enum.TryParse<FieldType>(request.FieldType, true, out var fieldType))
             {
-                return Result.Failure<AddFieldResponse>(
-                    new Error("Field.InvalidType", $"Invalid field type: {request.FieldType}", ErrorType.Validation));
+                return Result.Failure<AddFieldResponse>(VenueErrors.InvalidFieldType(request.FieldType));
             }
 
             // Create new field
