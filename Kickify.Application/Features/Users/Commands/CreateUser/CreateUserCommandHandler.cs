@@ -46,7 +46,6 @@ namespace Kickify.Application.Features.Users.Commands.CreateUser
                 PasswordHash = _passwordHasher.Hash(request.Password),
                 FullName = request.FullName,
                 Phone = request.Phone,
-                AvatarUrl = request.AvatarUrl,
                 Bio = request.Bio,
                 DateOfBirth = request.DateOfBirth,
                 Gender = request.Gender,
@@ -86,7 +85,6 @@ namespace Kickify.Application.Features.Users.Commands.CreateUser
                 Email = user.Email,
                 FullName = user.FullName,
                 Phone = user.Phone,
-                AvatarUrl = user.AvatarUrl,
                 Role = user.Role,
                 CreatedAt = user.CreatedAt
             };

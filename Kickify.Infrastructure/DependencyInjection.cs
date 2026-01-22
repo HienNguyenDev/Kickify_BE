@@ -114,6 +114,8 @@ namespace Kickify.Infrastructure
             services.AddScoped<IRoomParticipantRepository, RoomParticipantRepository>();
             services.AddScoped<IPostLikeRepository, PostLikeRepository>();
             services.AddScoped<IChatMessageRepository, ChatMessageRepository>();
+            services.AddScoped<ICommentRepository, CommentRepository>();
+            services.AddScoped<ICommentLikeRepository, CommentLikeRepository>();
             return services;
         }
         private static IServiceCollection AddFirebase(this IServiceCollection services)
@@ -128,16 +130,6 @@ namespace Kickify.Infrastructure
         {
             services.AddSingleton<IConnectionMultiplexer>(sp => ConnectionMultiplexer.Connect(configuration.GetConnectionString("Redis")))
                     .AddTransient<IRedisOtpStore, RedisOtpStore>();
-
-
-            //var redisConnectionString = configuration.GetConnectionString("Redis");
-            //var configurationOptions = ConfigurationOptions.Parse(redisConnectionString);
-            //configurationOptions.AbortOnConnectFail = false; // Allow app to start even if Redis is not available
-            //configurationOptions.ConnectTimeout = 5000;
-            //configurationOptions.ConnectRetry = 3;
-
-            //services.AddSingleton<IConnectionMultiplexer>(sp => ConnectionMultiplexer.Connect(configurationOptions))
-            //        .AddTransient<IRedisOtpStore, RedisOtpStore>();
             return services;
         }
         private static IServiceCollection AddMinioStorage(this IServiceCollection services, IConfiguration configuration)
