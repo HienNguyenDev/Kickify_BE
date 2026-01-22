@@ -43,23 +43,20 @@ namespace Kickify.Application.Features.Bookings.Commands.ProcessPayment
             var room = await _matchRoomRepository.GetRoomWithParticipantsAsync(request.RoomId, cancellationToken);
             if (room == null)
             {
-                return Result.Failure<ProcessPaymentResponse>(
-                    new Error("Room.NotFound", "Match room not found", ErrorType.NotFound));
+                return Result.Failure<ProcessPaymentResponse>(BookingErrors.RoomNotFound(request.RoomId));
             }
 
             // Check if user is participant
             var participant = room.RoomParticipants.FirstOrDefault(p => p.UserId == request.UserId);
             if (participant == null)
             {
-                return Result.Failure<ProcessPaymentResponse>(
-                    new Error("Participant.NotFound", "User is not a participant of this room", ErrorType.NotFound));
+                return Result.Failure<ProcessPaymentResponse>(BookingErrors.ParticipantNotFound);
             }
 
             // Check if already paid
             if (participant.DepositPaid)
             {
-                return Result.Failure<ProcessPaymentResponse>(
-                    new Error("Payment.AlreadyPaid", "User has already paid", ErrorType.Conflict));
+                return Result.Failure<ProcessPaymentResponse>(BookingErrors.AlreadyPaid);
             }
 
             // Mark as paid

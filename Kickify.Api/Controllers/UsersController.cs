@@ -15,7 +15,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Kickify.Api.Controllers;
 
-[Route("api/[controller]")]
+[Route("api/users")]
 [ApiController]
 public class UsersController : ControllerBase
 {

@@ -29,8 +29,7 @@ namespace Kickify.Application.Features.Bookings.Queries.GetBookingPreview
             // Validate time slot
             if (request.StartTime >= endTime)
             {
-                return Result.Failure<GetBookingPreviewResponse>(
-                    new Error("Booking.InvalidTimeSlot", "Start time must be before end time", ErrorType.Validation));
+                return Result.Failure<GetBookingPreviewResponse>(BookingErrors.InvalidTimeSlot);
             }
 
             // Validate number of players (we don't have MaxPlayers in entity, so skip this check)
