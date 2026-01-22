@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Kickify.Api.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/bookings")]
     public class BookingsController : ControllerBase
     {
         private readonly ISender _sender;

@@ -27,5 +27,13 @@ namespace Kickify.Domain.Errors
         public static readonly Error Unauthorized = Error.Problem(
             "Venues.Unauthorized",
             "You are not authorized to perform this action on this venue");
+
+        public static Error InvalidFieldType(string fieldType) => Error.Problem(
+            "Venues.InvalidFieldType",
+            $"Invalid field type: {fieldType}");
+
+        public static readonly Error CreateFailed = Error.Problem(
+            "Venues.CreateFailed",
+            "Failed to create venue");
     }
 }

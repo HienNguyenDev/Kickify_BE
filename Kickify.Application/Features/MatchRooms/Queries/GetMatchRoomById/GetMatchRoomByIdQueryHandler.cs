@@ -1,5 +1,6 @@
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
+using Kickify.Domain.Errors;
 using MediatR;
 
 namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById
@@ -19,8 +20,7 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById
 
             if (room == null)
             {
-                return Result.Failure<GetMatchRoomByIdResponse>(
-                    new Error("MatchRoom.NotFound", $"Room with ID {request.RoomId} not found", ErrorType.NotFound));
+                return Result.Failure<GetMatchRoomByIdResponse>(MatchRoomErrors.NotFound(request.RoomId));
             }
 
             // Calculate EndTime

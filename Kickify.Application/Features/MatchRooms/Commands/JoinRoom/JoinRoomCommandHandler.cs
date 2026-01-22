@@ -45,29 +45,25 @@ namespace Kickify.Application.Features.MatchRooms.Commands.JoinRoom
             var room = await _matchRoomRepository.GetRoomWithParticipantsForUpdateAsync(request.RoomId, cancellationToken);
             if (room == null)
             {
-                return Result.Failure<JoinRoomResponse>(
-                    new Error("MatchRoom.NotFound", $"Room with ID {request.RoomId} not found", ErrorType.NotFound));
+                return Result.Failure<JoinRoomResponse>(MatchRoomErrors.NotFound(request.RoomId));
             }
 
             // Check if room is open
             if (room.Status != RoomStatus.Open)
             {
-                return Result.Failure<JoinRoomResponse>(
-                    new Error("MatchRoom.NotOpen", "Room is not open for joining", ErrorType.Validation));
+                return Result.Failure<JoinRoomResponse>(MatchRoomErrors.NotOpen);
             }
 
             // RULE #4: Check if user is already in room
             if (room.RoomParticipants.Any(p => p.UserId == request.UserId))
             {
-                return Result.Failure<JoinRoomResponse>(
-                    new Error("MatchRoom.AlreadyJoined", "User is already in this room", ErrorType.Conflict));
+                return Result.Failure<JoinRoomResponse>(MatchRoomErrors.AlreadyJoined);
             }
 
             // RULE #4: Check if room is full (with concurrency safety)
             if (room.FilledSlots >= room.TotalSlots)
             {
-                return Result.Failure<JoinRoomResponse>(
-                    new Error("MatchRoom.RoomFull", "Room is already full", ErrorType.Conflict));
+                return Result.Failure<JoinRoomResponse>(MatchRoomErrors.RoomFull);
             }
 
             try

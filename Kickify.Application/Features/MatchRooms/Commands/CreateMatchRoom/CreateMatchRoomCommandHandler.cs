@@ -98,8 +98,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom
             // Parse MatchFormat enum
             if (!Enum.TryParse<MatchFormat>(request.MatchFormat, true, out var matchFormat))
             {
-                return Result.Failure<CreateMatchRoomResponse>(
-                    new Error("MatchRoom.InvalidFormat", $"Invalid match format: {request.MatchFormat}", ErrorType.Validation));
+                return Result.Failure<CreateMatchRoomResponse>(MatchRoomErrors.InvalidFormat(request.MatchFormat));
             }
 
             // RULE #1: Auto-calculate TotalSlots based on MatchFormat

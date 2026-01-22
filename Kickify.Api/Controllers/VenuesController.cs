@@ -12,7 +12,7 @@ using System.Security.Claims;
 namespace Kickify.Api.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/venues")]
     public class VenuesController : ControllerBase
     {
         private readonly ISender _sender;

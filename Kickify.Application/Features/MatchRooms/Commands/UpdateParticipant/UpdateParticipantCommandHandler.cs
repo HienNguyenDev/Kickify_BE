@@ -43,16 +43,14 @@ namespace Kickify.Application.Features.MatchRooms.Commands.UpdateParticipant
             var room = await _matchRoomRepository.GetRoomWithParticipantsAsync(request.RoomId, cancellationToken);
             if (room == null)
             {
-                return Result.Failure<UpdateParticipantResponse>(
-                    new Error("MatchRoom.NotFound", $"Room with ID {request.RoomId} not found", ErrorType.NotFound));
+                return Result.Failure<UpdateParticipantResponse>(MatchRoomErrors.NotFound(request.RoomId));
             }
 
             // Find participant
             var participant = room.RoomParticipants.FirstOrDefault(p => p.UserId == request.UserId);
             if (participant == null)
             {
-                return Result.Failure<UpdateParticipantResponse>(
-                    new Error("MatchRoom.NotParticipant", "User is not a participant of this room", ErrorType.NotFound));
+                return Result.Failure<UpdateParticipantResponse>(MatchRoomErrors.NotParticipant);
             }
 
             try
@@ -66,8 +64,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.UpdateParticipant
                     }
                     else
                     {
-                        return Result.Failure<UpdateParticipantResponse>(
-                            new Error("MatchRoom.InvalidTeam", $"Invalid team assignment: {request.TeamAssignment}", ErrorType.Validation));
+                        return Result.Failure<UpdateParticipantResponse>(MatchRoomErrors.InvalidTeam(request.TeamAssignment));
                     }
                 }
 
