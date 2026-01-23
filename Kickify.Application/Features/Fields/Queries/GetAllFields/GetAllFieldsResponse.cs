@@ -2,9 +2,10 @@ namespace Kickify.Application.Features.Fields.Queries.GetAllFields
 {
     public record GetAllFieldsResponse(
         List<FieldItemDto> Fields,
-        int Total,
+        int TotalCount,
         int Page,
-        int PageSize
+        int PageSize,
+        int TotalPages
     );
 
     public record FieldItemDto(

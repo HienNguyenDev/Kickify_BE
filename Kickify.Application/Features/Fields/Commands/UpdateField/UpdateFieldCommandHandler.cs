@@ -1,3 +1,4 @@
+using AutoMapper;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
@@ -11,13 +12,16 @@ namespace Kickify.Application.Features.Fields.Commands.UpdateField
     {
         private readonly IFieldRepository _fieldRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
 
         public UpdateFieldCommandHandler(
             IFieldRepository fieldRepository,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            IMapper mapper)
         {
             _fieldRepository = fieldRepository;
             _unitOfWork = unitOfWork;
+            _mapper = mapper;
         }
 
         public async Task<Result<UpdateFieldResponse>> Handle(UpdateFieldCommand request, CancellationToken cancellationToken)
@@ -36,38 +40,17 @@ namespace Kickify.Application.Features.Fields.Commands.UpdateField
                 return Result.Failure<UpdateFieldResponse>(FieldErrors.Unauthorized);
             }
 
-            // Update fields if provided
-            if (!string.IsNullOrEmpty(request.FieldName))
-            {
-                field.FieldName = request.FieldName;
-            }
+            // Map properties from command to entity
+            // Rule: null = keep old value, non-null (including empty string) = update
+            _mapper.Map(request, field);
 
-            if (!string.IsNullOrEmpty(request.FieldType))
+            // Handle FieldType enum separately (since it's a string in command)
+            if (request.FieldType != null)
             {
                 if (Enum.TryParse<FieldType>(request.FieldType, true, out var fieldType))
                 {
                     field.FieldType = fieldType;
                 }
-            }
-
-            if (request.SurfaceType != null)
-            {
-                field.SurfaceType = request.SurfaceType;
-            }
-
-            if (request.HourlyRate.HasValue)
-            {
-                field.HourlyRate = request.HourlyRate.Value;
-            }
-
-            if (request.PeakHourSurcharge.HasValue)
-            {
-                field.PeakHourSurcharge = request.PeakHourSurcharge.Value;
-            }
-
-            if (request.IsActive.HasValue)
-            {
-                field.IsActive = request.IsActive.Value;
             }
 
             field.UpdatedAt = DateTime.UtcNow;

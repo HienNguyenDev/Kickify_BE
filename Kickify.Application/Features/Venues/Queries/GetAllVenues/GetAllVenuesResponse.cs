@@ -2,9 +2,10 @@ namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
 {
     public record GetAllVenuesResponse(
         List<VenueItemDto> Venues,
-        int Total,
+        int TotalCount,
         int Page,
-        int PageSize
+        int PageSize,
+        int TotalPages
     );
 
     public record VenueItemDto(
