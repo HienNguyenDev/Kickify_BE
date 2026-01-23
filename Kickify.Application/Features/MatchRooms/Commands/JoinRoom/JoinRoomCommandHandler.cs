@@ -1,5 +1,6 @@
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
+using Kickify.Application.Abstractions.Services;
 using Kickify.Domain.Common;
 using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
@@ -15,6 +16,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.JoinRoom
         private readonly IMatchRoomRepository _matchRoomRepository;
         private readonly IUserRepository _userRepository;
         private readonly IRoomParticipantRepository _roomParticipantRepository;
+        private readonly IMatchRoomHubService _matchRoomHubService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<JoinRoomCommandHandler> _logger;
 
@@ -22,12 +24,14 @@ namespace Kickify.Application.Features.MatchRooms.Commands.JoinRoom
             IMatchRoomRepository matchRoomRepository,
             IUserRepository userRepository,
             IRoomParticipantRepository roomParticipantRepository,
+            IMatchRoomHubService matchRoomHubService,
             IUnitOfWork unitOfWork,
             ILogger<JoinRoomCommandHandler> logger)
         {
             _matchRoomRepository = matchRoomRepository;
             _userRepository = userRepository;
             _roomParticipantRepository = roomParticipantRepository;
+            _matchRoomHubService = matchRoomHubService;
             _unitOfWork = unitOfWork;
             _logger = logger;
         }
@@ -91,6 +95,16 @@ namespace Kickify.Application.Features.MatchRooms.Commands.JoinRoom
 
                 _logger.LogInformation("User {UserId} joined room {RoomId}. Filled: {FilledSlots}/{TotalSlots}",
                     request.UserId, request.RoomId, room.FilledSlots, room.TotalSlots);
+
+                // Send real-time notification to all room participants
+                await _matchRoomHubService.NotifyUserJoinedAsync(
+                    room.RoomId,
+                    user.UserId,
+                    user.FullName ?? user.Email,
+                    user.AvatarUrl,
+                    room.FilledSlots,
+                    room.TotalSlots,
+                    cancellationToken);
 
                 return Result.Success(new JoinRoomResponse(
                     participant.ParticipantId,

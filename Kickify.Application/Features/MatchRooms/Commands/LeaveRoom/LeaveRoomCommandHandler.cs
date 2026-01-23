@@ -1,5 +1,6 @@
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
+using Kickify.Application.Abstractions.Services;
 using Kickify.Domain.Common;
 using Kickify.Domain.Errors;
 using MediatR;
@@ -12,6 +13,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.LeaveRoom
         private readonly IMatchRoomRepository _matchRoomRepository;
         private readonly IUserRepository _userRepository;
         private readonly IRoomParticipantRepository _roomParticipantRepository;
+        private readonly IMatchRoomHubService _matchRoomHubService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<LeaveRoomCommandHandler> _logger;
 
@@ -19,12 +21,14 @@ namespace Kickify.Application.Features.MatchRooms.Commands.LeaveRoom
             IMatchRoomRepository matchRoomRepository,
             IUserRepository userRepository,
             IRoomParticipantRepository roomParticipantRepository,
+            IMatchRoomHubService matchRoomHubService,
             IUnitOfWork unitOfWork,
             ILogger<LeaveRoomCommandHandler> logger)
         {
             _matchRoomRepository = matchRoomRepository;
             _userRepository = userRepository;
             _roomParticipantRepository = roomParticipantRepository;
+            _matchRoomHubService = matchRoomHubService;
             _unitOfWork = unitOfWork;
             _logger = logger;
         }
@@ -56,11 +60,14 @@ namespace Kickify.Application.Features.MatchRooms.Commands.LeaveRoom
             {
                 // RULE #5: Check if user is host
                 bool isHost = room.HostId == request.UserId;
+                bool isRoomDeleted = false;
+                Guid? newHostId = null;
                 string message;
 
                 if (isHost && room.FilledSlots == 1)
                 {
                     // Host is the only one left - delete the room
+                    isRoomDeleted = true;
                     _matchRoomRepository.Remove(room);
                     message = "Room deleted as you were the last participant";
 
@@ -74,6 +81,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.LeaveRoom
                     if (newHost != null)
                     {
                         room.HostId = newHost.UserId;
+                        newHostId = newHost.UserId;
                         _logger.LogInformation("Room {RoomId} host reassigned from {OldHostId} to {NewHostId}",
                             request.RoomId, request.UserId, newHost.UserId);
                     }
@@ -97,6 +105,17 @@ namespace Kickify.Application.Features.MatchRooms.Commands.LeaveRoom
                 }
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                // Send real-time notification to all room participants
+                await _matchRoomHubService.NotifyUserLeftAsync(
+                    room.RoomId,
+                    user.UserId,
+                    user.FullName ?? user.Email,
+                    room.FilledSlots,
+                    room.TotalSlots,
+                    isRoomDeleted,
+                    newHostId,
+                    cancellationToken);
 
                 return Result.Success(new LeaveRoomResponse(
                     room.RoomId,
