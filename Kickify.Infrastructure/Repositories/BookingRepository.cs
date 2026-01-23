@@ -69,5 +69,52 @@ namespace Kickify.Infrastructure.Repositories
 
             return !hasOverlap; // Available if no overlap
         }
+
+        public async Task<Booking?> GetBookingWithDetailsAsync(
+            Guid bookingId,
+            CancellationToken cancellationToken = default)
+        {
+            return await _dbSet
+                .AsNoTracking()
+                .Include(b => b.Field)
+                    .ThenInclude(f => f.Venue)
+                .Include(b => b.MatchRoom)
+                .FirstOrDefaultAsync(b => b.BookingId == bookingId, cancellationToken);
+        }
+
+        public async Task<(IEnumerable<Booking> Bookings, int Total)> GetBookingsPagedAsync(
+            Guid? fieldId = null,
+            DateTime? date = null,
+            int page = 1,
+            int pageSize = 10,
+            CancellationToken cancellationToken = default)
+        {
+            var query = _dbSet
+                .AsNoTracking()
+                .Include(b => b.Field)
+                    .ThenInclude(f => f.Venue)
+                .AsQueryable();
+
+            if (fieldId.HasValue)
+            {
+                query = query.Where(b => b.FieldId == fieldId.Value);
+            }
+
+            if (date.HasValue)
+            {
+                query = query.Where(b => b.BookingDate == date.Value);
+            }
+
+            var total = await query.CountAsync(cancellationToken);
+
+            var bookings = await query
+                .OrderByDescending(b => b.BookingDate)
+                .ThenByDescending(b => b.StartTime)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+
+            return (bookings, total);
+        }
     }
 }

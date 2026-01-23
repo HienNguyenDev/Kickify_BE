@@ -17,5 +17,21 @@ namespace Kickify.Application.Abstractions.Repositories
             int page = 1,
             int pageSize = 10,
             CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Get venue for update (WITH tracking)
+        /// </summary>
+        Task<Venue?> GetVenueForUpdateAsync(
+            Guid venueId,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Get paged venues by owner
+        /// </summary>
+        Task<(IEnumerable<Venue> Venues, int Total)> GetVenuesByOwnerPagedAsync(
+            Guid ownerId,
+            int page = 1,
+            int pageSize = 10,
+            CancellationToken cancellationToken = default);
     }
 }

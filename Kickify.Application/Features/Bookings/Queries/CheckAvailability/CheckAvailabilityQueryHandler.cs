@@ -56,24 +56,46 @@ namespace Kickify.Application.Features.Bookings.Queries.CheckAvailability
 
             // Generate available time slots (30-minute intervals)
             var availableSlots = new List<TimeSlotDto>();
-            var currentTime = operatingHour.OpenTime ?? TimeSpan.Zero;
+            var currentSlotTime = operatingHour.OpenTime ?? TimeSpan.Zero;
             var closeTime = operatingHour.CloseTime ?? TimeSpan.Zero;
 
-            while (currentTime < closeTime)
+            // Get current server time for past slot validation
+            var now = DateTime.Now;
+            var today = now.Date;
+            var currentTimeOfDay = now.TimeOfDay;
+            var isToday = request.Date.Date == today;
+            var isPastDate = request.Date.Date < today;
+
+            while (currentSlotTime < closeTime)
             {
-                // Check if this 30-minute slot overlaps with any booked slot
-                // A slot is unavailable if it falls within any booked period
-                bool isBooked = bookedSlots.Any(booked =>
-                    currentTime >= booked.Item1 && currentTime < booked.Item2);
+                bool isAvailable = true;
+
+                // If the entire date is in the past, all slots are unavailable
+                if (isPastDate)
+                {
+                    isAvailable = false;
+                }
+                // If it's today, check if this slot time has already passed
+                else if (isToday && currentSlotTime < currentTimeOfDay)
+                {
+                    isAvailable = false;
+                }
+                else
+                {
+                    // Check if this 30-minute slot overlaps with any booked slot
+                    // A slot is unavailable if it falls within any booked period
+                    isAvailable = !bookedSlots.Any(booked =>
+                        currentSlotTime >= booked.Item1 && currentSlotTime < booked.Item2);
+                }
 
                 availableSlots.Add(new TimeSlotDto(
-                    currentTime,
-                    !isBooked,
+                    currentSlotTime,
+                    isAvailable,
                     field.HourlyRate
                 ));
 
                 // Move to next 30-minute slot
-                currentTime = currentTime.Add(TimeSpan.FromMinutes(30));
+                currentSlotTime = currentSlotTime.Add(TimeSpan.FromMinutes(30));
             }
 
             return Result.Success(new CheckAvailabilityResponse(
