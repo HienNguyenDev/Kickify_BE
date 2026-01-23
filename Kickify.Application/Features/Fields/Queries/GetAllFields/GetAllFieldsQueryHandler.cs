@@ -51,7 +51,8 @@ namespace Kickify.Application.Features.Fields.Queries.GetAllFields
                 fieldItems,
                 total,
                 request.Page,
-                request.PageSize
+                request.PageSize,
+                (int)Math.Ceiling(total / (double)request.PageSize)
             );
 
             return Result.Success(response);
