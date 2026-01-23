@@ -2,9 +2,10 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRooms
 {
     public record GetMatchRoomsResponse(
         List<MatchRoomItemDto> Rooms,
-        int Total,
+        int TotalCount,
         int Page,
-        int PageSize
+        int PageSize,
+        int TotalPages
     );
 
     public record MatchRoomItemDto(

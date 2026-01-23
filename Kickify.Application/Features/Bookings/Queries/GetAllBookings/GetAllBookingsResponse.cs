@@ -2,9 +2,10 @@ namespace Kickify.Application.Features.Bookings.Queries.GetAllBookings
 {
     public record GetAllBookingsResponse(
         List<BookingItemDto> Bookings,
-        int Total,
+        int TotalCount,
         int Page,
-        int PageSize
+        int PageSize,
+        int TotalPages
     );
 
     public record BookingItemDto(
