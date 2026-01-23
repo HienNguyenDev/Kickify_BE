@@ -1,3 +1,4 @@
+using AutoMapper;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
@@ -10,13 +11,16 @@ namespace Kickify.Application.Features.Venues.Commands.UpdateVenue
     {
         private readonly IVenueRepository _venueRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
 
         public UpdateVenueCommandHandler(
             IVenueRepository venueRepository,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            IMapper mapper)
         {
             _venueRepository = venueRepository;
             _unitOfWork = unitOfWork;
+            _mapper = mapper;
         }
 
         public async Task<Result<UpdateVenueResponse>> Handle(UpdateVenueCommand request, CancellationToken cancellationToken)
@@ -35,46 +39,9 @@ namespace Kickify.Application.Features.Venues.Commands.UpdateVenue
                 return Result.Failure<UpdateVenueResponse>(VenueErrors.Unauthorized);
             }
 
-            // Update fields if provided
-            if (!string.IsNullOrEmpty(request.Name))
-            {
-                venue.VenueName = request.Name;
-            }
-
-            if (!string.IsNullOrEmpty(request.Address))
-            {
-                venue.Address = request.Address;
-            }
-
-            if (request.Latitude.HasValue)
-            {
-                venue.Latitude = request.Latitude.Value;
-            }
-
-            if (request.Longitude.HasValue)
-            {
-                venue.Longitude = request.Longitude.Value;
-            }
-
-            if (request.ContactPhone != null)
-            {
-                venue.ContactPhone = request.ContactPhone;
-            }
-
-            if (request.ContactEmail != null)
-            {
-                venue.ContactEmail = request.ContactEmail;
-            }
-
-            if (request.Description != null)
-            {
-                venue.Description = request.Description;
-            }
-
-            if (request.Amenities != null)
-            {
-                venue.Amenities = request.Amenities;
-            }
+            // Map properties from command to entity
+            // Rule: null = keep old value, non-null (including empty string) = update
+            _mapper.Map(request, venue);
 
             venue.UpdatedAt = DateTime.UtcNow;
 

@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Kickify Match Room Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; margin: 20px; background: #1a1f2e; color: #fff; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .grid { display: grid; grid-template-columns: 400px 1fr; gap: 20px; }
+        .section { background: #2a3545; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        h2 { color: #7fff6f; margin-top: 0; font-size: 18px; }
+        h3 { color: #ffd700; margin-bottom: 10px; }
+        input, button { padding: 10px; margin: 5px 0; border-radius: 4px; border: 1px solid #3a4555; }
+        input { background: #1a1f2e; color: #fff; width: 100%; }
+        button { background: #7fff6f; color: #1a1f2e; cursor: pointer; font-weight: bold; margin-right: 5px; }
+        button:hover { background: #5fdf4f; }
+        button:disabled { background: #555; cursor: not-allowed; }
+        button.danger { background: #ff6b6b; }
+        button.danger:hover { background: #ff4757; }
+        button.warning { background: #ffd700; }
+        button.info { background: #6fb5ff; }
+        .status { padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .connected { background: #2a5530; }
+        .disconnected { background: #553030; }
+        .events { height: 150px; overflow-y: auto; background: #1a1f2e; padding: 10px; border-radius: 4px; font-size: 12px; }
+        .event { padding: 6px; margin: 3px 0; border-radius: 4px; }
+        .event.join { background: #2a5530; border-left: 3px solid #7fff6f; }
+        .event.leave { background: #553030; border-left: 3px solid #ff6b6b; }
+        .event.info { background: #2a3555; border-left: 3px solid #6fb5ff; }
+        .event.error { background: #552030; border-left: 3px solid #ff4757; }
+        .flex { display: flex; gap: 5px; flex-wrap: wrap; }
+        .current-user { background: #3a5545; padding: 10px; border-radius: 4px; margin-top: 10px; }
+        
+        /* Room Display */
+        .room-card { background: linear-gradient(135deg, #2a3545, #1e2738); border-radius: 16px; padding: 30px; min-height: 600px; }
+        .room-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #3a4555; }
+        .room-title { font-size: 24px; font-weight: bold; }
+        .room-id { font-size: 12px; color: #888; margin-top: 5px; }
+        .status-badge { padding: 8px 20px; border-radius: 20px; font-weight: bold; font-size: 14px; }
+        .status-badge.open { background: #7fff6f; color: #1a1f2e; }
+        .status-badge.full { background: #ffd700; color: #1a1f2e; }
+        .status-badge.closed { background: #ff6b6b; color: #fff; }
+        
+        /* Slots Display */
+        .slots-container { text-align: center; padding: 30px; background: #1a1f2e; border-radius: 12px; margin-bottom: 30px; }
+        .slots-number { font-size: 72px; font-weight: bold; line-height: 1; }
+        .slots-filled { color: #7fff6f; }
+        .slots-total { color: #555; }
+        .slots-label { font-size: 16px; color: #888; margin-top: 10px; }
+        .slots-bar { height: 10px; background: #3a4555; border-radius: 5px; margin-top: 15px; overflow: hidden; }
+        .slots-bar-fill { height: 100%; background: linear-gradient(90deg, #7fff6f, #4faf3f); transition: width 0.5s ease; }
+        
+        /* Room Info */
+        .room-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px; }
+        .info-item { background: #1a1f2e; padding: 15px; border-radius: 8px; }
+        .info-label { font-size: 12px; color: #888; margin-bottom: 5px; }
+        .info-value { font-size: 16px; font-weight: bold; }
+        
+        /* Participants Grid */
+        .participants-section { margin-top: 20px; }
+        .participants-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 15px; margin-top: 15px; }
+        .participant-card { background: #3a4555; padding: 20px 15px; border-radius: 12px; text-align: center; transition: all 0.3s; position: relative; }
+        .participant-card.host { background: linear-gradient(135deg, #7fff6f, #4faf3f); color: #1a1f2e; }
+        .participant-card.you { border: 2px solid #6fb5ff; }
+        .participant-card.new { animation: popIn 0.5s ease-out; }
+        .participant-card.leaving { animation: popOut 0.3s ease-out forwards; }
+        .participant-avatar { width: 50px; height: 50px; border-radius: 50%; background: #555; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+        .participant-card.host .participant-avatar { background: rgba(0,0,0,0.2); }
+        .participant-name { font-weight: bold; font-size: 14px; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .participant-role { font-size: 11px; color: #888; }
+        .participant-card.host .participant-role { color: #1a1f2e; }
+        .you-badge { position: absolute; top: -5px; right: -5px; background: #6fb5ff; color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 10px; }
+        
+        @keyframes popIn { 
+            0% { transform: scale(0); opacity: 0; } 
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; } 
+        }
+        @keyframes popOut { 
+            0% { transform: scale(1); opacity: 1; } 
+            100% { transform: scale(0); opacity: 0; } 
+        }
+        @keyframes pulse { 
+            0%, 100% { box-shadow: 0 0 0 0 rgba(127, 255, 111, 0.4); } 
+            50% { box-shadow: 0 0 0 15px rgba(127, 255, 111, 0); } 
+        }
+        
+        /* Empty State */
+        .empty-state { text-align: center; padding: 80px 20px; color: #555; }
+        .empty-state-icon { font-size: 80px; margin-bottom: 20px; }
+        
+        /* Notifications */
+        .toast { position: fixed; top: 20px; right: 20px; padding: 15px 25px; border-radius: 8px; color: #fff; font-weight: bold; z-index: 1000; animation: slideIn 0.3s ease-out; }
+        .toast.success { background: #2a5530; border-left: 4px solid #7fff6f; }
+        .toast.error { background: #552030; border-left: 4px solid #ff6b6b; }
+        .toast.info { background: #2a3555; border-left: 4px solid #6fb5ff; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Kickify Match Room - Real-time Test</h1>
+        
+        <div class="grid">
+            <!-- Left Panel - Controls -->
+            <div class="left-panel">
+                <!-- Connection -->
+                <div class="section">
+                    <h2>Connection</h2>
+                    <input type="text" id="accessToken" placeholder="JWT Access Token" />
+                    <input type="text" id="hubUrl" value="https://localhost:7109/hubs/matchroom" placeholder="Hub URL" />
+                    <input type="text" id="apiBaseUrl" value="https://localhost:7109/api" placeholder="API Base URL" />
+                    <div class="flex">
+                        <button id="connectBtn" onclick="connect()">Connect</button>
+                        <button id="disconnectBtn" onclick="disconnect()" disabled class="danger">Disconnect</button>
+                    </div>
+                    <div id="connectionStatus" class="status disconnected">Disconnected</div>
+                    <div id="currentUser" class="current-user" style="display: none;">
+                        Players Name: <strong id="currentUserName"></strong>
+                        <div style="font-size: 11px; color: #888; margin-top: 3px;">ID: <span id="currentUserId"></span></div>
+                    </div>
+                </div>
+
+                <!-- Room Actions -->
+                <div class="section">
+                    <h2>🏟Room Actions</h2>
+                    <input type="text" id="roomId" placeholder="Room ID (GUID)" />
+                    <div class="flex">
+                        <button onclick="loadRoom()" id="loadBtn" disabled class="info">Load Room</button>
+                        <button onclick="refreshRoom()" id="refreshBtn" disabled class="warning">REFRESH</button>
+                    </div>
+                    <div class="flex" style="margin-top: 10px;">
+                        <button onclick="joinRoom()" id="joinBtn" disabled style="flex: 1;">JOIN</button>
+                        <button onclick="leaveRoom()" id="leaveBtn" disabled class="danger" style="flex: 1;">Leave</button>
+                    </div>
+                </div>
+
+                <!-- Available Rooms -->
+                <div class="section">
+                    <h2>Available Rooms</h2>
+                    <button onclick="listRooms()" id="listBtn" disabled class="info" style="width: 100%;">Load Available Rooms</button>
+                    <div id="roomsList" style="margin-top: 10px; max-height: 150px; overflow-y: auto;"></div>
+                </div>
+
+                <!-- Events Log -->
+                <div class="section">
+                    <h2>Events <button onclick="clearEvents()" class="warning" style="float: right; font-size: 10px; padding: 3px 8px;">Clear</button></h2>
+                    <div id="events" class="events"></div>
+                </div>
+            </div>
+
+            <!-- Right Panel - Room Display -->
+            <div class="right-panel">
+                <div class="room-card">
+                    <!-- Empty State -->
+                    <div id="emptyState" class="empty-state">
+                        <div class="empty-state-icon">O__O__O</div>
+                        <h3>No Room Selected</h3>
+                        <p>Enter a Room ID and click "Load Room" to view details</p>
+                    </div>
+
+                    <!-- Room Content -->
+                    <div id="roomContent" style="display: none;">
+                        <!-- Header -->
+                        <div class="room-header">
+                            <div>
+                                <div class="room-title" id="displayRoomName">Match Room</div>
+                                <div class="room-id">ID: <span id="displayRoomId"></span></div>
+                            </div>
+                            <span id="displayStatus" class="status-badge open">Open</span>
+                        </div>
+
+                        <!-- Slots Display -->
+                        <div class="slots-container">
+                            <div class="slots-number">
+                                <span class="slots-filled" id="displayFilled">0</span><span class="slots-total">/<span id="displayTotal">0</span></span>
+                            </div>
+                            <div class="slots-label">Players Joined</div>
+                            <div class="slots-bar">
+                                <div class="slots-bar-fill" id="slotsBar" style="width: 0%;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Room Info -->
+                        <div class="room-info-grid">
+                            <div class="info-item">
+                                <div class="info-label">Match Date</div>
+                                <div class="info-value" id="displayDate">-</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Start Time</div>
+                                <div class="info-value" id="displayTime">-</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Host</div>
+                                <div class="info-value" id="displayHost">-</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Field</div>
+                                <div class="info-value" id="displayField">-</div>
+                            </div>
+                        </div>
+
+                        <!-- Participants -->
+                        <div class="participants-section">
+                            <h3>Participants</h3>
+                            <div id="participantsGrid" class="participants-grid"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let connection = null;
+        let accessToken = '';
+        let currentRoomId = null;
+        let currentUserId = null;
+        let roomData = null;
+
+        // ============ Utility Functions ============
+        
+        function log(msg) { console.log(`[${new Date().toLocaleTimeString()}]`, msg); }
+        
+        function addEvent(content, type = 'info') {
+            const div = document.getElementById('events');
+            const time = new Date().toLocaleTimeString();
+            div.innerHTML = `<div class="event ${type}">[${time}] ${content}</div>` + div.innerHTML;
+        }
+        
+        function clearEvents() { document.getElementById('events').innerHTML = ''; }
+        
+        function toast(message, type = 'success') {
+            const t = document.createElement('div');
+            t.className = `toast ${type}`;
+            t.textContent = message;
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
+        }
+
+        function parseJwt(token) {
+            try {
+                const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+                return JSON.parse(atob(base64));
+            } catch { return null; }
+        }
+
+        function updateConnectionUI(connected) {
+            const status = document.getElementById('connectionStatus');
+            status.className = `status ${connected ? 'connected' : 'disconnected'}`;
+            status.textContent = connected ? ' Connected' : ' Disconnected';
+            
+            document.getElementById('connectBtn').disabled = connected;
+            document.getElementById('disconnectBtn').disabled = !connected;
+            ['loadBtn', 'refreshBtn', 'joinBtn', 'leaveBtn', 'listBtn'].forEach(id => {
+                document.getElementById(id).disabled = !connected;
+            });
+        }
+
+        // ============ Room Display ============
+
+        function updateRoomDisplay(data) {
+            if (!data) {
+                document.getElementById('emptyState').style.display = 'block';
+                document.getElementById('roomContent').style.display = 'none';
+                return;
+            }
+
+            roomData = data;
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('roomContent').style.display = 'block';
+
+            document.getElementById('displayRoomName').textContent = data.roomName || 'Match Room';
+            document.getElementById('displayRoomId').textContent = data.roomId;
+            document.getElementById('displayFilled').textContent = data.filledSlots || 0;
+            document.getElementById('displayTotal').textContent = data.totalSlots || 0;
+            document.getElementById('displayDate').textContent = data.matchDate ? new Date(data.matchDate).toLocaleDateString() : '-';
+            document.getElementById('displayTime').textContent = data.startTime || '-';
+            document.getElementById('displayHost').textContent = data.hostName || '-';
+            document.getElementById('displayField').textContent = data.fieldName || '-';
+
+            // Status badge
+            const badge = document.getElementById('displayStatus');
+            const filled = data.filledSlots || 0;
+            const total = data.totalSlots || 1;
+            if (filled >= total) {
+                badge.textContent = 'Full';
+                badge.className = 'status-badge full';
+            } else {
+                badge.textContent = data.status || 'Open';
+                badge.className = 'status-badge open';
+            }
+
+            // Slots bar
+            document.getElementById('slotsBar').style.width = `${(filled / total) * 100}%`;
+
+            // Participants
+            renderParticipants(data.participants || []);
+        }
+
+        function renderParticipants(participants) {
+            const grid = document.getElementById('participantsGrid');
+            if (!participants.length) {
+                grid.innerHTML = '<div style="color: #555; padding: 20px; text-align: center;">Waiting for players...</div>';
+                return;
+            }
+
+            grid.innerHTML = participants.map(p => {
+                const isHost = p.isHost || (roomData && p.userId === roomData.hostId);
+                const isYou = p.userId === currentUserId;
+                return `
+                    <div class="participant-card ${isHost ? 'host' : ''} ${isYou ? 'you' : ''}" data-user-id="${p.userId}">
+                        ${isYou ? '<span class="you-badge">YOU</span>' : ''}
+                        <div class="participant-avatar">${isHost ? 'HOST' : 'PLAYER'}</div>
+                        <div class="participant-name">${p.userName || p.fullName || 'Player'}</div>
+                        <div class="participant-role">${isHost ? 'Host' : 'Player'}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function addParticipant(userId, userName, isHost = false) {
+            const grid = document.getElementById('participantsGrid');
+            if (grid.querySelector(`[data-user-id="${userId}"]`)) return;
+            
+            // Remove empty message
+            if (grid.innerHTML.includes('Waiting for players')) grid.innerHTML = '';
+
+            const isYou = userId === currentUserId;
+            const card = document.createElement('div');
+            card.className = `participant-card new ${isHost ? 'host' : ''} ${isYou ? 'you' : ''}`;
+            card.dataset.userId = userId;
+            card.innerHTML = `
+                ${isYou ? '<span class="you-badge">YOU</span>' : ''}
+                <div class="participant-avatar">${isHost ? 'HOST' : 'PLAYER'}</div>
+                <div class="participant-name">${userName || 'Player'}</div>
+                <div class="participant-role">${isHost ? 'Host' : 'Player'}</div>
+            `;
+            grid.appendChild(card);
+            setTimeout(() => card.classList.remove('new'), 500);
+        }
+
+        function removeParticipant(userId) {
+            const card = document.querySelector(`[data-user-id="${userId}"]`);
+            if (card) {
+                card.classList.add('leaving');
+                setTimeout(() => card.remove(), 300);
+            }
+        }
+
+        function updateSlots(filled, total) {
+            document.getElementById('displayFilled').textContent = filled;
+            document.getElementById('displayTotal').textContent = total;
+            document.getElementById('slotsBar').style.width = `${(filled / total) * 100}%`;
+            
+            // Animate
+            const el = document.getElementById('displayFilled');
+            el.style.transform = 'scale(1.3)';
+            setTimeout(() => el.style.transform = 'scale(1)', 200);
+
+            // Update status
+            const badge = document.getElementById('displayStatus');
+            if (filled >= total) {
+                badge.textContent = 'Full';
+                badge.className = 'status-badge full';
+            } else {
+                badge.textContent = 'Open';
+                badge.className = 'status-badge open';
+            }
+        }
+
+        function updateHost(newHostId) {
+            document.querySelectorAll('.participant-card').forEach(card => {
+                const isNew = card.dataset.userId === newHostId;
+                card.classList.toggle('host', isNew);
+                card.querySelector('.participant-avatar').textContent = isNew ? 'HOST' : 'PLAYER';
+                card.querySelector('.participant-role').textContent = isNew ? 'Host' : 'Player';
+            });
+        }
+
+        // ============ SignalR ============
+
+        async function connect() {
+            accessToken = document.getElementById('accessToken').value;
+            if (!accessToken) { alert('Enter JWT token'); return; }
+
+            // Parse user from token
+            const payload = parseJwt(accessToken);
+            if (payload) {
+                currentUserId = payload.sub || payload.nameid || payload.userId;
+                const name = payload.name || payload.unique_name || payload.email || 'User';
+                document.getElementById('currentUser').style.display = 'block';
+                document.getElementById('currentUserName').textContent = name;
+                document.getElementById('currentUserId').textContent = currentUserId;
+            }
+
+            const hubUrl = document.getElementById('hubUrl').value;
+            connection = new signalR.HubConnectionBuilder()
+                .withUrl(hubUrl, { accessTokenFactory: () => accessToken })
+                .withAutomaticReconnect()
+                .build();
+
+            // Events
+            connection.on("UserJoinedRoom", (data) => {
+                log('UserJoinedRoom: ' + JSON.stringify(data));
+                if (data.roomId === currentRoomId) {
+                    addParticipant(data.userId, data.userName);
+                    updateSlots(data.filledSlots, data.totalSlots);
+                    toast(`${data.userName} joined!`, 'success');
+                }
+                addEvent(`👋 ${data.userName} joined (${data.filledSlots}/${data.totalSlots})`, 'join');
+            });
+
+            connection.on("UserLeftRoom", (data) => {
+                log('UserLeftRoom: ' + JSON.stringify(data));
+                if (data.roomId === currentRoomId) {
+                    removeParticipant(data.userId);
+                    updateSlots(data.filledSlots, data.totalSlots);
+                    if (data.isRoomDeleted) {
+                        toast('Room deleted!', 'error');
+                        updateRoomDisplay(null);
+                        currentRoomId = null;
+                    } else {
+                        toast(`${data.userName} left`, 'info');
+                        if (data.newHostId) updateHost(data.newHostId);
+                    }
+                }
+                addEvent(`🚪 ${data.userName} left${data.isRoomDeleted ? ' (room deleted)' : ''}`, 'leave');
+            });
+
+            connection.on("RoomStatusChanged", (data) => {
+                log('RoomStatusChanged: ' + JSON.stringify(data));
+                addEvent(`🔄 Status: ${data.status}`, 'info');
+            });
+
+            connection.onclose(() => { updateConnectionUI(false); });
+            connection.onreconnected(() => {
+                updateConnectionUI(true);
+                if (currentRoomId) connection.invoke("JoinRoomGroup", currentRoomId);
+            });
+
+            try {
+                await connection.start();
+                updateConnectionUI(true);
+                addEvent('✅ Connected!', 'info');
+                toast('Connected!', 'success');
+            } catch (err) {
+                addEvent(`❌ ${err}`, 'error');
+            }
+        }
+
+        async function disconnect() {
+            if (connection) await connection.stop();
+            updateConnectionUI(false);
+            currentRoomId = null;
+            updateRoomDisplay(null);
+        }
+
+        // ============ API ============
+
+        async function api(endpoint, method = 'GET', body = null) {
+            const url = document.getElementById('apiBaseUrl').value + endpoint;
+            const opts = {
+                method,
+                headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' }
+            };
+            if (body) opts.body = JSON.stringify(body);
+            const res = await fetch(url, opts);
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.title || data.message || JSON.stringify(data));
+            return data;
+        }
+
+        async function loadRoom() {
+            const roomId = document.getElementById('roomId').value;
+            if (!roomId) { alert('Enter Room ID'); return; }
+
+            try {
+                await connection.invoke("JoinRoomGroup", roomId);
+                currentRoomId = roomId;
+                const data = await api(`/match-rooms/${roomId}`);
+                updateRoomDisplay(data);
+                addEvent(`📡 Loaded room`, 'info');
+            } catch (err) {
+                addEvent(`❌ ${err.message}`, 'error');
+                toast(err.message, 'error');
+            }
+        }
+
+        async function refreshRoom() {
+            if (!currentRoomId) return;
+            try {
+                const data = await api(`/match-rooms/${currentRoomId}`);
+                updateRoomDisplay(data);
+            } catch (err) {
+                addEvent(`❌ ${err.message}`, 'error');
+            }
+        }
+
+        async function joinRoom() {
+            const roomId = document.getElementById('roomId').value || currentRoomId;
+            if (!roomId) { alert('Enter Room ID'); return; }
+
+            try {
+                await api(`/match-rooms/${roomId}/join`, 'POST');
+                addEvent('You joined!', 'join');
+                toast('Joined!', 'success');
+                if (!currentRoomId) {
+                    document.getElementById('roomId').value = roomId;
+                    await loadRoom();
+                }
+            } catch (err) {
+                addEvent(`❌ ${err.message}`, 'error');
+                toast(err.message, 'error');
+            }
+        }
+
+        async function leaveRoom() {
+            const roomId = document.getElementById('roomId').value || currentRoomId;
+            if (!roomId) { alert('Enter Room ID'); return; }
+
+            try {
+                await api(`/match-rooms/${roomId}/leave`, 'POST');
+                addEvent('You left', 'leave');
+                toast('Left room', 'info');
+            } catch (err) {
+                addEvent(`❌ ${err.message}`, 'error');
+                toast(err.message, 'error');
+            }
+        }
+
+        async function listRooms() {
+            try {
+                const data = await api('/match-rooms?page=1&pageSize=10');
+                const list = document.getElementById('roomsList');
+                if (data.items && data.items.length) {
+                    list.innerHTML = data.items.map(r => `
+                        <div style="padding: 8px; margin: 5px 0; background: #1a1f2e; border-radius: 4px; cursor: pointer;" 
+                             onclick="document.getElementById('roomId').value='${r.roomId}'; loadRoom();">
+                            <strong>${r.roomName || 'Room'}</strong>
+                            <span style="float: right; color: #7fff6f;">${r.filledSlots}/${r.totalSlots}</span>
+                            <div style="font-size: 11px; color: #888;">${r.roomId}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    list.innerHTML = '<div style="color: #555; text-align: center; padding: 10px;">No rooms</div>';
+                }
+            } catch (err) {
+                addEvent(`❌ ${err.message}`, 'error');
+            }
+        }
+    </script>
+</body>
+</html>

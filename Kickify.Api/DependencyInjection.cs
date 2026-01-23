@@ -55,6 +55,7 @@ namespace Kickify.Api
             });
 
             services.AddScoped<IChatHubService, ChatHubService>();
+            services.AddScoped<IMatchRoomHubService, MatchRoomHubService>();
 
             return services;
         }
