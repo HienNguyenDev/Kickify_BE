@@ -15,6 +15,7 @@ public class SendPrivateMessageCommandHandler : ICommandHandler<SendPrivateMessa
 {
     private readonly IChatMessageRepository _chatMessageRepository;
     private readonly IUserRepository _userRepository;
+    private readonly IFriendshipRepository _friendshipRepository;
     private readonly IChatHubService _chatHubService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IUserContext _userContext;
@@ -22,12 +23,14 @@ public class SendPrivateMessageCommandHandler : ICommandHandler<SendPrivateMessa
     public SendPrivateMessageCommandHandler(
         IChatMessageRepository chatMessageRepository,
         IUserRepository userRepository,
+        IFriendshipRepository friendshipRepository,
         IChatHubService chatHubService,
         IUnitOfWork unitOfWork,
         IUserContext userContext)
     {
         _chatMessageRepository = chatMessageRepository;
         _userRepository = userRepository;
+        _friendshipRepository = friendshipRepository;
         _chatHubService = chatHubService;
         _unitOfWork = unitOfWork;
         _userContext = userContext;
@@ -46,6 +49,12 @@ public class SendPrivateMessageCommandHandler : ICommandHandler<SendPrivateMessa
         if (receiver is null)
         {
             return Result.Failure<SendPrivateMessageCommandResponse>(ChatErrors.ReceiverNotFound);
+        }
+
+        var areFriends = await _friendshipRepository.AreFriendsAsync(senderId, request.ReceiverId, cancellationToken);
+        if (!areFriends)
+        {
+            return Result.Failure<SendPrivateMessageCommandResponse>(FriendshipErrors.CannotChat);
         }
 
         var sender = await _userRepository.GetByIdAsync(senderId);
