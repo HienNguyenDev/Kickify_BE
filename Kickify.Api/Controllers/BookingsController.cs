@@ -3,6 +3,8 @@ using Kickify.Api.Requests;
 using Kickify.Application.Features.Bookings.Commands.ProcessPayment;
 using Kickify.Application.Features.Bookings.Queries.CheckAvailability;
 using Kickify.Application.Features.Bookings.Queries.CheckConsecutiveSlots;
+using Kickify.Application.Features.Bookings.Queries.GetAllBookings;
+using Kickify.Application.Features.Bookings.Queries.GetBookingById;
 using Kickify.Application.Features.Bookings.Queries.GetBookingPreview;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -21,43 +23,34 @@ namespace Kickify.Api.Controllers
         }
 
         /// <summary>
-        /// Check availability for a field on a specific date (returns 30-minute slots)
+        /// Get all bookings with pagination and optional filters
         /// </summary>
-        [HttpGet("availability")]
-        public async Task<IResult> CheckAvailability(
-            [FromQuery] Guid fieldId,
-            [FromQuery] DateTime date,
-            CancellationToken cancellationToken)
+        [HttpGet]
+        public async Task<IResult> GetAllBookings(
+            [FromQuery] Guid? fieldId,
+            [FromQuery] DateTime? date,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
+            CancellationToken cancellationToken = default)
         {
-            var query = new CheckAvailabilityQuery(fieldId, date);
+            var query = new GetAllBookingsQuery(fieldId, date, page, pageSize);
             var result = await _sender.Send(query, cancellationToken);
 
             return result.MatchOk();
         }
 
         /// <summary>
-        /// Check if consecutive time slots are available for a specific duration
-        /// Used when host selects start time + duration (60/90/120 minutes)
+        /// Get booking by ID with full details
         /// </summary>
-        [HttpGet("check-consecutive-slots")]
-        public async Task<IResult> CheckConsecutiveSlots(
-            [FromQuery] Guid fieldId,
-            [FromQuery] DateTime date,
-            [FromQuery] TimeSpan startTime,
-            [FromQuery] int durationMinutes,
-            CancellationToken cancellationToken)
+        [HttpGet("{bookingId:guid}")]
+        public async Task<IResult> GetBookingById(Guid bookingId, CancellationToken cancellationToken)
         {
-            var query = new CheckConsecutiveSlotsQuery(
-                fieldId,
-                date,
-                startTime,
-                durationMinutes
-            );
-
+            var query = new GetBookingByIdQuery(bookingId);
             var result = await _sender.Send(query, cancellationToken);
 
             return result.MatchOk();
         }
+
 
         /// <summary>
         /// Get booking preview with pricing calculation
