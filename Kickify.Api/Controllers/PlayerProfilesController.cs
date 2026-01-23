@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Kickify.Api.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/playerprofiles")]
     [ApiController]
     public class PlayerProfilesController : ControllerBase
     {

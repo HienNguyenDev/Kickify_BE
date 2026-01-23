@@ -8,6 +8,18 @@ namespace Kickify.Domain.Errors
             "Bookings.NotFound",
             $"The booking with Id = '{bookingId}' was not found");
 
+        public static Error RoomNotFound(Guid roomId) => Error.NotFound(
+            "Bookings.RoomNotFound",
+            $"Match room with ID {roomId} not found");
+
+        public static readonly Error ParticipantNotFound = Error.NotFound(
+            "Bookings.ParticipantNotFound",
+            "User is not a participant of this room");
+
+        public static readonly Error AlreadyPaid = Error.Conflict(
+            "Bookings.AlreadyPaid",
+            "User has already paid");
+
         public static readonly Error FieldNotAvailable = Error.Conflict(
             "Bookings.FieldNotAvailable",
             "The selected field is not available for the requested time slot");
@@ -35,5 +47,9 @@ namespace Kickify.Domain.Errors
         public static readonly Error PaymentNotComplete = Error.Problem(
             "Bookings.PaymentNotComplete",
             "All participants must complete payment before booking can be created");
+
+        public static readonly Error PaymentProcessFailed = Error.Problem(
+            "Bookings.PaymentProcessFailed",
+            "Failed to process payment");
     }
 }

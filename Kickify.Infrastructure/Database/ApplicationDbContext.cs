@@ -48,6 +48,7 @@ namespace Kickify.Infrastructure.Database
         public DbSet<PostLike> PostLikes { get; set; }
         public DbSet<Comment> Comments { get; set; }
         public DbSet<CommentLike> CommentLikes { get; set; }
+        public DbSet<Friendship> Friendships { get; set; }
 
         // Evaluation Schema
         public DbSet<MatchFeedback> MatchFeedbacks { get; set; }
