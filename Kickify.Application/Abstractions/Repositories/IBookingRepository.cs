@@ -24,5 +24,22 @@ namespace Kickify.Application.Abstractions.Repositories
             TimeSpan startTime,
             TimeSpan endTime,
             CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Get booking with full details (field, venue)
+        /// </summary>
+        Task<Booking?> GetBookingWithDetailsAsync(
+            Guid bookingId,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Get paged bookings with optional filters
+        /// </summary>
+        Task<(IEnumerable<Booking> Bookings, int Total)> GetBookingsPagedAsync(
+            Guid? fieldId = null,
+            DateTime? date = null,
+            int page = 1,
+            int pageSize = 10,
+            CancellationToken cancellationToken = default);
     }
 }

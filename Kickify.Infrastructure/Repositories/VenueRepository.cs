@@ -84,5 +84,36 @@ namespace Kickify.Infrastructure.Repositories
 
             return (venues, total);
         }
+
+        public async Task<Venue?> GetVenueForUpdateAsync(
+            Guid venueId,
+            CancellationToken cancellationToken = default)
+        {
+            return await _dbSet
+                .FirstOrDefaultAsync(v => v.VenueId == venueId, cancellationToken);
+        }
+
+        public async Task<(IEnumerable<Venue> Venues, int Total)> GetVenuesByOwnerPagedAsync(
+            Guid ownerId,
+            int page = 1,
+            int pageSize = 10,
+            CancellationToken cancellationToken = default)
+        {
+            var query = _dbSet
+                .AsNoTracking()
+                .Include(v => v.Fields)
+                .Include(v => v.VenueWallet)
+                .Where(v => v.OwnerId == ownerId);
+
+            var total = await query.CountAsync(cancellationToken);
+
+            var venues = await query
+                .OrderByDescending(v => v.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+
+            return (venues, total);
+        }
     }
 }

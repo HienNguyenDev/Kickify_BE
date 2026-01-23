@@ -2,8 +2,12 @@ using Kickify.Api.Extensions;
 using Kickify.Api.Requests;
 using Kickify.Application.Features.Venues.Commands.AddField;
 using Kickify.Application.Features.Venues.Commands.CreateVenue;
+using Kickify.Application.Features.Venues.Commands.DeleteVenue;
+using Kickify.Application.Features.Venues.Commands.UpdateVenue;
 using Kickify.Application.Features.Venues.Queries.GetAllVenues;
+using Kickify.Application.Features.Venues.Queries.GetFieldsByVenue;
 using Kickify.Application.Features.Venues.Queries.GetVenueById;
+using Kickify.Application.Features.Venues.Queries.GetVenuesByOwner;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,7 +16,7 @@ using System.Security.Claims;
 namespace Kickify.Api.Controllers
 {
     [ApiController]
-    [Route("api/venues")]
+    [Route("api/[controller]")]
     public class VenuesController : ControllerBase
     {
         private readonly ISender _sender;
@@ -121,6 +125,95 @@ namespace Kickify.Api.Controllers
                 request.Description
             );
 
+            var result = await _sender.Send(command, cancellationToken);
+
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Get venues owned by the current user
+        /// </summary>
+        [Authorize]
+        [HttpGet("mine")]
+        public async Task<IResult> GetMyVenues(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
+            CancellationToken cancellationToken = default)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var query = new GetVenuesByOwnerQuery(userId, page, pageSize);
+            var result = await _sender.Send(query, cancellationToken);
+
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Get all fields of a venue
+        /// </summary>
+        [HttpGet("{venueId:guid}/fields")]
+        public async Task<IResult> GetFieldsByVenue(
+            Guid venueId,
+            CancellationToken cancellationToken = default)
+        {
+            var query = new GetFieldsByVenueQuery(venueId);
+            var result = await _sender.Send(query, cancellationToken);
+
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Update venue (owner only)
+        /// </summary>
+        [Authorize]
+        [HttpPut("{venueId:guid}")]
+        public async Task<IResult> UpdateVenue(
+            Guid venueId,
+            [FromBody] UpdateVenueRequest request,
+            CancellationToken cancellationToken)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new UpdateVenueCommand(
+                venueId,
+                userId,
+                request.Name,
+                request.Address,
+                request.Latitude,
+                request.Longitude,
+                request.ContactPhone,
+                request.ContactEmail,
+                request.Description,
+                request.Amenities
+            );
+
+            var result = await _sender.Send(command, cancellationToken);
+
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Delete venue (owner only)
+        /// </summary>
+        [Authorize]
+        [HttpDelete("{venueId:guid}")]
+        public async Task<IResult> DeleteVenue(Guid venueId, CancellationToken cancellationToken)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new DeleteVenueCommand(venueId, userId);
             var result = await _sender.Send(command, cancellationToken);
 
             return result.MatchOk();
