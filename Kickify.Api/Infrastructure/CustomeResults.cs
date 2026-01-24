@@ -16,7 +16,7 @@ public static class CustomResults
             detail: GetDetail(result.Error),
             type: GetType(result.Error.Type),
             statusCode: GetStatusCode(result.Error.Type),
-            extensions: GetErrors(result));
+            extensions: GetExtensions(result));
 
         static string GetTitle(Error error) =>
             error.Type switch
@@ -57,17 +57,26 @@ public static class CustomResults
                 _ => StatusCodes.Status500InternalServerError
             };
 
-        static Dictionary<string, object?>? GetErrors(Result result)
+        static Dictionary<string, object?>? GetExtensions(Result result)
         {
-            if (result.Error is not ValidationError validationError)
+            var extensions = new Dictionary<string, object?>();
+
+            // Add validation errors if present
+            if (result.Error is ValidationError validationError)
             {
-                return null;
+                extensions["errors"] = validationError.Errors;
             }
 
-            return new Dictionary<string, object?>
+            // Add metadata if present
+            if (result.Error.Metadata.Count > 0)
             {
-                { "errors", validationError.Errors }
-            };
+                foreach (var kvp in result.Error.Metadata)
+                {
+                    extensions[kvp.Key] = kvp.Value;
+                }
+            }
+
+            return extensions.Count > 0 ? extensions : null;
         }
     }
 }
