@@ -9,6 +9,7 @@ using Kickify.Application.Abstractions.Services;
 using Kickify.Infrastructure.Authentication;
 using Kickify.Infrastructure.Database;
 using Kickify.Infrastructure.Mail;
+//using Kickify.Infrastructure.Payment;
 using Kickify.Infrastructure.Persistence;
 using Kickify.Infrastructure.Redis;
 using Kickify.Infrastructure.Repositories;
@@ -178,6 +179,9 @@ namespace Kickify.Infrastructure
                 config.Version = vnpayConfig["Version"]!;
                 config.OrderType = vnpayConfig["OrderType"]!;
             });
+            
+            //services.AddScoped<IVnPayService, VnPayService>();
+            
             return services;
         }
 
