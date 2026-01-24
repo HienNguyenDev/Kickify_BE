@@ -6,6 +6,6 @@ public class RespondFriendRequestCommandValidator : AbstractValidator<RespondFri
 {
     public RespondFriendRequestCommandValidator()
     {
-        RuleFor(x => x.FriendshipId).NotEmpty().WithMessage("FriendshipId is required");
+        RuleFor(x => x.RequesterId).NotEmpty().WithMessage("RequesterId is required");
     }
 }

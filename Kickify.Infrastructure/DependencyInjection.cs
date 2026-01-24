@@ -21,12 +21,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Minio;
 using StackExchange.Redis;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using Kickify.Infrastructure.ChatConnection;
+using VNPAY.Extensions;
+using Hangfire;
+using Hangfire.PostgreSql;
 
 namespace Kickify.Infrastructure
 {
@@ -41,7 +40,9 @@ namespace Kickify.Infrastructure
             .AddFirebase()
             .AddRedisStore(configuration)
             .AddMinioStorage(configuration)
-            .AddSignalRServices();
+            .AddSignalRServices()
+            .AddVNPay(configuration)
+            .AddHangfireServices(configuration);
 
         private static IServiceCollection AddAuthenticationInternal(this IServiceCollection services, IConfiguration configuration)
         {
@@ -162,6 +163,43 @@ namespace Kickify.Infrastructure
         {
             services.AddSignalR();
             services.AddSingleton<ConnectionMapping>();
+            return services;
+        }
+
+        private static IServiceCollection AddVNPay(this IServiceCollection services, IConfiguration configuration)
+        {
+            var vnpayConfig = configuration.GetSection("VNPAY");
+            services.AddVnpayClient(config =>
+            {
+                config.TmnCode = vnpayConfig["TmnCode"]!;
+                config.HashSecret = vnpayConfig["HashSecret"]!;
+                config.BaseUrl = vnpayConfig["BaseUrl"]!;
+                config.CallbackUrl = vnpayConfig["CallbackUrl"]!;
+                config.Version = vnpayConfig["Version"]!;
+                config.OrderType = vnpayConfig["OrderType"]!;
+            });
+            return services;
+        }
+
+        private static IServiceCollection AddHangfireServices(this IServiceCollection services, IConfiguration configuration)
+        {
+            var connectionString = configuration.GetConnectionString("Database");
+
+            services.AddHangfire(config => config
+                .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+                .UseSimpleAssemblyNameTypeSerializer()
+                .UseRecommendedSerializerSettings()
+                .UsePostgreSqlStorage(options =>
+                    options.UseNpgsqlConnection(connectionString),
+                    new PostgreSqlStorageOptions
+                    {
+                        PrepareSchemaIfNecessary = true,
+                        SchemaName = "hangfire",
+                        QueuePollInterval = TimeSpan.FromSeconds(15)
+                    }));
+
+            services.AddHangfireServer();
+
             return services;
         }
     }
