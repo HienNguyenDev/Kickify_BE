@@ -25,7 +25,7 @@ namespace Kickify.Application.Features.VenuePhotos.Commands.UpdateVenuePhoto
 
         public async Task<Result<UpdateVenuePhotoResponse>> Handle(UpdateVenuePhotoCommand request, CancellationToken cancellationToken)
         {
-            // Get photo with venue info for ownership check TEST
+            // Get photo with venue info for ownership check
             var photo = await _venuePhotoRepository.GetPhotoWithVenueAsync(request.PhotoId, cancellationToken);
             if (photo == null)
             {
