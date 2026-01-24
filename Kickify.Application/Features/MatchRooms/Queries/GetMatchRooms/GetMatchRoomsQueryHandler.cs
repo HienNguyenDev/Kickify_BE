@@ -54,7 +54,8 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRooms
                 roomItems,
                 total,
                 request.Page,
-                request.PageSize
+                request.PageSize,
+                (int)Math.Ceiling(total / (double)request.PageSize)
             );
 
             return Result.Success(response);

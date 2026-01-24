@@ -1,5 +1,6 @@
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Entities;
+using Kickify.Domain.Enums;
 using Kickify.Infrastructure.Database;
 using Kickify.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -47,6 +48,70 @@ namespace Kickify.Infrastructure.Repositories
                     cancellationToken);
 
             return !hasConflict;
+        }
+
+        public async Task<Field?> GetFieldWithVenueForUpdateAsync(
+            Guid fieldId,
+            CancellationToken cancellationToken = default)
+        {
+            return await _dbSet
+                .Include(f => f.Venue)
+                .FirstOrDefaultAsync(f => f.FieldId == fieldId, cancellationToken);
+        }
+
+        public async Task<(IEnumerable<Field> Fields, int Total)> GetFieldsPagedAsync(
+            FieldType? fieldType = null,
+            bool? isActive = null,
+            int page = 1,
+            int pageSize = 10,
+            CancellationToken cancellationToken = default)
+        {
+            var query = _dbSet
+                .AsNoTracking()
+                .Include(f => f.Venue)
+                .AsQueryable();
+
+            if (fieldType.HasValue)
+            {
+                query = query.Where(f => f.FieldType == fieldType.Value);
+            }
+
+            if (isActive.HasValue)
+            {
+                query = query.Where(f => f.IsActive == isActive.Value);
+            }
+
+            var total = await query.CountAsync(cancellationToken);
+
+            var fields = await query
+                .OrderByDescending(f => f.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+
+            return (fields, total);
+        }
+
+        public async Task<(IEnumerable<Field> Fields, int Total)> GetFieldsByOwnerPagedAsync(
+            Guid ownerId,
+            int page = 1,
+            int pageSize = 10,
+            CancellationToken cancellationToken = default)
+        {
+            var query = _dbSet
+                .AsNoTracking()
+                .Include(f => f.Venue)
+                .Where(f => f.Venue.OwnerId == ownerId);
+
+            var total = await query.CountAsync(cancellationToken);
+
+            var fields = await query
+                .OrderByDescending(f => f.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+
+            return (fields, total);
         }
     }
 }
