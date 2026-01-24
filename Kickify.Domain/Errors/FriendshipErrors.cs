@@ -11,6 +11,6 @@ public static class FriendshipErrors
     public static readonly Error RequestAlreadyExists = Error.Conflict("Friendships.RequestAlreadyExists", "A friend request already exists between you and this user");
     public static readonly Error RequestNotFound = Error.NotFound("Friendships.RequestNotFound", "Friend request not found");
     public static readonly Error Unauthorized = Error.Problem("Friendships.Unauthorized", "You are not authorized to perform this action");
-    public static readonly Error NotFriends = Error.Problem("Friendships.NotFriends", "You are not friends with this user");
-    public static readonly Error CannotChat = Error.Problem("Friendships.CannotChat", "You must be friends to chat with this user");
+    public static readonly Error NotFriends = Error.Conflict("Friendships.NotFriends", "You are not friends with this user");
+    public static readonly Error CannotChat = Error.Conflict("Friendships.CannotChat", "You must be friends to chat with this user");
 }

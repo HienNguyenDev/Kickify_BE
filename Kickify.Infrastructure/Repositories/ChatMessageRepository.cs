@@ -80,35 +80,43 @@ public class ChatMessageRepository : GenericRepository<ChatMessage>, IChatMessag
         int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var conversations = await _dbSet
-            .Include(m => m.Sender)
-            .Include(m => m.Receiver)
+        var conversationData = await _dbSet
             .Where(m => m.ConversationType == ConversationType.Private &&
                        (m.SenderId == userId || m.ReceiverId == userId))
             .GroupBy(m => m.SenderId == userId ? m.ReceiverId : m.SenderId)
             .Select(g => new
             {
                 OtherUserId = g.Key,
-                LastMessage = g.OrderByDescending(m => m.SentAt).First(),
+                LastMessageId = g.OrderByDescending(m => m.SentAt).Select(m => m.MessageId).FirstOrDefault(),
                 UnreadCount = g.Count(m => m.ReceiverId == userId && !m.IsRead)
             })
-            .OrderByDescending(x => x.LastMessage.SentAt)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
             .ToListAsync(cancellationToken);
 
-        var result = new List<(User, ChatMessage, int)>();
-        foreach (var conv in conversations)
-        {
-            var otherUser = conv.LastMessage.SenderId == userId
-                ? conv.LastMessage.Receiver
-                : conv.LastMessage.Sender;
+        if (!conversationData.Any())
+            return Enumerable.Empty<(User, ChatMessage, int)>();
 
-            if (otherUser != null)
+        var lastMessageIds = conversationData.Select(c => c.LastMessageId).ToList();
+        var lastMessages = await _dbSet
+            .Include(m => m.Sender)
+            .Include(m => m.Receiver)
+            .Where(m => lastMessageIds.Contains(m.MessageId))
+            .ToListAsync(cancellationToken);
+
+        var result = conversationData
+            .Select(conv =>
             {
-                result.Add((otherUser, conv.LastMessage, conv.UnreadCount));
-            }
-        }
+                var lastMessage = lastMessages.FirstOrDefault(m => m.MessageId == conv.LastMessageId);
+                if (lastMessage == null) return ((User?, ChatMessage?, int))(null, null, 0);
+
+                var otherUser = lastMessage.SenderId == userId ? lastMessage.Receiver : lastMessage.Sender;
+                return (otherUser, lastMessage, conv.UnreadCount);
+            })
+            .Where(x => x.Item1 != null && x.Item2 != null)
+            .OrderByDescending(x => x.Item2!.SentAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(x => (x.Item1!, x.Item2!, x.Item3))
+            .ToList();
 
         return result;
     }
