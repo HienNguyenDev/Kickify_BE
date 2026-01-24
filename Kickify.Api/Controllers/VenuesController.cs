@@ -46,7 +46,10 @@ namespace Kickify.Api.Controllers
                 request.Address,
                 request.Latitude,
                 request.Longitude,
+                request.ContactPhone,
+                request.ContactEmail,
                 request.Description,
+                request.Amenities,
                 request.Fields.Select(f => new CreateVenueFieldDto(
                     f.Name,
                     f.FieldType,
@@ -66,6 +69,7 @@ namespace Kickify.Api.Controllers
             return result.MatchOk();
         }
 
+        
         /// <summary>
         /// Get venue by ID with all details (fields, photos, operating hours)
         /// </summary>

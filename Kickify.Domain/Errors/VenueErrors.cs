@@ -35,5 +35,13 @@ namespace Kickify.Domain.Errors
         public static readonly Error CreateFailed = Error.Problem(
             "Venues.CreateFailed",
             "Failed to create venue");
+
+        public static Error UploadFailed(string errors) => Error.Problem(
+            "Venues.UploadFailed",
+            $"Failed to upload venue photos: {errors}");
+
+        public static readonly Error NoPhotosProvided = Error.Problem(
+            "Venues.NoPhotosProvided",
+            "At least one photo must be provided");
     }
 }

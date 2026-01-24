@@ -52,7 +52,10 @@ namespace Kickify.Application.Features.Venues.Commands.CreateVenue
                     Address = request.Address,
                     Latitude = request.Latitude,
                     Longitude = request.Longitude,
+                    ContactPhone = request.ContactPhone,
+                    ContactEmail = request.ContactEmail,
                     Description = request.Description,
+                    Amenities = request.Amenities,
                     CreatedAt = DateTime.UtcNow
                 };
 
@@ -118,7 +121,10 @@ namespace Kickify.Application.Features.Venues.Commands.CreateVenue
                     venue.Address,
                     venue.Latitude ?? 0,
                     venue.Longitude ?? 0,
+                    venue.ContactPhone,
+                    venue.ContactEmail,
                     venue.Description,
+                    venue.Amenities,
                     wallet.WalletId,
                     venue.Fields.Select(f => new VenueFieldDto(
                         f.FieldId,
