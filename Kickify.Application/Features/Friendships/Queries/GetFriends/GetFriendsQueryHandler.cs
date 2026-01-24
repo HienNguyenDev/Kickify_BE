@@ -28,6 +28,8 @@ public class GetFriendsQueryHandler : IQueryHandler<GetFriendsQuery, GetFriendsQ
                 UserId = friend.UserId,
                 FullName = friend.FullName ?? string.Empty,
                 AvatarUrl = friend.AvatarUrl,
+                CurrentElo = friend.PlayerProfile?.CurrentElo,
+                PreferredPositions = friend.PlayerProfile?.PreferredPositions,
                 FriendsSince = f.RespondedAt ?? f.CreatedAt
             };
         }).ToList();

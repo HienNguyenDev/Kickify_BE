@@ -4,6 +4,6 @@ namespace Kickify.Application.Features.Friendships.Commands.RespondFriendRequest
 
 public class RespondFriendRequestCommand : ICommand<RespondFriendRequestCommandResponse>
 {
-    public Guid FriendshipId { get; set; }
+    public Guid RequesterId { get; set; }
     public bool Accept { get; set; }
 }

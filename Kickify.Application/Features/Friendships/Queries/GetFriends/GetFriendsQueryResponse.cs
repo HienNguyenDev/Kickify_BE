@@ -14,5 +14,7 @@ public class FriendDto
     public Guid UserId { get; set; }
     public string FullName { get; set; } = string.Empty;
     public string? AvatarUrl { get; set; }
+    public int? CurrentElo { get; set; }
+    public string? PreferredPositions { get; set; }
     public DateTime FriendsSince { get; set; }
 }
