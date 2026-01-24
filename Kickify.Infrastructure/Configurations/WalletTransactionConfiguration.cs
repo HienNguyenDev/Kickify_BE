@@ -16,7 +16,7 @@ public class WalletTransactionConfiguration : IEntityTypeConfiguration<WalletTra
         builder.Property(wt => wt.TransactionId)
             .IsRequired();
 
-        builder.Property(wt => wt.WalletId)
+        builder.Property(wt => wt.VenueWalletId)
             .IsRequired();
 
         builder.Property(wt => wt.TransactionType)
@@ -38,7 +38,7 @@ public class WalletTransactionConfiguration : IEntityTypeConfiguration<WalletTra
             .HasColumnType("text");
 
         // Indexes
-        builder.HasIndex(wt => wt.WalletId);
+        builder.HasIndex(wt => wt.VenueWalletId);
         builder.HasIndex(wt => wt.CreatedAt);
     }
 }
