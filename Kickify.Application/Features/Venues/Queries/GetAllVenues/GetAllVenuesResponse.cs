@@ -22,7 +22,7 @@ namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
 
     public record FieldSummaryDto(
         Guid FieldId,
-        string Name,
+        string FieldName,
         string FieldType,
         decimal PricePerHour
     );
