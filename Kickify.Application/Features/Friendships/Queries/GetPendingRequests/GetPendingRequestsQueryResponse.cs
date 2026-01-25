@@ -15,5 +15,7 @@ public class FriendRequestDto
     public Guid RequesterId { get; set; }
     public string RequesterFullName { get; set; } = string.Empty;
     public string? RequesterAvatarUrl { get; set; }
+    public int? CurrentElo { get; set; }
+    public string? PreferredPositions { get; set; }
     public DateTime SentAt { get; set; }
 }

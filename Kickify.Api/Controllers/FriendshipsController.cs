@@ -1,8 +1,10 @@
 using Kickify.Api.Extensions;
+using Kickify.Api.Requests;
 using Kickify.Application.Features.Friendships.Commands.RemoveFriend;
 using Kickify.Application.Features.Friendships.Commands.RespondFriendRequest;
 using Kickify.Application.Features.Friendships.Commands.SendFriendRequest;
 using Kickify.Application.Features.Friendships.Queries.GetFriends;
+using Kickify.Application.Features.Friendships.Queries.GetFriendshipStatus;
 using Kickify.Application.Features.Friendships.Queries.GetPendingRequests;
 using Kickify.Domain.Common;
 using MediatR;
@@ -39,6 +41,14 @@ public class FriendshipsController : ControllerBase
         return result.MatchOk();
     }
 
+    [HttpGet("status/{userId:guid}")]
+    public async Task<IResult> GetFriendshipStatus(Guid userId, CancellationToken cancellationToken)
+    {
+        var query = new GetFriendshipStatusQuery { OtherUserId = userId };
+        Result<GetFriendshipStatusQueryResponse> result = await _mediator.Send(query, cancellationToken);
+        return result.MatchOk();
+    }
+
     [HttpPost("request/{addresseeId:guid}")]
     public async Task<IResult> SendFriendRequest(Guid addresseeId, CancellationToken cancellationToken)
     {
@@ -47,24 +57,21 @@ public class FriendshipsController : ControllerBase
         return result.MatchOk();
     }
 
-    [HttpPost("respond/{friendshipId:guid}")]
-    public async Task<IResult> RespondFriendRequest(Guid friendshipId, [FromBody] RespondFriendRequestRequest request, CancellationToken cancellationToken)
+    [HttpPost("respond/{requesterId:guid}")]
+    public async Task<IResult> RespondFriendRequest(Guid requesterId, [FromBody] RespondFriendRequestRequest request, CancellationToken cancellationToken)
     {
-        var command = new RespondFriendRequestCommand { FriendshipId = friendshipId, Accept = request.Accept };
+        var command = new RespondFriendRequestCommand { RequesterId = requesterId, Accept = request.Accept };
         Result<RespondFriendRequestCommandResponse> result = await _mediator.Send(command, cancellationToken);
         return result.MatchOk();
     }
 
-    [HttpDelete("{friendId:guid}")]
-    public async Task<IResult> RemoveFriend(Guid friendId, CancellationToken cancellationToken)
+    [HttpDelete("{userId:guid}")]
+    public async Task<IResult> RemoveFriend(Guid userId, CancellationToken cancellationToken)
     {
-        var command = new RemoveFriendCommand { FriendId = friendId };
+        var command = new RemoveFriendCommand { FriendId = userId };
         Result<RemoveFriendCommandResponse> result = await _mediator.Send(command, cancellationToken);
         return result.MatchOk();
     }
 }
 
-public class RespondFriendRequestRequest
-{
-    public bool Accept { get; set; }
-}
+

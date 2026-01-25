@@ -4,7 +4,7 @@ namespace Kickify.Domain.Entities;
 
 public class VenueWallet : BaseEntity
 {
-    public Guid WalletId { get; set; }
+    public Guid VenueWalletId { get; set; }
     public Guid VenueId { get; set; }
     public decimal Balance { get; set; } = 0;
     public string? BankAccountNumber { get; set; }
@@ -15,5 +15,5 @@ public class VenueWallet : BaseEntity
     // Navigation properties
     public Venue Venue { get; set; } = null!;
     public ICollection<WalletTransaction> WalletTransactions { get; set; } = new List<WalletTransaction>();
-    public ICollection<Withdrawal> Withdrawals { get; set; } = new List<Withdrawal>();
+    public ICollection<VenueWithdrawal> VenueWithdrawals { get; set; } = new List<VenueWithdrawal>();
 }

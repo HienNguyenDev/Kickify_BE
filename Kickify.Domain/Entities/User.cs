@@ -24,6 +24,7 @@ public class User : Entity
 
     // Navigation properties
     public PlayerProfile? PlayerProfile { get; set; }
+    public PlayerWallet? PlayerWallet { get; set; }
     public NotificationPreference? NotificationPreference { get; set; }
     public ICollection<PlayerAchievement> PlayerAchievements { get; set; } = new List<PlayerAchievement>();
     public ICollection<Venue> Venues { get; set; } = new List<Venue>();

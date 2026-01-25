@@ -8,6 +8,8 @@
 
   <ItemGroup>
     <Folder Include="Features\Users\Queries\" />
+    <Folder Include="Features\Wallets\Commands\" />
+    <Folder Include="Features\Wallets\Queries\" />
   </ItemGroup>
 
   <ItemGroup>

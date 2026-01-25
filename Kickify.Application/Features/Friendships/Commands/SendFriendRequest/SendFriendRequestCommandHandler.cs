@@ -31,22 +31,41 @@ public class SendFriendRequestCommandHandler : ICommandHandler<SendFriendRequest
         var addressee = await _userRepository.GetByIdAsync(request.AddresseeId);
         if (addressee is null) return Result.Failure<SendFriendRequestCommandResponse>(FriendshipErrors.UserNotFound);
 
-        var existingFriendship = await _friendshipRepository.GetFriendshipAsync(_userContext.UserId, request.AddresseeId, cancellationToken);
+        var existingFriendship = await _friendshipRepository.GetFriendshipIncludeDeletedAsync(_userContext.UserId, request.AddresseeId, cancellationToken);
+        
+        Friendship friendship;
+
         if (existingFriendship is not null)
         {
-            if (existingFriendship.Status == FriendshipStatus.Accepted) return Result.Failure<SendFriendRequestCommandResponse>(FriendshipErrors.AlreadyFriends);
-            if (existingFriendship.Status == FriendshipStatus.Pending) return Result.Failure<SendFriendRequestCommandResponse>(FriendshipErrors.RequestAlreadyExists);
+            if (existingFriendship.DeletedAt is not null)
+            {
+                existingFriendship.DeletedAt = null;
+                existingFriendship.RequesterId = _userContext.UserId;
+                existingFriendship.AddresseeId = request.AddresseeId;
+                existingFriendship.Status = FriendshipStatus.Pending;
+                existingFriendship.RespondedAt = null;
+                _friendshipRepository.Update(existingFriendship);
+                friendship = existingFriendship;
+            }
+            else
+            {
+                if (existingFriendship.Status == FriendshipStatus.Accepted) return Result.Failure<SendFriendRequestCommandResponse>(FriendshipErrors.AlreadyFriends);
+                if (existingFriendship.Status == FriendshipStatus.Pending) return Result.Failure<SendFriendRequestCommandResponse>(FriendshipErrors.RequestAlreadyExists);
+                return Result.Failure<SendFriendRequestCommandResponse>(FriendshipErrors.RequestAlreadyExists);
+            }
+        }
+        else
+        {
+            friendship = new Friendship
+            {
+                FriendshipId = Guid.NewGuid(),
+                RequesterId = _userContext.UserId,
+                AddresseeId = request.AddresseeId,
+                Status = FriendshipStatus.Pending
+            };
+            await _friendshipRepository.AddAsync(friendship);
         }
 
-        var friendship = new Friendship
-        {
-            FriendshipId = Guid.NewGuid(),
-            RequesterId = _userContext.UserId,
-            AddresseeId = request.AddresseeId,
-            Status = FriendshipStatus.Pending
-        };
-
-        await _friendshipRepository.AddAsync(friendship);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         var response = new SendFriendRequestCommandResponse
@@ -57,7 +76,7 @@ public class SendFriendRequestCommandHandler : ICommandHandler<SendFriendRequest
             Status = friendship.Status.ToString(),
             CreatedAt = friendship.CreatedAt
         };
-
+            
         return Result.Success(response);
     }
 }

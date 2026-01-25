@@ -23,20 +23,32 @@ public class RespondFriendRequestCommandHandler : ICommandHandler<RespondFriendR
 
     public async Task<Result<RespondFriendRequestCommandResponse>> Handle(RespondFriendRequestCommand request, CancellationToken cancellationToken)
     {
-        var friendship = await _friendshipRepository.GetByIdAsync(request.FriendshipId);
+        var friendship = await _friendshipRepository.GetFriendshipAsync(request.RequesterId, _userContext.UserId, cancellationToken);
         if (friendship is null || friendship.Status != FriendshipStatus.Pending) return Result.Failure<RespondFriendRequestCommandResponse>(FriendshipErrors.RequestNotFound);
         if (friendship.AddresseeId != _userContext.UserId) return Result.Failure<RespondFriendRequestCommandResponse>(FriendshipErrors.Unauthorized);
 
-        friendship.Status = request.Accept ? FriendshipStatus.Accepted : FriendshipStatus.Declined;
-        friendship.RespondedAt = DateTime.UtcNow;
-        _friendshipRepository.Update(friendship);
+        var friendshipId = friendship.FriendshipId;
+        var requesterId = friendship.RequesterId;
+
+        if (request.Accept)
+        {
+            friendship.Status = FriendshipStatus.Accepted;
+            friendship.RespondedAt = DateTime.UtcNow;
+            _friendshipRepository.Update(friendship);
+        }
+        else
+        {
+            _friendshipRepository.Remove(friendship);
+        }
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         var response = new RespondFriendRequestCommandResponse
         {
-            FriendshipId = friendship.FriendshipId,
-            Status = friendship.Status.ToString(),
-            RespondedAt = friendship.RespondedAt.Value
+            FriendshipId = friendshipId,
+            RequesterId = requesterId,
+            Status = request.Accept ? FriendshipStatus.Accepted.ToString() : "Declined",
+            RespondedAt = DateTime.UtcNow
         };
 
         return Result.Success(response);

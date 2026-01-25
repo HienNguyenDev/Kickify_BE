@@ -19,6 +19,9 @@ namespace Kickify.Infrastructure.Database
         // Identity Schema
         public DbSet<User> Users { get; set; }
         public DbSet<PlayerProfile> PlayerProfiles { get; set; }
+        public DbSet<PlayerWallet> PlayerWallets { get; set; }
+        public DbSet<PlayerWalletTransaction> PlayerWalletTransactions { get; set; }
+        public DbSet<PlayerWithdrawal> PlayerWithdrawals { get; set; }
         public DbSet<NotificationPreference> NotificationPreferences { get; set; }
         public DbSet<Achievement> Achievements { get; set; }
         public DbSet<PlayerAchievement> PlayerAchievements { get; set; }
@@ -31,7 +34,7 @@ namespace Kickify.Infrastructure.Database
         public DbSet<Field> Fields { get; set; }
         public DbSet<VenueWallet> VenueWallets { get; set; }
         public DbSet<WalletTransaction> WalletTransactions { get; set; }
-        public DbSet<Withdrawal> Withdrawals { get; set; }
+        public DbSet<VenueWithdrawal> VenueWithdrawals { get; set; }
         public DbSet<VenueReview> VenueReviews { get; set; }
 
         // Match Schema
@@ -176,6 +179,14 @@ namespace Kickify.Infrastructure.Database
             modelBuilder.Entity<PlayerReport>()
                 .HasQueryFilter(e => e.Reporter.DeletedAt == null && e.Reported.DeletedAt == null);
 
+            // PlayerWalletTransaction → PlayerWallet
+            modelBuilder.Entity<PlayerWalletTransaction>()
+                .HasQueryFilter(e => e.PlayerWallet.DeletedAt == null);
+
+            // PlayerWithdrawal → PlayerWallet
+            modelBuilder.Entity<PlayerWithdrawal>()
+                .HasQueryFilter(e => e.PlayerWallet.DeletedAt == null);
+
             // PostLike → Post, User
             modelBuilder.Entity<PostLike>()
                 .HasQueryFilter(e => e.Post.DeletedAt == null && e.User.DeletedAt == null);
@@ -183,6 +194,10 @@ namespace Kickify.Infrastructure.Database
             // PostMedia → Post
             modelBuilder.Entity<PostMedia>()
                 .HasQueryFilter(e => e.Post.DeletedAt == null);
+
+            // RefreshToken → User
+            modelBuilder.Entity<RefreshToken>()
+                .HasQueryFilter(e => e.User.DeletedAt == null);
 
             // RoomInvitation → MatchRoom, User (Inviter and Invitee)
             modelBuilder.Entity<RoomInvitation>()
@@ -208,8 +223,8 @@ namespace Kickify.Infrastructure.Database
             modelBuilder.Entity<WalletTransaction>()
                 .HasQueryFilter(e => e.VenueWallet.DeletedAt == null);
 
-            // Withdrawal → VenueWallet
-            modelBuilder.Entity<Withdrawal>()
+            // VenueWithdrawal → VenueWallet
+            modelBuilder.Entity<VenueWithdrawal>()
                 .HasQueryFilter(e => e.VenueWallet.DeletedAt == null);
         }
     }
