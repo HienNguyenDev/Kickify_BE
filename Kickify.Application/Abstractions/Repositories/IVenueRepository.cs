@@ -33,5 +33,19 @@ namespace Kickify.Application.Abstractions.Repositories
             int page = 1,
             int pageSize = 10,
             CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Get max display order for venue photos
+        /// </summary>
+        Task<int> GetMaxPhotoDisplayOrderAsync(
+            Guid venueId,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Add photos to venue
+        /// </summary>
+        Task AddVenuePhotosAsync(
+            IEnumerable<VenuePhoto> photos,
+            CancellationToken cancellationToken = default);
     }
 }

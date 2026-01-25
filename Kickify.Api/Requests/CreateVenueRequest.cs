@@ -7,7 +7,10 @@ namespace Kickify.Api.Requests
         public string Address { get; init; } = string.Empty;
         public decimal Latitude { get; init; }
         public decimal Longitude { get; init; }
+        public string? ContactPhone { get; init; }
+        public string? ContactEmail { get; init; }
         public string? Description { get; init; }
+        public string? Amenities { get; init; }
         public List<CreateVenueFieldRequest> Fields { get; init; } = new();
         public List<CreateVenueOperatingHoursRequest> OperatingHours { get; init; } = new();
     }
