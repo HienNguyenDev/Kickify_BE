@@ -1,5 +1,6 @@
 using Kickify.Api.Extensions;
 using Kickify.Api.Requests;
+using Kickify.Application.Features.Fields.Commands.BlockFieldSlot;
 using Kickify.Application.Features.Venues.Commands.AddField;
 using Kickify.Application.Features.Venues.Commands.CreateVenue;
 using Kickify.Application.Features.Venues.Commands.DeleteVenue;
@@ -218,6 +219,41 @@ namespace Kickify.Api.Controllers
             }
 
             var command = new DeleteVenueCommand(venueId, userId);
+            var result = await _sender.Send(command, cancellationToken);
+
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Block a time slot on a field (owner only)
+        /// Used for offline bookings or field maintenance
+        /// Creates a "ghost" booking that marks the slot as unavailable
+        /// </summary>
+        [Authorize]
+        [HttpPost("{venueId:guid}/fields/{fieldId:guid}/block")]
+        public async Task<IResult> BlockFieldSlot(
+            Guid venueId,
+            Guid fieldId,
+            [FromBody] BlockFieldSlotRequest request,
+            CancellationToken cancellationToken)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new BlockFieldSlotCommand(
+                venueId,
+                fieldId,
+                userId,
+                request.Date,
+                request.StartTime,
+                request.EndTime,
+                request.Reason,
+                request.Amount
+            );
+
             var result = await _sender.Send(command, cancellationToken);
 
             return result.MatchOk();
