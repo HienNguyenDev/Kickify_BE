@@ -115,5 +115,21 @@ namespace Kickify.Infrastructure.Repositories
 
             return (venues, total);
         }
+
+        public async Task<int> GetMaxPhotoDisplayOrderAsync(
+            Guid venueId,
+            CancellationToken cancellationToken = default)
+        {
+            return await _context.VenuePhotos
+                .Where(vp => vp.VenueId == venueId)
+                .MaxAsync(vp => (int?)vp.DisplayOrder, cancellationToken) ?? -1;
+        }
+
+        public async Task AddVenuePhotosAsync(
+            IEnumerable<VenuePhoto> photos,
+            CancellationToken cancellationToken = default)
+        {
+            await _context.VenuePhotos.AddRangeAsync(photos, cancellationToken);
+        }
     }
 }
