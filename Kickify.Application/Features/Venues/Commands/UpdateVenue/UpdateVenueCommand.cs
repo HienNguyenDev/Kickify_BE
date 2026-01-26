@@ -1,5 +1,4 @@
-using Kickify.Domain.Common;
-using MediatR;
+using Kickify.Application.Abstractions.Messaging;
 
 namespace Kickify.Application.Features.Venues.Commands.UpdateVenue
 {
@@ -14,5 +13,5 @@ namespace Kickify.Application.Features.Venues.Commands.UpdateVenue
         string? ContactEmail,
         string? Description,
         string? Amenities
-    ) : IRequest<Result<UpdateVenueResponse>>;
+    ) : ICommand<UpdateVenueResponse>;
 }

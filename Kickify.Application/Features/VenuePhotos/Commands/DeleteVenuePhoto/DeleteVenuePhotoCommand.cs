@@ -1,10 +1,9 @@
-using Kickify.Domain.Common;
-using MediatR;
+using Kickify.Application.Abstractions.Messaging;
 
 namespace Kickify.Application.Features.VenuePhotos.Commands.DeleteVenuePhoto
 {
     public record DeleteVenuePhotoCommand(
         Guid PhotoId,
         Guid UserId
-    ) : IRequest<Result<DeleteVenuePhotoResponse>>;
+    ) : ICommand<DeleteVenuePhotoResponse>;
 }

@@ -1,12 +1,12 @@
+using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
 using Kickify.Domain.Errors;
-using MediatR;
 
 namespace Kickify.Application.Features.Venues.Commands.DeleteVenue
 {
-    public class DeleteVenueCommandHandler : IRequestHandler<DeleteVenueCommand, Result<DeleteVenueResponse>>
+    public class DeleteVenueCommandHandler : ICommandHandler<DeleteVenueCommand, DeleteVenueResponse>
     {
         private readonly IVenueRepository _venueRepository;
         private readonly IUnitOfWork _unitOfWork;

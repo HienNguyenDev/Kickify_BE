@@ -43,6 +43,7 @@ namespace Kickify.Api.Controllers
                 request.StartTime,
                 request.DurationMinutes,
                 request.MatchFormat,
+                request.RoomName,
                 request.Description,
                 request.Rules,
                 request.DepositPerPerson

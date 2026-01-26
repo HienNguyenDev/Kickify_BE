@@ -1,5 +1,4 @@
-using Kickify.Domain.Common;
-using MediatR;
+using Kickify.Application.Abstractions.Messaging;
 
 namespace Kickify.Application.Features.Bookings.Queries.GetBookingPreview
 {
@@ -9,5 +8,5 @@ namespace Kickify.Application.Features.Bookings.Queries.GetBookingPreview
         TimeSpan StartTime,
         int DurationMinutes,
         int NumberOfPlayers
-    ) : IRequest<Result<GetBookingPreviewResponse>>;
+    ) : IQuery<GetBookingPreviewResponse>;
 }

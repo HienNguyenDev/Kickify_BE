@@ -1,7 +1,6 @@
-using Kickify.Domain.Common;
-using MediatR;
+using Kickify.Application.Abstractions.Messaging;
 
 namespace Kickify.Application.Features.Fields.Queries.GetFieldById
 {
-    public record GetFieldByIdQuery(Guid FieldId) : IRequest<Result<GetFieldByIdResponse>>;
+    public record GetFieldByIdQuery(Guid FieldId) : IQuery<GetFieldByIdResponse>;
 }

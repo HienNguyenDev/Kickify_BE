@@ -1,5 +1,4 @@
-using Kickify.Domain.Common;
-using MediatR;
+using Kickify.Application.Abstractions.Messaging;
 
 namespace Kickify.Application.Features.Fields.Commands.BlockFieldSlot
 {
@@ -16,7 +15,7 @@ namespace Kickify.Application.Features.Fields.Commands.BlockFieldSlot
         TimeSpan EndTime,
         string Reason,
         decimal Amount = 0
-    ) : IRequest<Result<BlockFieldSlotResponse>>;
+    ) : ICommand<BlockFieldSlotResponse>;
 
     public record BlockFieldSlotResponse(
         Guid RoomId,

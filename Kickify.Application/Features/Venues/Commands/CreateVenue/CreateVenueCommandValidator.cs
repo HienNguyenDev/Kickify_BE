@@ -6,9 +6,6 @@ namespace Kickify.Application.Features.Venues.Commands.CreateVenue
     {
         public CreateVenueCommandValidator()
         {
-            RuleFor(x => x.OwnerId)
-                .NotEmpty().WithMessage("OwnerId is required");
-
             RuleFor(x => x.Name)
                 .NotEmpty().WithMessage("Name is required")
                 .MaximumLength(200).WithMessage("Name must not exceed 200 characters");

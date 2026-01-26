@@ -1,5 +1,4 @@
-using Kickify.Domain.Common;
-using MediatR;
+using Kickify.Application.Abstractions.Messaging;
 
 namespace Kickify.Application.Features.Fields.Commands.UpdateField
 {
@@ -12,5 +11,5 @@ namespace Kickify.Application.Features.Fields.Commands.UpdateField
         decimal? HourlyRate,
         decimal? PeakHourSurcharge,
         bool? IsActive
-    ) : IRequest<Result<UpdateFieldResponse>>;
+    ) : ICommand<UpdateFieldResponse>;
 }

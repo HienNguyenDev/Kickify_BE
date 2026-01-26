@@ -1,11 +1,11 @@
+using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
 using Kickify.Domain.Errors;
-using MediatR;
 
 namespace Kickify.Application.Features.Bookings.Queries.GetBookingById
 {
-    public class GetBookingByIdQueryHandler : IRequestHandler<GetBookingByIdQuery, Result<GetBookingByIdResponse>>
+    public class GetBookingByIdQueryHandler : IQueryHandler<GetBookingByIdQuery, GetBookingByIdResponse>
     {
         private readonly IBookingRepository _bookingRepository;
 

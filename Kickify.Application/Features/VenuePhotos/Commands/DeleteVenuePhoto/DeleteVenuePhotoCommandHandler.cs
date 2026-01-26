@@ -1,14 +1,14 @@
+using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Application.Abstractions.Services;
 using Kickify.Domain.Common;
 using Kickify.Domain.Errors;
-using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace Kickify.Application.Features.VenuePhotos.Commands.DeleteVenuePhoto
 {
-    public class DeleteVenuePhotoCommandHandler : IRequestHandler<DeleteVenuePhotoCommand, Result<DeleteVenuePhotoResponse>>
+    public class DeleteVenuePhotoCommandHandler : ICommandHandler<DeleteVenuePhotoCommand, DeleteVenuePhotoResponse>
     {
         private readonly IVenuePhotoRepository _venuePhotoRepository;
         private readonly IStorageService _storageService;

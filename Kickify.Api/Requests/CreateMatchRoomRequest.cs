@@ -6,6 +6,7 @@ namespace Kickify.Api.Requests
         TimeSpan StartTime,
         int DurationMinutes,
         string MatchFormat,
+        string? RoomName,
         string? Description,
         string? Rules,
         decimal? DepositPerPerson

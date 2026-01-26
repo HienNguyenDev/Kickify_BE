@@ -1,5 +1,4 @@
-using Kickify.Domain.Common;
-using MediatR;
+using Kickify.Application.Abstractions.Messaging;
 
 namespace Kickify.Application.Features.VenuePhotos.Commands.UpdateVenuePhoto
 {
@@ -7,5 +6,5 @@ namespace Kickify.Application.Features.VenuePhotos.Commands.UpdateVenuePhoto
         Guid PhotoId,
         Guid UserId,
         int? DisplayOrder
-    ) : IRequest<Result<UpdateVenuePhotoResponse>>;
+    ) : ICommand<UpdateVenuePhotoResponse>;
 }

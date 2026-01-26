@@ -26,7 +26,7 @@ namespace Kickify.Api.Requests
 
     public record CreateVenueOperatingHoursRequest
     {
-        public DayOfWeek DayOfWeek { get; init; }
+        public int DayOfWeek { get; init; }
         public TimeSpan OpenTime { get; init; }
         public TimeSpan CloseTime { get; init; }
     }

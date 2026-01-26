@@ -1,10 +1,9 @@
-using Kickify.Domain.Common;
-using MediatR;
+using Kickify.Application.Abstractions.Messaging;
 
 namespace Kickify.Application.Features.Venues.Commands.DeleteVenue
 {
     public record DeleteVenueCommand(
         Guid VenueId,
         Guid UserId
-    ) : IRequest<Result<DeleteVenueResponse>>;
+    ) : ICommand<DeleteVenueResponse>;
 }

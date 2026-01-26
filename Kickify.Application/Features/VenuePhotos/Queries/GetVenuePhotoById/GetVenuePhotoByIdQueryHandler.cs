@@ -1,12 +1,12 @@
+using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
 using Kickify.Domain.Errors;
-using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace Kickify.Application.Features.VenuePhotos.Queries.GetVenuePhotoById
 {
-    public class GetVenuePhotoByIdQueryHandler : IRequestHandler<GetVenuePhotoByIdQuery, Result<GetVenuePhotoByIdResponse>>
+    public class GetVenuePhotoByIdQueryHandler : IQueryHandler<GetVenuePhotoByIdQuery, GetVenuePhotoByIdResponse>
     {
         private readonly IVenuePhotoRepository _venuePhotoRepository;
         private readonly ILogger<GetVenuePhotoByIdQueryHandler> _logger;
