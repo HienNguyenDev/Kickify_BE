@@ -1,11 +1,11 @@
+using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
 using Kickify.Domain.Enums;
-using MediatR;
 
 namespace Kickify.Application.Features.Fields.Queries.GetAllFields
 {
-    public class GetAllFieldsQueryHandler : IRequestHandler<GetAllFieldsQuery, Result<GetAllFieldsResponse>>
+    public class GetAllFieldsQueryHandler : IQueryHandler<GetAllFieldsQuery, GetAllFieldsResponse>
     {
         private readonly IFieldRepository _fieldRepository;
 

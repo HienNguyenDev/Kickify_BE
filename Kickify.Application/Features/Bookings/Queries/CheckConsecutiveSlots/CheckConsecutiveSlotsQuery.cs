@@ -1,5 +1,4 @@
-using Kickify.Domain.Common;
-using MediatR;
+using Kickify.Application.Abstractions.Messaging;
 
 namespace Kickify.Application.Features.Bookings.Queries.CheckConsecutiveSlots
 {
@@ -11,5 +10,5 @@ namespace Kickify.Application.Features.Bookings.Queries.CheckConsecutiveSlots
         DateTime Date,
         TimeSpan StartTime,
         int DurationMinutes
-    ) : IRequest<Result<CheckConsecutiveSlotsResponse>>;
+    ) : IQuery<CheckConsecutiveSlotsResponse>;
 }

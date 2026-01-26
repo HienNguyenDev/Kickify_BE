@@ -1,3 +1,4 @@
+using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Application.Abstractions.Services;
@@ -5,13 +6,12 @@ using Kickify.Domain.Common;
 using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
 using Kickify.Domain.Errors;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Kickify.Application.Features.MatchRooms.Commands.JoinRoom
 {
-    public class JoinRoomCommandHandler : IRequestHandler<JoinRoomCommand, Result<JoinRoomResponse>>
+    public class JoinRoomCommandHandler : ICommandHandler<JoinRoomCommand, JoinRoomResponse>
     {
         private readonly IMatchRoomRepository _matchRoomRepository;
         private readonly IUserRepository _userRepository;

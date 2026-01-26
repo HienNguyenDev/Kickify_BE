@@ -1,13 +1,13 @@
 using AutoMapper;
+using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
 using Kickify.Domain.Errors;
-using MediatR;
 
 namespace Kickify.Application.Features.Venues.Commands.UpdateVenue
 {
-    public class UpdateVenueCommandHandler : IRequestHandler<UpdateVenueCommand, Result<UpdateVenueResponse>>
+    public class UpdateVenueCommandHandler : ICommandHandler<UpdateVenueCommand, UpdateVenueResponse>
     {
         private readonly IVenueRepository _venueRepository;
         private readonly IUnitOfWork _unitOfWork;

@@ -1,14 +1,14 @@
+using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
 using Kickify.Domain.Enums;
 using Kickify.Domain.Errors;
-using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace Kickify.Application.Features.MatchRooms.Commands.UpdateParticipant
 {
-    public class UpdateParticipantCommandHandler : IRequestHandler<UpdateParticipantCommand, Result<UpdateParticipantResponse>>
+    public class UpdateParticipantCommandHandler : ICommandHandler<UpdateParticipantCommand, UpdateParticipantResponse>
     {
         private readonly IMatchRoomRepository _matchRoomRepository;
         private readonly IUserRepository _userRepository;

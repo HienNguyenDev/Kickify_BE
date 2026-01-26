@@ -1,6 +1,5 @@
+using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Services;
-using Kickify.Domain.Common;
-using MediatR;
 
 namespace Kickify.Application.Features.VenuePhotos.Commands.UploadVenuePhotos
 {
@@ -8,5 +7,5 @@ namespace Kickify.Application.Features.VenuePhotos.Commands.UploadVenuePhotos
         Guid VenueId,
         Guid UserId,
         List<FileUploadRequest> Photos
-    ) : IRequest<Result<UploadVenuePhotosResponse>>;
+    ) : ICommand<UploadVenuePhotosResponse>;
 }

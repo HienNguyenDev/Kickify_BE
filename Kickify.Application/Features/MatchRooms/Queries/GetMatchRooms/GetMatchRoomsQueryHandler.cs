@@ -1,10 +1,10 @@
+using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
-using MediatR;
 
 namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRooms
 {
-    public class GetMatchRoomsQueryHandler : IRequestHandler<GetMatchRoomsQuery, Result<GetMatchRoomsResponse>>
+    public class GetMatchRoomsQueryHandler : IQueryHandler<GetMatchRoomsQuery, GetMatchRoomsResponse>
     {
         private readonly IMatchRoomRepository _matchRoomRepository;
 

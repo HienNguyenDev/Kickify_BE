@@ -1,5 +1,4 @@
-using Kickify.Domain.Common;
-using MediatR;
+using Kickify.Application.Abstractions.Messaging;
 
 namespace Kickify.Application.Features.Fields.Queries.GetFieldsByOwner
 {
@@ -7,5 +6,5 @@ namespace Kickify.Application.Features.Fields.Queries.GetFieldsByOwner
         Guid OwnerId,
         int Page = 1,
         int PageSize = 10
-    ) : IRequest<Result<GetFieldsByOwnerResponse>>;
+    ) : IQuery<GetFieldsByOwnerResponse>;
 }

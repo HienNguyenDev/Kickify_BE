@@ -1,5 +1,4 @@
-using Kickify.Domain.Common;
-using MediatR;
+using Kickify.Application.Abstractions.Messaging;
 
 namespace Kickify.Application.Features.Bookings.Queries.GetAllBookings
 {
@@ -8,5 +7,5 @@ namespace Kickify.Application.Features.Bookings.Queries.GetAllBookings
         DateTime? Date = null,
         int Page = 1,
         int PageSize = 10
-    ) : IRequest<Result<GetAllBookingsResponse>>;
+    ) : IQuery<GetAllBookingsResponse>;
 }

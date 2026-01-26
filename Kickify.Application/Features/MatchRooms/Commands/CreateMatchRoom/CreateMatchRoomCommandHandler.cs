@@ -1,15 +1,15 @@
+using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
 using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
 using Kickify.Domain.Errors;
-using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom
 {
-    public class CreateMatchRoomCommandHandler : IRequestHandler<CreateMatchRoomCommand, Result<CreateMatchRoomResponse>>
+    public class CreateMatchRoomCommandHandler : ICommandHandler<CreateMatchRoomCommand, CreateMatchRoomResponse>
     {
         private readonly IMatchRoomRepository _matchRoomRepository;
         private readonly IFieldRepository _fieldRepository;
@@ -112,6 +112,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom
                     RoomId = Guid.NewGuid(),
                     HostId = request.UserId,
                     FieldId = request.FieldId,
+                    RoomName = request.RoomName,
                     MatchDate = request.MatchDate,
                     StartTime = request.StartTime,
                     DurationMinutes = request.DurationMinutes,
@@ -153,6 +154,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom
                     room.RoomId,
                     room.HostId,
                     room.FieldId,
+                    room.RoomName,
                     room.MatchDate,
                     room.StartTime,
                     endTime,

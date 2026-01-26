@@ -1,11 +1,11 @@
+using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
 using Kickify.Domain.Errors;
-using MediatR;
 
 namespace Kickify.Application.Features.Fields.Queries.GetFieldById
 {
-    public class GetFieldByIdQueryHandler : IRequestHandler<GetFieldByIdQuery, Result<GetFieldByIdResponse>>
+    public class GetFieldByIdQueryHandler : IQueryHandler<GetFieldByIdQuery, GetFieldByIdResponse>
     {
         private readonly IFieldRepository _fieldRepository;
 

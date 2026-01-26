@@ -1,5 +1,4 @@
-using Kickify.Domain.Common;
-using MediatR;
+using Kickify.Application.Abstractions.Messaging;
 
 namespace Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom
 {
@@ -10,8 +9,9 @@ namespace Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom
         TimeSpan StartTime,
         int DurationMinutes,
         string MatchFormat,
+        string? RoomName,
         string? Description,
         string? Rules,
         decimal? DepositPerPerson
-    ) : IRequest<Result<CreateMatchRoomResponse>>;
+    ) : ICommand<CreateMatchRoomResponse>;
 }

@@ -1,5 +1,4 @@
-using Kickify.Domain.Common;
-using MediatR;
+using Kickify.Application.Abstractions.Messaging;
 
 namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
 {
@@ -11,5 +10,5 @@ namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
         string? SportType = null,
         int Page = 1,
         int PageSize = 10
-    ) : IRequest<Result<GetAllVenuesResponse>>;
+    ) : IQuery<GetAllVenuesResponse>;
 }

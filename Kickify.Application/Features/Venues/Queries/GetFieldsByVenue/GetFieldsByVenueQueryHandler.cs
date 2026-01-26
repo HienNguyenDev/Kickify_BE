@@ -1,11 +1,11 @@
+using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
 using Kickify.Domain.Errors;
-using MediatR;
 
 namespace Kickify.Application.Features.Venues.Queries.GetFieldsByVenue
 {
-    public class GetFieldsByVenueQueryHandler : IRequestHandler<GetFieldsByVenueQuery, Result<GetFieldsByVenueResponse>>
+    public class GetFieldsByVenueQueryHandler : IQueryHandler<GetFieldsByVenueQuery, GetFieldsByVenueResponse>
     {
         private readonly IVenueRepository _venueRepository;
         private readonly IFieldRepository _fieldRepository;

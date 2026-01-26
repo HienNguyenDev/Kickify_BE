@@ -1,10 +1,10 @@
+using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
-using MediatR;
 
 namespace Kickify.Application.Features.Fields.Queries.GetFieldsByOwner
 {
-    public class GetFieldsByOwnerQueryHandler : IRequestHandler<GetFieldsByOwnerQuery, Result<GetFieldsByOwnerResponse>>
+    public class GetFieldsByOwnerQueryHandler : IQueryHandler<GetFieldsByOwnerQuery, GetFieldsByOwnerResponse>
     {
         private readonly IFieldRepository _fieldRepository;
 

@@ -1,14 +1,14 @@
 using AutoMapper;
+using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
 using Kickify.Domain.Enums;
 using Kickify.Domain.Errors;
-using MediatR;
 
 namespace Kickify.Application.Features.Fields.Commands.UpdateField
 {
-    public class UpdateFieldCommandHandler : IRequestHandler<UpdateFieldCommand, Result<UpdateFieldResponse>>
+    public class UpdateFieldCommandHandler : ICommandHandler<UpdateFieldCommand, UpdateFieldResponse>
     {
         private readonly IFieldRepository _fieldRepository;
         private readonly IUnitOfWork _unitOfWork;

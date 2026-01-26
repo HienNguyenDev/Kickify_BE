@@ -1,14 +1,14 @@
+using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
 using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
 using Kickify.Domain.Errors;
-using MediatR;
 
 namespace Kickify.Application.Features.Venues.Commands.AddField
 {
-    public class AddFieldCommandHandler : IRequestHandler<AddFieldCommand, Result<AddFieldResponse>>
+    public class AddFieldCommandHandler : ICommandHandler<AddFieldCommand, AddFieldResponse>
     {
         private readonly IVenueRepository _venueRepository;
         private readonly IFieldRepository _fieldRepository;
