@@ -1,10 +1,8 @@
-using Kickify.Domain.Common;
-using MediatR;
+using Kickify.Application.Abstractions.Messaging;
 
 namespace Kickify.Application.Features.Venues.Commands.CreateVenue
 {
     public record CreateVenueCommand(
-        Guid OwnerId,
         string Name,
         string Address,
         decimal Latitude,
@@ -15,7 +13,7 @@ namespace Kickify.Application.Features.Venues.Commands.CreateVenue
         string? Amenities,
         List<CreateVenueFieldDto> Fields,
         List<CreateVenueOperatingHoursDto> OperatingHours
-    ) : IRequest<Result<CreateVenueResponse>>;
+    ) : ICommand<CreateVenueResponse>;
 
     public record CreateVenueFieldDto(
         string Name,
@@ -26,7 +24,7 @@ namespace Kickify.Application.Features.Venues.Commands.CreateVenue
     );
 
     public record CreateVenueOperatingHoursDto(
-        DayOfWeek DayOfWeek,
+        int DayOfWeek,
         TimeSpan OpenTime,
         TimeSpan CloseTime
     );

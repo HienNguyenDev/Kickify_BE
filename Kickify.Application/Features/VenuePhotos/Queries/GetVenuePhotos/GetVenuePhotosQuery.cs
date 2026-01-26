@@ -1,9 +1,8 @@
-using Kickify.Domain.Common;
-using MediatR;
+using Kickify.Application.Abstractions.Messaging;
 
 namespace Kickify.Application.Features.VenuePhotos.Queries.GetVenuePhotos
 {
     public record GetVenuePhotosQuery(
         Guid VenueId
-    ) : IRequest<Result<GetVenuePhotosResponse>>;
+    ) : IQuery<GetVenuePhotosResponse>;
 }

@@ -8,6 +8,7 @@ public class MatchRoom : BaseEntity
     public Guid RoomId { get; set; }
     public Guid HostId { get; set; }
     public Guid? FieldId { get; set; }
+    public string? RoomName { get; set; }
     public string? CustomLocation { get; set; }
     public MatchFormat MatchFormat { get; set; }
     public Enums.MatchType MatchType { get; set; }

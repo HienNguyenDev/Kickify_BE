@@ -1,5 +1,4 @@
-using Kickify.Domain.Common;
-using MediatR;
+using Kickify.Application.Abstractions.Messaging;
 
 namespace Kickify.Application.Features.MatchRooms.Commands.UpdateParticipant
 {
@@ -8,5 +7,5 @@ namespace Kickify.Application.Features.MatchRooms.Commands.UpdateParticipant
         Guid RoomId,
         string? TeamAssignment,
         string? Position
-    ) : IRequest<Result<UpdateParticipantResponse>>;
+    ) : ICommand<UpdateParticipantResponse>;
 }

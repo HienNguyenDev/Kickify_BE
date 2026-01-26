@@ -1,21 +1,22 @@
+using Kickify.Application.Abstractions.Authentication;
+using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
 using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
 using Kickify.Domain.Errors;
-using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace Kickify.Application.Features.Venues.Commands.CreateVenue;
 
-public class CreateVenueCommandHandler : IRequestHandler<CreateVenueCommand, Result<CreateVenueResponse>>
+public class CreateVenueCommandHandler : ICommandHandler<CreateVenueCommand, CreateVenueResponse>
 {
     private readonly IVenueRepository _venueRepository;
     private readonly IVenueWalletRepository _venueWalletRepository;
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
- 
+    private readonly IUserContext _userContext;
     private readonly ILogger<CreateVenueCommandHandler> _logger;
 
     public CreateVenueCommandHandler(
@@ -23,22 +24,27 @@ public class CreateVenueCommandHandler : IRequestHandler<CreateVenueCommand, Res
         IVenueWalletRepository venueWalletRepository,
         IUserRepository userRepository,
         IUnitOfWork unitOfWork,
+        IUserContext userContext,
         ILogger<CreateVenueCommandHandler> logger)
     {
         _venueRepository = venueRepository;
         _venueWalletRepository = venueWalletRepository;
         _userRepository = userRepository;
         _unitOfWork = unitOfWork;
+        _userContext = userContext;
         _logger = logger;
     }
 
     public async Task<Result<CreateVenueResponse>> Handle(CreateVenueCommand request, CancellationToken cancellationToken)
     {
+        // Get owner ID from user context
+        var ownerId = _userContext.UserId;
+
         // Verify owner exists
-        var owner = await _userRepository.GetByIdAsync(request.OwnerId);
+        var owner = await _userRepository.GetByIdAsync(ownerId);
         if (owner == null)
         {
-            return Result.Failure<CreateVenueResponse>(UserErrors.NotFound(request.OwnerId));
+            return Result.Failure<CreateVenueResponse>(UserErrors.NotFound(ownerId));
         }
 
         try
@@ -47,7 +53,7 @@ public class CreateVenueCommandHandler : IRequestHandler<CreateVenueCommand, Res
             var venue = new Venue
             {
                 VenueId = Guid.NewGuid(),
-                OwnerId = request.OwnerId,
+                OwnerId = ownerId,
                 VenueName = request.Name,
                 Address = request.Address,
                 Latitude = request.Latitude,

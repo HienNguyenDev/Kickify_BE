@@ -1,11 +1,11 @@
+using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
 using Kickify.Domain.Enums;
-using MediatR;
 
 namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
 {
-    public class GetAllVenuesQueryHandler : IRequestHandler<GetAllVenuesQuery, Result<GetAllVenuesResponse>>
+    public class GetAllVenuesQueryHandler : IQueryHandler<GetAllVenuesQuery, GetAllVenuesResponse>
     {
         private readonly IVenueRepository _venueRepository;
 

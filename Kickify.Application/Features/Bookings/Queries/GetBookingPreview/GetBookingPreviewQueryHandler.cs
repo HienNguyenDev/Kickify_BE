@@ -1,11 +1,11 @@
+using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
 using Kickify.Domain.Errors;
-using MediatR;
 
 namespace Kickify.Application.Features.Bookings.Queries.GetBookingPreview
 {
-    public class GetBookingPreviewQueryHandler : IRequestHandler<GetBookingPreviewQuery, Result<GetBookingPreviewResponse>>
+    public class GetBookingPreviewQueryHandler : IQueryHandler<GetBookingPreviewQuery, GetBookingPreviewResponse>
     {
         private readonly IFieldRepository _fieldRepository;
 

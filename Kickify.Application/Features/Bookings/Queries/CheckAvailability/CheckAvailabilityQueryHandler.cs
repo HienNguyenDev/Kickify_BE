@@ -1,12 +1,12 @@
+using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
 using Kickify.Domain.Enums;
 using Kickify.Domain.Errors;
-using MediatR;
 
 namespace Kickify.Application.Features.Bookings.Queries.CheckAvailability
 {
-    public class CheckAvailabilityQueryHandler : IRequestHandler<CheckAvailabilityQuery, Result<CheckAvailabilityResponse>>
+    public class CheckAvailabilityQueryHandler : IQueryHandler<CheckAvailabilityQuery, CheckAvailabilityResponse>
     {
         private readonly IFieldRepository _fieldRepository;
         private readonly IBookingRepository _bookingRepository;

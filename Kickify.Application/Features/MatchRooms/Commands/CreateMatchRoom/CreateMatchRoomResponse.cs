@@ -4,6 +4,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom
         Guid RoomId,
         Guid HostId,
         Guid? FieldId,
+        string? RoomName,
         DateTime MatchDate,
         TimeSpan StartTime,
         TimeSpan EndTime,

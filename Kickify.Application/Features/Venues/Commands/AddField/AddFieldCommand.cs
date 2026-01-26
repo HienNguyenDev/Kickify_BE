@@ -1,5 +1,4 @@
-using Kickify.Domain.Common;
-using MediatR;
+using Kickify.Application.Abstractions.Messaging;
 
 namespace Kickify.Application.Features.Venues.Commands.AddField
 {
@@ -10,5 +9,5 @@ namespace Kickify.Application.Features.Venues.Commands.AddField
         int MaxPlayers,
         decimal PricePerHour,
         string? Description
-    ) : IRequest<Result<AddFieldResponse>>;
+    ) : ICommand<AddFieldResponse>;
 }

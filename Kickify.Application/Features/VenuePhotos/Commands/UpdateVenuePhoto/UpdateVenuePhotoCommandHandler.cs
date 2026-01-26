@@ -1,13 +1,13 @@
+using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
 using Kickify.Domain.Errors;
-using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace Kickify.Application.Features.VenuePhotos.Commands.UpdateVenuePhoto
 {
-    public class UpdateVenuePhotoCommandHandler : IRequestHandler<UpdateVenuePhotoCommand, Result<UpdateVenuePhotoResponse>>
+    public class UpdateVenuePhotoCommandHandler : ICommandHandler<UpdateVenuePhotoCommand, UpdateVenuePhotoResponse>
     {
         private readonly IVenuePhotoRepository _venuePhotoRepository;
         private readonly IUnitOfWork _unitOfWork;
