@@ -6,5 +6,6 @@ namespace Kickify.Application.Abstractions.Repositories
     public interface IVenueWalletRepository : IGenericRepository<VenueWallet>
     {
         Task<VenueWallet?> GetByVenueIdAsync(Guid venueId, CancellationToken cancellationToken = default);
+        Task<VenueWallet?> GetByOwnerIdAsync(Guid ownerId, CancellationToken cancellationToken = default);
     }
 }

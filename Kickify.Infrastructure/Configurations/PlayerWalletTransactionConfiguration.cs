@@ -9,7 +9,7 @@ public class PlayerWalletTransactionConfiguration : IEntityTypeConfiguration<Pla
 {
     public void Configure(EntityTypeBuilder<PlayerWalletTransaction> builder)
     {
-        builder.ToTable("PlayerWalletTransactions", Schemas.Identity);
+        builder.ToTable("PlayerWalletTransactions", Schemas.Payment);
         builder.HasKey(t => t.TransactionId);
 
         builder.Property(t => t.TransactionType).HasConversion<string>().IsRequired();

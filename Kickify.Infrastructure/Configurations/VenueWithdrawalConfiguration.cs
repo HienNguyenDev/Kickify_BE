@@ -10,7 +10,7 @@ public class VenueWithdrawalConfiguration : IEntityTypeConfiguration<VenueWithdr
 {
     public void Configure(EntityTypeBuilder<VenueWithdrawal> builder)
     {
-        builder.ToTable("VenueWithdrawals", Schemas.Venue);
+        builder.ToTable("VenueWithdrawals", Schemas.Payment);
         builder.HasKey(w => w.VenueWithdrawalId);
 
         builder.Property(w => w.Amount)
