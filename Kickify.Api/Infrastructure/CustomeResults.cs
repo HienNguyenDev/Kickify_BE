@@ -61,13 +61,11 @@ public static class CustomResults
         {
             var extensions = new Dictionary<string, object?>();
 
-            // Add validation errors if present
             if (result.Error is ValidationError validationError)
             {
                 extensions["errors"] = validationError.Errors;
             }
 
-            // Add metadata if present
             if (result.Error.Metadata.Count > 0)
             {
                 foreach (var kvp in result.Error.Metadata)

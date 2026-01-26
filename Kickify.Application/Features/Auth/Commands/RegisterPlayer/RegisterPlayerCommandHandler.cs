@@ -19,14 +19,16 @@ namespace Kickify.Application.Features.Auth.Commands.RegisterPlayer
     public class RegisterPlayerCommandHandler : ICommandHandler<RegisterPlayerCommand, RegisterPlayerCommandResponse>
     {
         private readonly IUserRepository _userRepository;
+        private readonly IPlayerWalletRepository _playerWalletRepository;
         private readonly IAuthenticationServices _authenticationServices;
         private readonly IPasswordHasher _passwordHasher;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IOtpGenerator _otpGenerator;
         private readonly IRedisOtpStore _otpStore;
-        public RegisterPlayerCommandHandler(IUserRepository userRepository, IAuthenticationServices authenticationServices, IPasswordHasher passwordHasher, IUnitOfWork unitOfWork, IOtpGenerator otpGenerator, IRedisOtpStore otpStore)
+        public RegisterPlayerCommandHandler(IUserRepository userRepository, IPlayerWalletRepository playerWalletRepository, IAuthenticationServices authenticationServices, IPasswordHasher passwordHasher, IUnitOfWork unitOfWork, IOtpGenerator otpGenerator, IRedisOtpStore otpStore)
         {
             _userRepository = userRepository;
+            _playerWalletRepository = playerWalletRepository;
             _authenticationServices = authenticationServices;
             _passwordHasher = passwordHasher;
             _unitOfWork = unitOfWork;
@@ -55,8 +57,15 @@ namespace Kickify.Application.Features.Auth.Commands.RegisterPlayer
                 IsActive = true,
                 IsEmailVerified = false,
             };  
-
             await _userRepository.AddAsync(user);
+
+            var playerWallet = new PlayerWallet
+            {
+                PlayerWalletId = Guid.NewGuid(),
+                UserId = user.UserId,
+                Balance = 0,
+            };
+            await _playerWalletRepository.AddAsync(playerWallet);
 
             var otp = _otpGenerator.Generate6Digits();
             await _otpStore.StoreAsync(user.UserId, otp, TimeSpan.FromMinutes(5), cancellationToken);
@@ -74,7 +83,6 @@ namespace Kickify.Application.Features.Auth.Commands.RegisterPlayer
                 IsActive = user.IsActive,
                 IsEmailVerified = user.IsEmailVerified,
                 CreatedAt = user.CreatedAt
-
             };
             return Result.Success(response);
         }

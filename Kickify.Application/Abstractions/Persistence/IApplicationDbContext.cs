@@ -8,9 +8,6 @@ public interface IApplicationDbContext
     // Identity Schema
     DbSet<User> Users { get; set; }
     DbSet<PlayerProfile> PlayerProfiles { get; set; }
-    DbSet<PlayerWallet> PlayerWallets { get; set; }
-    DbSet<PlayerWalletTransaction> PlayerWalletTransactions { get; set; }
-    DbSet<PlayerWithdrawal> PlayerWithdrawals { get; set; }
     DbSet<NotificationPreference> NotificationPreferences { get; set; }
     DbSet<Achievement> Achievements { get; set; }
     DbSet<PlayerAchievement> PlayerAchievements { get; set; }
@@ -20,9 +17,6 @@ public interface IApplicationDbContext
     DbSet<VenuePhoto> VenuePhotos { get; set; }
     DbSet<VenueOperatingHour> VenueOperatingHours { get; set; }
     DbSet<Field> Fields { get; set; }
-    DbSet<VenueWallet> VenueWallets { get; set; }
-    DbSet<WalletTransaction> WalletTransactions { get; set; }
-    DbSet<VenueWithdrawal> VenueWithdrawals { get; set; }
     DbSet<VenueReview> VenueReviews { get; set; }
 
     // Match Schema
@@ -51,4 +45,14 @@ public interface IApplicationDbContext
     DbSet<Notification> Notifications { get; set; }
     DbSet<Announcement> Announcements { get; set; }
     DbSet<SystemLog> SystemLogs { get; set; }
+
+    // Payment Schema
+    DbSet<PaymentRequest> PaymentRequests { get; set; }
+    DbSet<PlayerWallet> PlayerWallets { get; set; }
+    DbSet<PlayerWalletTransaction> PlayerWalletTransactions { get; set; }
+    DbSet<PlayerWithdrawal> PlayerWithdrawals { get; set; }
+    DbSet<VenueWallet> VenueWallets { get; set; }
+    DbSet<VenueWalletTransaction> VenueWalletTransactions { get; set; }
+    DbSet<VenueWithdrawal> VenueWithdrawals { get; set; }
+
 }

@@ -9,7 +9,7 @@ using Kickify.Application.Abstractions.Services;
 using Kickify.Infrastructure.Authentication;
 using Kickify.Infrastructure.Database;
 using Kickify.Infrastructure.Mail;
-//using Kickify.Infrastructure.Payment;
+using Kickify.Infrastructure.Payment;
 using Kickify.Infrastructure.Persistence;
 using Kickify.Infrastructure.Redis;
 using Kickify.Infrastructure.Repositories;
@@ -107,11 +107,15 @@ namespace Kickify.Infrastructure
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
             services.AddScoped<IPostRepository, PostRepository>();      
+            services.AddScoped<IPaymentRequestRepository, PaymentRequestRepository>();
             services.AddScoped<IPlayerProfileRepository, PlayerProfileRepository>();
+            services.AddScoped<IPlayerWalletRepository, PlayerWalletRepository>();
+            services.AddScoped<IPlayerWalletTransactionRepository, PlayerWalletTransactionRepository>();
             services.AddScoped<IVenueRepository, VenueRepository>();
             services.AddScoped<IFieldRepository, FieldRepository>();
             services.AddScoped<IBookingRepository, BookingRepository>();
             services.AddScoped<IVenueWalletRepository, VenueWalletRepository>();
+            services.AddScoped<IVenueWalletTransactionRepository, VenueWalletTransactionRepository>();
             services.AddScoped<IMatchRoomRepository, MatchRoomRepository>();
             services.AddScoped<IRoomParticipantRepository, RoomParticipantRepository>();
             services.AddScoped<IPostLikeRepository, PostLikeRepository>();
@@ -179,9 +183,9 @@ namespace Kickify.Infrastructure
                 config.Version = vnpayConfig["Version"]!;
                 config.OrderType = vnpayConfig["OrderType"]!;
             });
-            
-            //services.AddScoped<IVnPayService, VnPayService>();
-            
+
+            services.AddScoped<IVnPayService, VnPayService>();
+
             return services;
         }
 
