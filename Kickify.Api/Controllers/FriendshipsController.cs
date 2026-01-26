@@ -26,17 +26,25 @@ public class FriendshipsController : ControllerBase
     }
 
     [HttpGet("friends")]
-    public async Task<IResult> GetFriends([FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken cancellationToken = default)
+    public async Task<IResult> GetFriends(
+        [FromQuery] string? searchTerm = null,
+        [FromQuery] int page = 1, 
+        [FromQuery] int pageSize = 20, 
+        CancellationToken cancellationToken = default)
     {
-        var query = new GetFriendsQuery { Page = page, PageSize = pageSize };
+        var query = new GetFriendsQuery { SearchTerm = searchTerm, Page = page, PageSize = pageSize };
         Result<GetFriendsQueryResponse> result = await _mediator.Send(query, cancellationToken);
         return result.MatchOk();
     }
 
     [HttpGet("requests")]
-    public async Task<IResult> GetPendingRequests([FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken cancellationToken = default)
+    public async Task<IResult> GetPendingRequests(
+        [FromQuery] string? searchTerm = null,
+        [FromQuery] int page = 1, 
+        [FromQuery] int pageSize = 20, 
+        CancellationToken cancellationToken = default)
     {
-        var query = new GetPendingRequestsQuery { Page = page, PageSize = pageSize };
+        var query = new GetPendingRequestsQuery { SearchTerm = searchTerm, Page = page, PageSize = pageSize };
         Result<GetPendingRequestsQueryResponse> result = await _mediator.Send(query, cancellationToken);
         return result.MatchOk();
     }

@@ -18,7 +18,12 @@ public class GetFriendsQueryHandler : IQueryHandler<GetFriendsQuery, GetFriendsQ
 
     public async Task<Result<GetFriendsQueryResponse>> Handle(GetFriendsQuery request, CancellationToken cancellationToken)
     {
-        var (friendships, total) = await _friendshipRepository.GetFriendsAsync(_userContext.UserId, request.Page, request.PageSize, cancellationToken);
+        var (friendships, total) = await _friendshipRepository.GetFriendsAsync(
+            _userContext.UserId, 
+            request.SearchTerm, 
+            request.Page, 
+            request.PageSize, 
+            cancellationToken);
 
         var friendDtos = friendships.Select(f =>
         {
