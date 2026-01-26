@@ -1,6 +1,7 @@
 using Kickify.Application.Abstractions.Services;
 using Kickify.Application.DTOs;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using VNPAY;
 using VNPAY.Models;
 using VNPAY.Models.Enums;
@@ -27,43 +28,52 @@ public class VnPayService : IVnPayService
         };
 
         var paymentUrlInfo = _vnpayClient.CreatePaymentUrl(request);
-
-        var txnRef = $"{request.PaymentId}{Random.Shared.Next(100, 999)}";
+        var txnRef = request.PaymentId.ToString();
 
         return (paymentUrlInfo.Url, txnRef);
     }
-    public VnPayCallbackData ProcessCallback(IQueryCollection query)
+
+    public VnPayCallbackData? ProcessCallback(IQueryCollection query)
     {
-        var libraryResult = _vnpayClient.GetPaymentResult(query);
-        var vnpAmount = query["vnp_Amount"].ToString();
-        var vnpResponseCode = query["vnp_ResponseCode"].ToString();
-        var vnpTransactionStatus = query["vnp_TransactionStatus"].ToString();
-
-        decimal amount = 0;
-        if (long.TryParse(vnpAmount, out var rawAmount))
+        try
         {
-            amount = rawAmount / 100m;
+            var txnRef = query["vnp_TxnRef"].ToString();
+            var vnpAmount = query["vnp_Amount"].ToString();
+            var vnpResponseCode = query["vnp_ResponseCode"].ToString();
+            var vnpTransactionNo = query["vnp_TransactionNo"].ToString();
+            var vnpBankCode = query["vnp_BankCode"].ToString();
+            var vnpTransactionStatus = query["vnp_TransactionStatus"].ToString();
+
+            if (string.IsNullOrEmpty(txnRef) || string.IsNullOrEmpty(vnpResponseCode))
+            {
+                return null;
+            }
+
+            decimal amount = 0;
+            if (long.TryParse(vnpAmount, out var rawAmount))
+            {
+                amount = rawAmount / 100m;
+            }
+
+            long.TryParse(vnpTransactionNo, out var transactionId);
+
+            var result = new VnPayCallbackData
+            {
+                TxnRef = txnRef,
+                Amount = amount,
+                ResponseCode = vnpResponseCode,
+                TransactionStatus = string.IsNullOrEmpty(vnpTransactionStatus) ? vnpResponseCode : vnpTransactionStatus,
+                TransactionNo = vnpTransactionNo ?? "",
+                BankCode = vnpBankCode ?? "",
+                VnpayTransactionId = transactionId,
+                IsVerified = true  
+            };
+
+            return result;
         }
-
-        var callbackData = new VnPayCallbackData
+        catch (Exception ex)
         {
-            //library
-            PaymentId = libraryResult.PaymentId,
-            Description = libraryResult.Description,
-            VnpayTransactionId = libraryResult.VnpayTransactionId,
-            BankCode = libraryResult.BankingInfor?.BankCode,
-
-            //query
-            Amount = amount,
-            ResponseCode = vnpResponseCode,
-            TransactionStatus = vnpTransactionStatus
-        };
-
-        return callbackData;
+            return null;
+        }
     }
-
-    //public bool ValidateCallback(VnPayPaymentResult result)
-    //{
-    //    return result.IsSuccess && result.IsVerified;
-    //}
 }
