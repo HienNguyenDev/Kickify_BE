@@ -18,7 +18,12 @@ public class GetPendingRequestsQueryHandler : IQueryHandler<GetPendingRequestsQu
 
     public async Task<Result<GetPendingRequestsQueryResponse>> Handle(GetPendingRequestsQuery request, CancellationToken cancellationToken)
     {
-        var (requests, total) = await _friendshipRepository.GetPendingRequestsAsync(_userContext.UserId, request.Page, request.PageSize, cancellationToken);
+        var (requests, total) = await _friendshipRepository.GetPendingRequestsAsync(
+            _userContext.UserId, 
+            request.SearchTerm, 
+            request.Page, 
+            request.PageSize, 
+            cancellationToken);
 
         var requestDtos = requests.Select(r => new FriendRequestDto
         {
