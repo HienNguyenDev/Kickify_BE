@@ -10,7 +10,7 @@ public class PlayerWithdrawalConfiguration : IEntityTypeConfiguration<PlayerWith
 {
     public void Configure(EntityTypeBuilder<PlayerWithdrawal> builder)
     {
-        builder.ToTable("PlayerWithdrawals", Schemas.Identity);
+        builder.ToTable("PlayerWithdrawals", Schemas.Payment);
         builder.HasKey(w => w.PlayerWithdrawalId);
 
         builder.Property(w => w.Amount).HasPrecision(18, 2).IsRequired();

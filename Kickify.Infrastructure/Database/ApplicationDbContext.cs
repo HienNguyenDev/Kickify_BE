@@ -19,9 +19,6 @@ namespace Kickify.Infrastructure.Database
         // Identity Schema
         public DbSet<User> Users { get; set; }
         public DbSet<PlayerProfile> PlayerProfiles { get; set; }
-        public DbSet<PlayerWallet> PlayerWallets { get; set; }
-        public DbSet<PlayerWalletTransaction> PlayerWalletTransactions { get; set; }
-        public DbSet<PlayerWithdrawal> PlayerWithdrawals { get; set; }
         public DbSet<NotificationPreference> NotificationPreferences { get; set; }
         public DbSet<Achievement> Achievements { get; set; }
         public DbSet<PlayerAchievement> PlayerAchievements { get; set; }
@@ -32,9 +29,6 @@ namespace Kickify.Infrastructure.Database
         public DbSet<VenuePhoto> VenuePhotos { get; set; }
         public DbSet<VenueOperatingHour> VenueOperatingHours { get; set; }
         public DbSet<Field> Fields { get; set; }
-        public DbSet<VenueWallet> VenueWallets { get; set; }
-        public DbSet<WalletTransaction> WalletTransactions { get; set; }
-        public DbSet<VenueWithdrawal> VenueWithdrawals { get; set; }
         public DbSet<VenueReview> VenueReviews { get; set; }
 
         // Match Schema
@@ -63,6 +57,16 @@ namespace Kickify.Infrastructure.Database
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<Announcement> Announcements { get; set; }
         public DbSet<SystemLog> SystemLogs { get; set; }
+
+        // Payment Schema
+        public DbSet<PaymentRequest> PaymentRequests { get; set; }
+        public DbSet<PlayerWallet> PlayerWallets { get; set; }
+        public DbSet<PlayerWalletTransaction> PlayerWalletTransactions { get; set; }
+        public DbSet<PlayerWithdrawal> PlayerWithdrawals { get; set; }
+        public DbSet<VenueWallet> VenueWallets { get; set; }
+        public DbSet<VenueWalletTransaction> VenueWalletTransactions { get; set; }
+        public DbSet<VenueWithdrawal> VenueWithdrawals { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -219,8 +223,8 @@ namespace Kickify.Infrastructure.Database
             modelBuilder.Entity<VenueReview>()
                 .HasQueryFilter(e => e.Venue.DeletedAt == null && e.User.DeletedAt == null && e.Booking.DeletedAt == null);
 
-            // WalletTransaction → VenueWallet
-            modelBuilder.Entity<WalletTransaction>()
+            // VenueWalletTransaction → VenueWallet
+            modelBuilder.Entity<VenueWalletTransaction>()
                 .HasQueryFilter(e => e.VenueWallet.DeletedAt == null);
 
             // VenueWithdrawal → VenueWallet

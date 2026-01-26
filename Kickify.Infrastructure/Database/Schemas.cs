@@ -15,5 +15,6 @@ namespace Kickify.Infrastructure.Database
         public const string Social = "social";
         public const string Evaluation = "evaluation";
         public const string System = "system";
+        public const string Payment = "payment";
     }
 }

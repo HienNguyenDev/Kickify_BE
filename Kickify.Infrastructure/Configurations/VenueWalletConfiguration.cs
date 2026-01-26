@@ -9,7 +9,7 @@ public class VenueWalletConfiguration : IEntityTypeConfiguration<VenueWallet>
 {
     public void Configure(EntityTypeBuilder<VenueWallet> builder)
     {
-        builder.ToTable("VenueWallets", Schemas.Venue);
+        builder.ToTable("VenueWallets", Schemas.Payment);
         builder.HasKey(vw => vw.VenueWalletId);
 
         builder.Property(vw => vw.Balance)
@@ -30,12 +30,12 @@ public class VenueWalletConfiguration : IEntityTypeConfiguration<VenueWallet>
             .HasDefaultValue(false);
 
         // Relationships
-        builder.HasMany(vw => vw.WalletTransactions)
-            .WithOne(wt => wt.VenueWallet)
-            .HasForeignKey(wt => wt.VenueWalletId)
+        builder.HasMany(vw => vw.Transactions)
+            .WithOne(t => t.VenueWallet)
+            .HasForeignKey(t => t.VenueWalletId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasMany(vw => vw.VenueWithdrawals)
+        builder.HasMany(vw => vw.Withdrawals)
             .WithOne(w => w.VenueWallet)
             .HasForeignKey(w => w.VenueWalletId)
             .OnDelete(DeleteBehavior.Cascade);

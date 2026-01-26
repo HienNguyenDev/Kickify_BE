@@ -14,6 +14,6 @@ public class VenueWallet : BaseEntity
 
     // Navigation properties
     public Venue Venue { get; set; } = null!;
-    public ICollection<WalletTransaction> WalletTransactions { get; set; } = new List<WalletTransaction>();
-    public ICollection<VenueWithdrawal> VenueWithdrawals { get; set; } = new List<VenueWithdrawal>();
+    public ICollection<VenueWalletTransaction> Transactions { get; set; } = new List<VenueWalletTransaction>();
+    public ICollection<VenueWithdrawal> Withdrawals { get; set; } = new List<VenueWithdrawal>();
 }

@@ -9,7 +9,7 @@ public class PlayerWalletConfiguration : IEntityTypeConfiguration<PlayerWallet>
 {
     public void Configure(EntityTypeBuilder<PlayerWallet> builder)
     {
-        builder.ToTable("PlayerWallets", Schemas.Identity);
+        builder.ToTable("PlayerWallets", Schemas.Payment);
         builder.HasKey(pw => pw.PlayerWalletId);
 
         builder.Property(pw => pw.Balance).HasPrecision(18, 2).HasDefaultValue(0);
