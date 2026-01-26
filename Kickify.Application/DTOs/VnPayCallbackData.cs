@@ -8,14 +8,15 @@ namespace Kickify.Application.DTOs
 {
     public class VnPayCallbackData
     {
-        public long PaymentId { get; set; }
-        public string Description { get; set; } = null!;
-        public long VnpayTransactionId { get; set; }
-        public string? BankCode { get; set; }
+        public string TxnRef { get; set; } = null!;
         public decimal Amount { get; set; }
         public string ResponseCode { get; set; } = null!;
         public string TransactionStatus { get; set; } = null!;
-        public string TxnRef => PaymentId.ToString();
-        public bool IsSuccess => ResponseCode == "00" && TransactionStatus == "00";
+        public string TransactionNo { get; set; } = null!;
+        public string BankCode { get; set; } = null!;
+        public long VnpayTransactionId { get; set; }
+        public bool IsVerified { get; set; }
+        public bool IsSuccess => ResponseCode == "00";
+
     }
 }

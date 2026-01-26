@@ -46,15 +46,27 @@ public class WalletsController : ControllerBase
     [HttpGet("ipn")]
     public async Task<IActionResult> IpnCallback(CancellationToken cancellationToken)
     {
-        var callbackData = _vnPayService.ProcessCallback(Request.Query);
-        var command = new ProcessDepositIpnCommand { CallbackData = callbackData };
-        var result = await _mediator.Send(command, cancellationToken);
-
-        return Ok(new
+        try
         {
-            RspCode = result.Value?.RspCode ?? "99",
-            Message = result.Value?.Message ?? "Unknown error"
-        });
+            var callbackData = _vnPayService.ProcessCallback(Request.Query);
+
+            if (callbackData == null)
+            {
+                return Ok(new { RspCode = "97", Message = "Invalid data" });
+            }
+
+            var command = new ProcessDepositIpnCommand { CallbackData = callbackData };
+            var result = await _mediator.Send(command, cancellationToken);
+            return Ok(new
+            {
+                RspCode = result.Value?.RspCode ?? "99",
+                Message = result.Value?.Message ?? "Unknown error"
+            });
+        }
+        catch (Exception ex)
+        {
+            return Ok(new { RspCode = "99", Message = "Server error" });
+        }
     }
 
     [HttpGet("callback")]

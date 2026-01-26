@@ -6,7 +6,7 @@ namespace Kickify.Application.Abstractions.Services;
 public interface IVnPayService
 {
     (string Url, string TxnRef) CreatePaymentUrl(decimal amount, string description);
-    VnPayCallbackData ProcessCallback(IQueryCollection query);
+    VnPayCallbackData? ProcessCallback(IQueryCollection query);
 }
 
 public class VnPayPaymentRequest
