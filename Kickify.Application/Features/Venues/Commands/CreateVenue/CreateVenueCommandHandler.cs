@@ -5,6 +5,7 @@ using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
 using Kickify.Domain.Errors;
 using MediatR;
+using Microsoft.Extensions.Logging;
 
 namespace Kickify.Application.Features.Venues.Commands.CreateVenue;
 
@@ -14,13 +15,21 @@ public class CreateVenueCommandHandler : IRequestHandler<CreateVenueCommand, Res
     private readonly IVenueWalletRepository _venueWalletRepository;
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
+ 
+    private readonly ILogger<CreateVenueCommandHandler> _logger;
 
-    public CreateVenueCommandHandler(IVenueRepository venueRepository, IVenueWalletRepository venueWalletRepository, IUserRepository userRepository, IUnitOfWork unitOfWork)
+    public CreateVenueCommandHandler(
+        IVenueRepository venueRepository,
+        IVenueWalletRepository venueWalletRepository,
+        IUserRepository userRepository,
+        IUnitOfWork unitOfWork,
+        ILogger<CreateVenueCommandHandler> logger)
     {
         _venueRepository = venueRepository;
         _venueWalletRepository = venueWalletRepository;
         _userRepository = userRepository;
         _unitOfWork = unitOfWork;
+        _logger = logger;
     }
 
     public async Task<Result<CreateVenueResponse>> Handle(CreateVenueCommand request, CancellationToken cancellationToken)
@@ -32,10 +41,9 @@ public class CreateVenueCommandHandler : IRequestHandler<CreateVenueCommand, Res
             return Result.Failure<CreateVenueResponse>(UserErrors.NotFound(request.OwnerId));
         }
 
-        // Begin transaction for atomic Venue + Wallet + Fields + OperatingHours creation
         try
         {
-            // 1. Create Venue
+            
             var venue = new Venue
             {
                 VenueId = Guid.NewGuid(),
@@ -44,16 +52,20 @@ public class CreateVenueCommandHandler : IRequestHandler<CreateVenueCommand, Res
                 Address = request.Address,
                 Latitude = request.Latitude,
                 Longitude = request.Longitude,
+                ContactPhone = request.ContactPhone, 
+                ContactEmail = request.ContactEmail, 
                 Description = request.Description,
+                Amenities = request.Amenities,       
                 CreatedAt = DateTime.UtcNow
             };
 
             await _venueRepository.AddAsync(venue);
 
-            // 2. Auto-create VenueWallet with initial balance = 0
+            // 2. Auto-create VenueWallet
+            
             var wallet = new VenueWallet
             {
-                VenueWalletId = Guid.NewGuid(),
+                VenueWalletId = Guid.NewGuid(), 
                 VenueId = venue.VenueId,
                 Balance = 0,
                 CreatedAt = DateTime.UtcNow
@@ -101,22 +113,35 @@ public class CreateVenueCommandHandler : IRequestHandler<CreateVenueCommand, Res
             // Save all changes
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            var response = new CreateVenueResponse(
+            _logger.LogInformation("Venue {VenueId} created with wallet and {FieldCount} fields",
+                venue.VenueId, venue.Fields.Count);
+
+          
+            return Result.Success(new CreateVenueResponse(
                 venue.VenueId,
                 venue.VenueName,
                 venue.Address,
                 venue.Latitude ?? 0,
                 venue.Longitude ?? 0,
+                venue.ContactPhone, 
+                venue.ContactEmail, 
                 venue.Description,
-                wallet.VenueWalletId,
-                venue.Fields.Select(f => new VenueFieldDto(f.FieldId, f.FieldName, f.FieldType.ToString(), 0, f.HourlyRate, null)).ToList(),
+                venue.Amenities,    
+                wallet.VenueWalletId, 
+                venue.Fields.Select(f => new VenueFieldDto(
+                    f.FieldId,
+                    f.FieldName,
+                    f.FieldType.ToString(),
+                    0,
+                    f.HourlyRate,
+                    null
+                )).ToList(),
                 venue.CreatedAt
-            );
-
-            return Result.Success(response);
+            ));
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Error creating venue");
             throw;
         }
     }

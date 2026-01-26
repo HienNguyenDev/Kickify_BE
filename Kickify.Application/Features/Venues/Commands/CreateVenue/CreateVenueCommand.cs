@@ -9,7 +9,10 @@ namespace Kickify.Application.Features.Venues.Commands.CreateVenue
         string Address,
         decimal Latitude,
         decimal Longitude,
+        string? ContactPhone,
+        string? ContactEmail,
         string? Description,
+        string? Amenities,
         List<CreateVenueFieldDto> Fields,
         List<CreateVenueOperatingHoursDto> OperatingHours
     ) : IRequest<Result<CreateVenueResponse>>;

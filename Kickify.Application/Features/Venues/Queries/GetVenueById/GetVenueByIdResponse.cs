@@ -2,7 +2,7 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenueById
 {
     public record GetVenueByIdResponse(
         Guid VenueId,
-        string Name,
+        string FieldName,
         string Address,
         decimal Latitude,
         decimal Longitude,
@@ -16,7 +16,7 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenueById
 
     public record VenueFieldDto(
         Guid FieldId,
-        string Name,
+        string FieldName,
         string FieldType,
         int MaxPlayers,
         decimal PricePerHour,
