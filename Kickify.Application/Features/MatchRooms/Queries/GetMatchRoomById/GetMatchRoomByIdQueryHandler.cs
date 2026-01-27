@@ -1,6 +1,7 @@
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
+using Kickify.Domain.Enums;
 using Kickify.Domain.Errors;
 
 namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById
@@ -53,8 +54,8 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById
                 );
             }
 
-            // Map Participants
-            var participants = room.RoomParticipants.Select(p => new RoomParticipantDto(
+            // Map Participants and group by TeamAssignment
+            var allParticipants = room.RoomParticipants.Select(p => new RoomParticipantDto(
                 p.ParticipantId,
                 p.UserId,
                 p.User.FullName ?? "Unknown",
@@ -65,12 +66,19 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById
                 p.JoinDate
             )).ToList();
 
+            var participantsDto = new RoomParticipantsDto(
+                TeamA: allParticipants.Where(p => p.TeamAssignment == TeamAssignment.A.ToString()).ToList(),
+                TeamB: allParticipants.Where(p => p.TeamAssignment == TeamAssignment.B.ToString()).ToList(),
+                Unassigned: allParticipants.Where(p => p.TeamAssignment == TeamAssignment.Unassigned.ToString()).ToList()
+            );
+
             var response = new GetMatchRoomByIdResponse(
                 room.RoomId,
                 room.HostId,
                 hostDto,
                 room.FieldId,
                 fieldDto,
+                room.RoomName,
                 room.MatchDate,
                 room.StartTime,
                 endTime,
@@ -83,7 +91,7 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById
                 room.DepositPerPerson,
                 room.TotalDepositCollected,
                 room.Status.ToString(),
-                participants,
+                participantsDto,
                 room.CreatedAt
             );
 

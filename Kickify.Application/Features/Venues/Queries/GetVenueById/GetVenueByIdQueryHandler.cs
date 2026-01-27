@@ -29,7 +29,10 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenueById
                 venue.Address,
                 venue.Latitude ?? 0,
                 venue.Longitude ?? 0,
+                venue.ContactPhone,
+                venue.ContactEmail,
                 venue.Description,
+                venue.Amenities,
                 venue.Fields.Select(f => new VenueFieldDto(
                     f.FieldId,
                     f.FieldName,
