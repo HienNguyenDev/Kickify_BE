@@ -6,25 +6,24 @@ using Kickify.Domain.Common;
 using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
 using Kickify.Domain.Errors;
-using Microsoft.EntityFrameworkCore;
 
 namespace Kickify.Application.Features.Venues.Commands.UpdateOperatingHours;
 
 public class UpdateOperatingHoursCommandHandler : ICommandHandler<UpdateOperatingHoursCommand, UpdateOperatingHoursResponse>
 {
     private readonly IVenueRepository _venueRepository;
-    private readonly IApplicationDbContext _dbContext;
+    private readonly IVenueOperatingHourRepository _operatingHourRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IUserContext _userContext;
 
     public UpdateOperatingHoursCommandHandler(
         IVenueRepository venueRepository,
-        IApplicationDbContext dbContext,
+        IVenueOperatingHourRepository operatingHourRepository,
         IUnitOfWork unitOfWork,
         IUserContext userContext)
     {
         _venueRepository = venueRepository;
-        _dbContext = dbContext;
+        _operatingHourRepository = operatingHourRepository;
         _unitOfWork = unitOfWork;
         _userContext = userContext;
     }
@@ -47,11 +46,10 @@ public class UpdateOperatingHoursCommandHandler : ICommandHandler<UpdateOperatin
         }
 
         // Get existing operating hours for this venue
-        var existingHours = await _dbContext.VenueOperatingHours
-            .Where(oh => oh.VenueId == request.VenueId)
-            .ToListAsync(cancellationToken);
+        var existingHours = await _operatingHourRepository.GetByVenueIdAsync(request.VenueId, cancellationToken);
 
         var resultHours = new List<VenueOperatingHour>();
+        var newHoursToAdd = new List<VenueOperatingHour>();
 
         foreach (var item in request.OperatingHours)
         {
@@ -82,7 +80,7 @@ public class UpdateOperatingHoursCommandHandler : ICommandHandler<UpdateOperatin
                         CloseTime = null,
                         IsClosed = true
                     };
-                    _dbContext.VenueOperatingHours.Add(newHour);
+                    newHoursToAdd.Add(newHour);
                     resultHours.Add(newHour);
                 }
             }
@@ -94,6 +92,7 @@ public class UpdateOperatingHoursCommandHandler : ICommandHandler<UpdateOperatin
                     existingHour.OpenTime = null;
                     existingHour.CloseTime = null;
                     existingHour.IsClosed = true;
+                    _operatingHourRepository.Update(existingHour);
                     resultHours.Add(existingHour);
                 }
                 else
@@ -107,7 +106,7 @@ public class UpdateOperatingHoursCommandHandler : ICommandHandler<UpdateOperatin
                         CloseTime = null,
                         IsClosed = true
                     };
-                    _dbContext.VenueOperatingHours.Add(newHour);
+                    newHoursToAdd.Add(newHour);
                     resultHours.Add(newHour);
                 }
             }
@@ -122,6 +121,7 @@ public class UpdateOperatingHoursCommandHandler : ICommandHandler<UpdateOperatin
                     existingHour.OpenTime = openTime;
                     existingHour.CloseTime = closeTime;
                     existingHour.IsClosed = false;
+                    _operatingHourRepository.Update(existingHour);
                     resultHours.Add(existingHour);
                 }
                 else
@@ -135,10 +135,16 @@ public class UpdateOperatingHoursCommandHandler : ICommandHandler<UpdateOperatin
                         CloseTime = closeTime,
                         IsClosed = false
                     };
-                    _dbContext.VenueOperatingHours.Add(newHour);
+                    newHoursToAdd.Add(newHour);
                     resultHours.Add(newHour);
                 }
             }
+        }
+
+        // Add all new hours at once
+        if (newHoursToAdd.Count > 0)
+        {
+            await _operatingHourRepository.AddRangeAsync(newHoursToAdd, cancellationToken);
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -147,7 +153,7 @@ public class UpdateOperatingHoursCommandHandler : ICommandHandler<UpdateOperatin
         {
             VenueId = request.VenueId,
             OperatingHours = resultHours
-                .OrderBy(h => h.DayOfWeek)
+                .OrderBy(h => (int)h.DayOfWeek)
                 .Select(h => new OperatingHourResultDto(
                     h.HoursId,
                     (int)h.DayOfWeek,
