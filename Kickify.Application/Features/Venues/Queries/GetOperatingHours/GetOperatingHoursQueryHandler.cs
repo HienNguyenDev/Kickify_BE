@@ -1,23 +1,21 @@
 using Kickify.Application.Abstractions.Messaging;
-using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
 using Kickify.Domain.Errors;
-using Microsoft.EntityFrameworkCore;
 
 namespace Kickify.Application.Features.Venues.Queries.GetOperatingHours;
 
 public class GetOperatingHoursQueryHandler : IQueryHandler<GetOperatingHoursQuery, GetOperatingHoursResponse>
 {
     private readonly IVenueRepository _venueRepository;
-    private readonly IApplicationDbContext _dbContext;
+    private readonly IVenueOperatingHourRepository _operatingHourRepository;
 
     public GetOperatingHoursQueryHandler(
         IVenueRepository venueRepository,
-        IApplicationDbContext dbContext)
+        IVenueOperatingHourRepository operatingHourRepository)
     {
         _venueRepository = venueRepository;
-        _dbContext = dbContext;
+        _operatingHourRepository = operatingHourRepository;
     }
 
     public async Task<Result<GetOperatingHoursResponse>> Handle(
@@ -32,16 +30,12 @@ public class GetOperatingHoursQueryHandler : IQueryHandler<GetOperatingHoursQuer
         }
 
         // Get operating hours ordered by DayOfWeek
-        var operatingHours = await _dbContext.VenueOperatingHours
-            .AsNoTracking()
-            .Where(oh => oh.VenueId == request.VenueId)
-            .ToListAsync(cancellationToken);
+        var operatingHours = await _operatingHourRepository.GetByVenueIdOrderedAsync(request.VenueId, cancellationToken);
 
         var response = new GetOperatingHoursResponse
         {
             VenueId = request.VenueId,
             OperatingHours = operatingHours
-                .OrderBy(h => (int)h.DayOfWeek)
                 .Select(h => new OperatingHourDto(
                     h.HoursId,
                     (int)h.DayOfWeek,
