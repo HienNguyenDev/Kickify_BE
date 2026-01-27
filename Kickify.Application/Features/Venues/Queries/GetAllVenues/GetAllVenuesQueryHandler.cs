@@ -42,7 +42,10 @@ namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
                 v.Address,
                 v.Latitude ?? 0,
                 v.Longitude ?? 0,
+                v.ContactPhone,
+                v.ContactEmail,
                 v.Description,
+                v.Amenities,
                 v.Fields.Select(f => new FieldSummaryDto(
                     f.FieldId,
                     f.FieldName,
