@@ -21,9 +21,9 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenueById
         Guid FieldId,
         string FieldName,
         string FieldType,
-        int MaxPlayers,
-        decimal PricePerHour,
-        string? Description
+        string? SurfaceType,
+        decimal HourlyRate,
+        decimal PeakHourSurcharge
     );
 
     public record OperatingHoursDto(

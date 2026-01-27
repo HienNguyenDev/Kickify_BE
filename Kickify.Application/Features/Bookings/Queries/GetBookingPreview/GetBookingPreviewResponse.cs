@@ -8,7 +8,7 @@ namespace Kickify.Application.Features.Bookings.Queries.GetBookingPreview
         TimeSpan StartTime,
         TimeSpan EndTime,
         decimal DurationHours,
-        decimal PricePerHour,
+        decimal HourlyRate,
         decimal TotalAmount,
         int NumberOfPlayers,
         decimal SharePerPlayer,

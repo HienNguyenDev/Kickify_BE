@@ -32,8 +32,7 @@ namespace Kickify.Application.Features.Bookings.Queries.GetBookingPreview
                 return Result.Failure<GetBookingPreviewResponse>(BookingErrors.InvalidTimeSlot);
             }
 
-            // Validate number of players (we don't have MaxPlayers in entity, so skip this check)
-
+ 
             // Check if field is available for this time slot
             var isAvailable = await _fieldRepository.IsFieldAvailableAsync(
                 request.FieldId,

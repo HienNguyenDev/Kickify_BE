@@ -93,7 +93,9 @@ public class CreateVenueCommandHandler : ICommandHandler<CreateVenueCommand, Cre
                     VenueId = venue.VenueId,
                     FieldName = fieldDto.Name,
                     FieldType = fieldType,
-                    HourlyRate = fieldDto.PricePerHour,
+                    SurfaceType = fieldDto.SurfaceType,
+                    HourlyRate = fieldDto.HourlyRate,
+                    PeakHourSurcharge = fieldDto.PeakHourSurcharge,
                     CreatedAt = DateTime.UtcNow
                 };
 
@@ -138,10 +140,10 @@ public class CreateVenueCommandHandler : ICommandHandler<CreateVenueCommand, Cre
                     f.FieldId,
                     f.FieldName,
                     f.FieldType.ToString(),
-                    0,
+                    f.SurfaceType,
                     f.HourlyRate,
-                    null
-                )).ToList(),
+                    f.PeakHourSurcharge
+                 )).ToList(),
                 venue.CreatedAt
             ));
         }

@@ -19,8 +19,8 @@ namespace Kickify.Application.Features.Venues.Commands.CreateVenue
         Guid FieldId,
         string Name,
         string FieldType,
-        int MaxPlayers,
-        decimal PricePerHour,
-        string? Description
+        string? SurfaceType,
+        decimal HourlyRate,
+        decimal PeakHourSurcharge
     );
 }
