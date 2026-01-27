@@ -14,7 +14,10 @@ namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
         string Address,
         decimal Latitude,
         decimal Longitude,
+        string? ContactPhone,
+        string? ContactEmail,
         string? Description,
+        string? Amenities,
         List<FieldSummaryDto> Fields,
         string? PrimaryPhotoUrl,
         DateTime CreatedAt

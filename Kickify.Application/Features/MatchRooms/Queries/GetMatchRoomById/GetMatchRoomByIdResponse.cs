@@ -6,6 +6,7 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById
         RoomHostDto Host,
         Guid? FieldId,
         RoomFieldDto? Field,
+        string? RoomName,
         DateTime MatchDate,
         TimeSpan StartTime,
         TimeSpan EndTime,
@@ -18,8 +19,14 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById
         decimal? DepositPerPerson,
         decimal TotalDepositCollected,
         string Status,
-        List<RoomParticipantDto> Participants,
+        RoomParticipantsDto Participants,
         DateTime CreatedAt
+    );
+
+    public record RoomParticipantsDto(
+        List<RoomParticipantDto> TeamA,
+        List<RoomParticipantDto> TeamB,
+        List<RoomParticipantDto> Unassigned
     );
 
     public record RoomHostDto(
