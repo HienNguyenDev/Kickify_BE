@@ -50,7 +50,9 @@ namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
                     f.FieldId,
                     f.FieldName,
                     f.FieldType.ToString(),
-                    f.HourlyRate
+                    f.SurfaceType,
+                    f.HourlyRate,
+                    f.PeakHourSurcharge
                 )).ToList(),
                 v.VenuePhotos.FirstOrDefault(p => p.DisplayOrder == 0)?.PhotoUrl,
                 v.CreatedAt

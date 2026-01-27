@@ -4,9 +4,11 @@ using Kickify.Application.Features.Fields.Commands.BlockFieldSlot;
 using Kickify.Application.Features.Venues.Commands.AddField;
 using Kickify.Application.Features.Venues.Commands.CreateVenue;
 using Kickify.Application.Features.Venues.Commands.DeleteVenue;
+using Kickify.Application.Features.Venues.Commands.UpdateOperatingHours;
 using Kickify.Application.Features.Venues.Commands.UpdateVenue;
 using Kickify.Application.Features.Venues.Queries.GetAllVenues;
 using Kickify.Application.Features.Venues.Queries.GetFieldsByVenue;
+using Kickify.Application.Features.Venues.Queries.GetOperatingHours;
 using Kickify.Application.Features.Venues.Queries.GetVenueById;
 using Kickify.Application.Features.Venues.Queries.GetVenuesByOwner;
 using MediatR;
@@ -46,9 +48,9 @@ namespace Kickify.Api.Controllers
                 request.Fields.Select(f => new CreateVenueFieldDto(
                     f.Name,
                     f.FieldType,
-                    f.MaxPlayers,
-                    f.PricePerHour,
-                    f.Description
+                    f.SurfaceType,
+                    f.HourlyRate,
+                    f.PeakHourSurcharge
                 )).ToList(),
                 request.OperatingHours.Select(oh => new CreateVenueOperatingHoursDto(
                     oh.DayOfWeek,
@@ -117,9 +119,9 @@ namespace Kickify.Api.Controllers
                 venueId,
                 request.Name,
                 request.FieldType,
-                request.MaxPlayers,
-                request.PricePerHour,
-                request.Description
+                request.SurfaceType,
+                request.HourlyRate,
+                request.PeakHourSurcharge
             );
 
             var result = await _sender.Send(command, cancellationToken);
@@ -159,6 +161,47 @@ namespace Kickify.Api.Controllers
         {
             var query = new GetFieldsByVenueQuery(venueId);
             var result = await _sender.Send(query, cancellationToken);
+
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Get operating hours of a venue (ordered by DayOfWeek)
+        /// </summary>
+        [HttpGet("{venueId:guid}/operating-hours")]
+        public async Task<IResult> GetOperatingHours(
+            Guid venueId,
+            CancellationToken cancellationToken = default)
+        {
+            var query = new GetOperatingHoursQuery { VenueId = venueId };
+            var result = await _sender.Send(query, cancellationToken);
+
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Update operating hours of a venue (owner only)
+        /// Requires exactly 7 items (one for each day of the week).
+        /// Logic: null = keep existing, "" = clear/close, valid time = update
+        /// </summary>
+        [Authorize]
+        [HttpPut("{venueId:guid}/operating-hours")]
+        public async Task<IResult> UpdateOperatingHours(
+            Guid venueId,
+            [FromBody] UpdateOperatingHoursRequest request,
+            CancellationToken cancellationToken)
+        {
+            var command = new UpdateOperatingHoursCommand
+            {
+                VenueId = venueId,
+                OperatingHours = request.OperatingHours.Select(oh => new OperatingHourItemDto(
+                    oh.DayOfWeek,
+                    oh.OpenTime,
+                    oh.CloseTime
+                )).ToList()
+            };
+
+            var result = await _sender.Send(command, cancellationToken);
 
             return result.MatchOk();
         }

@@ -19,10 +19,10 @@ namespace Kickify.Api.Requests
     {
         public string Name { get; init; } = string.Empty;
         public string FieldType { get; init; } = string.Empty;
-        public int MaxPlayers { get; init; }
-        public decimal PricePerHour { get; init; }
-        public string? Description { get; init; }
-    }
+        public string? SurfaceType { get; init; }
+        public decimal HourlyRate { get; init; }
+        public decimal PeakHourSurcharge { get; init; }
+     }
 
     public record CreateVenueOperatingHoursRequest
     {

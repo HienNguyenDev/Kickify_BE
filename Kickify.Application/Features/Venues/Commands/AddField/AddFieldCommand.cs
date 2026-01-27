@@ -6,8 +6,8 @@ namespace Kickify.Application.Features.Venues.Commands.AddField
         Guid VenueId,
         string Name,
         string FieldType,
-        int MaxPlayers,
-        decimal PricePerHour,
-        string? Description
-    ) : ICommand<AddFieldResponse>;
+        string? SurfaceType,
+        decimal HourlyRate,
+        decimal PeakHourSurcharge
+     ) : ICommand<AddFieldResponse>;
 }

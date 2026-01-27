@@ -46,7 +46,9 @@ namespace Kickify.Application.Features.Venues.Commands.AddField
                 VenueId = request.VenueId,
                 FieldName = request.Name,
                 FieldType = fieldType,
-                HourlyRate = request.PricePerHour,
+                SurfaceType = request.SurfaceType,
+                HourlyRate = request.HourlyRate,
+                PeakHourSurcharge = request.PeakHourSurcharge,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -58,9 +60,9 @@ namespace Kickify.Application.Features.Venues.Commands.AddField
                 field.VenueId,
                 field.FieldName,
                 field.FieldType.ToString(),
-                0, // MaxPlayers not in entity
+                field.SurfaceType,
                 field.HourlyRate,
-                null, // Description not in entity
+                field.PeakHourSurcharge,
                 field.CreatedAt
             ));
         }
