@@ -18,10 +18,10 @@ namespace Kickify.Application.Features.Venues.Commands.CreateVenue
     public record CreateVenueFieldDto(
         string Name,
         string FieldType,
-        int MaxPlayers,
-        decimal PricePerHour,
-        string? Description
-    );
+        string? SurfaceType,
+        decimal HourlyRate,
+        decimal PeakHourSurcharge
+     );
 
     public record CreateVenueOperatingHoursDto(
         int DayOfWeek,

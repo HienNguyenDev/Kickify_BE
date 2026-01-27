@@ -27,6 +27,6 @@ namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
         Guid FieldId,
         string FieldName,
         string FieldType,
-        decimal PricePerHour
+        decimal HourlyRate
     );
 }

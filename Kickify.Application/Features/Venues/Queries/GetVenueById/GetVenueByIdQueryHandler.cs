@@ -37,9 +37,9 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenueById
                     f.FieldId,
                     f.FieldName,
                     f.FieldType.ToString(),
-                    0, // MaxPlayers not in entity
+                    f.SurfaceType,
                     f.HourlyRate,
-                    null // Description not in entity
+                    f.PeakHourSurcharge
                 )).ToList(),
                 venue.VenueOperatingHours.Select(oh => new OperatingHoursDto(
                     (DayOfWeek)oh.DayOfWeek,

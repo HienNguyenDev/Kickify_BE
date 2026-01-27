@@ -46,9 +46,9 @@ namespace Kickify.Api.Controllers
                 request.Fields.Select(f => new CreateVenueFieldDto(
                     f.Name,
                     f.FieldType,
-                    f.MaxPlayers,
-                    f.PricePerHour,
-                    f.Description
+                    f.SurfaceType,
+                    f.HourlyRate,
+                    f.PeakHourSurcharge
                 )).ToList(),
                 request.OperatingHours.Select(oh => new CreateVenueOperatingHoursDto(
                     oh.DayOfWeek,
@@ -117,9 +117,9 @@ namespace Kickify.Api.Controllers
                 venueId,
                 request.Name,
                 request.FieldType,
-                request.MaxPlayers,
-                request.PricePerHour,
-                request.Description
+                request.SurfaceType,
+                request.HourlyRate,
+                request.PeakHourSurcharge
             );
 
             var result = await _sender.Send(command, cancellationToken);
