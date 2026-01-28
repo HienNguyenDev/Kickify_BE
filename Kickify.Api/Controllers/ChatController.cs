@@ -23,10 +23,15 @@ public class ChatController : ControllerBase
     }
 
     [HttpGet("conversations")]
-    public async Task<IResult> GetConversationList([FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken cancellationToken = default)
+    public async Task<IResult> GetConversationList(
+        [FromQuery] string? searchTerm = null,
+        [FromQuery] int page = 1, 
+        [FromQuery] int pageSize = 20, 
+        CancellationToken cancellationToken = default)
     {
         var query = new GetConversationListQuery
         {
+            SearchTerm = searchTerm,
             Page = page,
             PageSize = pageSize
         };

@@ -28,7 +28,6 @@ public class PostsController : ControllerBase
     }
 
     [HttpGet]
-    [AllowAnonymous]
     public async Task<IResult> GetAllPosts(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 10,
@@ -48,7 +47,6 @@ public class PostsController : ControllerBase
     }
 
     [HttpGet("{postId:guid}")]
-    [AllowAnonymous]
     public async Task<IResult> GetPostById(Guid postId, CancellationToken cancellationToken)
     {
         var query = new GetPostByIdQuery { PostId = postId };
