@@ -20,8 +20,18 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenuesByOwner
         string Status,
         decimal AverageRating,
         int TotalReviews,
-        int FieldCount,
+        List<OwnerVenueFieldDto> Fields,
         decimal WalletBalance,
         DateTime CreatedAt
+    );
+
+    public record OwnerVenueFieldDto(
+        Guid FieldId,
+        string FieldName,
+        string FieldType,
+        string? SurfaceType,
+        decimal HourlyRate,
+        decimal PeakHourSurcharge,
+        bool IsActive
     );
 }
