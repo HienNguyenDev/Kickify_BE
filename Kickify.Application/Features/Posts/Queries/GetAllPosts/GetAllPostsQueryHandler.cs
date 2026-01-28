@@ -1,3 +1,4 @@
+using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
@@ -7,10 +8,17 @@ namespace Kickify.Application.Features.Posts.Queries.GetAllPosts;
 public class GetAllPostsQueryHandler : IQueryHandler<GetAllPostsQuery, GetAllPostsQueryResponse>
 {
     private readonly IPostRepository _postRepository;
+    private readonly IPostLikeRepository _postLikeRepository;
+    private readonly IUserContext _userContext;
 
-    public GetAllPostsQueryHandler(IPostRepository postRepository)
+    public GetAllPostsQueryHandler(
+        IPostRepository postRepository,
+        IPostLikeRepository postLikeRepository,
+        IUserContext userContext)
     {
         _postRepository = postRepository;
+        _postLikeRepository = postLikeRepository;
+        _userContext = userContext;
     }
 
     public async Task<Result<GetAllPostsQueryResponse>> Handle(GetAllPostsQuery request, CancellationToken cancellationToken)
@@ -22,7 +30,13 @@ public class GetAllPostsQueryHandler : IQueryHandler<GetAllPostsQuery, GetAllPos
             pageSize: request.PageSize,
             cancellationToken: cancellationToken);
 
-        var postDtos = posts.Select(p => new PostDto
+        var postList = posts.ToList();
+        var postIds = postList.Select(p => p.PostId).ToList();
+
+        // Get liked post ids by current user
+        var likedPostIds = await _postLikeRepository.GetLikedPostIdsByUserAsync(postIds, _userContext.UserId, cancellationToken);
+
+        var postDtos = postList.Select(p => new PostDto
         {
             PostId = p.PostId,
             UserId = p.UserId,
@@ -36,6 +50,7 @@ public class GetAllPostsQueryHandler : IQueryHandler<GetAllPostsQuery, GetAllPos
             IsEdited = p.IsEdited,
             EditedAt = p.EditedAt,
             CreatedAt = p.CreatedAt,
+            IsLikedByCurrentUser = likedPostIds.Contains(p.PostId),
             Media = p.PostMedia.Select(m => new PostMediaDto
             {
                 MediaId = m.MediaId,
