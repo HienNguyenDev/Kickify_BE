@@ -7,23 +7,23 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Kickify.Infrastructure.Repositories;
 
-public class PlayerWalletTransactionRepository : GenericRepository<PlayerWalletTransaction>, IPlayerWalletTransactionRepository
+public class VenueWalletTransactionRepository : GenericRepository<VenueWalletTransaction>, IVenueWalletTransactionRepository
 {
-    public PlayerWalletTransactionRepository(ApplicationDbContext context) : base(context) { }
+    public VenueWalletTransactionRepository(ApplicationDbContext context) : base(context) { }
 
     public async Task<bool> ExistsByTransactionCodeAsync(string transactionCode, CancellationToken cancellationToken = default)
     {
         return await _dbSet.AnyAsync(t => t.TransactionCode == transactionCode, cancellationToken);
     }
 
-    public async Task<(IEnumerable<PlayerWalletTransaction> Transactions, int Total)> GetByWalletIdAsync(
+    public async Task<(IEnumerable<VenueWalletTransaction> Transactions, int Total)> GetByWalletIdAsync(
         Guid walletId,
         TransactionType? transactionType = null,
         int page = 1,
         int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var query = _dbSet.Where(t => t.PlayerWalletId == walletId);
+        var query = _dbSet.Where(t => t.VenueWalletId == walletId);
 
         if (transactionType.HasValue)
         {
@@ -40,13 +40,15 @@ public class PlayerWalletTransactionRepository : GenericRepository<PlayerWalletT
         return (transactions, total);
     }
 
-    public async Task<(IEnumerable<PlayerWalletTransaction> Transactions, int Total)> GetAllAsync(
+    public async Task<(IEnumerable<VenueWalletTransaction> Transactions, int Total)> GetAllAsync(
         TransactionType? transactionType = null,
         int page = 1,
         int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var query = _dbSet.Include(t => t.PlayerWallet).ThenInclude(w => w.User).AsQueryable();
+        var query = _dbSet
+            .Include(t => t.VenueWallet).ThenInclude(w => w.Venue)
+            .AsQueryable();
 
         if (transactionType.HasValue)
         {
