@@ -17,6 +17,7 @@ public class GetPostByIdQueryResponse
     public DateTime? EditedAt { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+    public bool IsLikedByCurrentUser { get; set; }
     public List<PostMediaDto> Media { get; set; } = new();
 }
 

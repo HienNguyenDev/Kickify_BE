@@ -20,11 +20,15 @@ public class GetConversationListQueryHandler : IQueryHandler<GetConversationList
     {
         var conversations = await _chatMessageRepository.GetConversationListAsync(
             _userContext.UserId,
+            request.SearchTerm,
             request.Page,
             request.PageSize,
             cancellationToken);
 
-        var total = await _chatMessageRepository.GetConversationCountAsync(_userContext.UserId, cancellationToken);
+        var total = await _chatMessageRepository.GetConversationCountAsync(
+            _userContext.UserId,
+            request.SearchTerm,
+            cancellationToken);
 
         var conversationDtos = conversations.Select(c => new ConversationItemDto
         {

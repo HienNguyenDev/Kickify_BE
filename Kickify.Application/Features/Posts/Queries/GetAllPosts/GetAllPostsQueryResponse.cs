@@ -25,6 +25,7 @@ public class PostDto
     public bool IsEdited { get; set; }
     public DateTime? EditedAt { get; set; }
     public DateTime CreatedAt { get; set; }
+    public bool IsLikedByCurrentUser { get; set; }
     public List<PostMediaDto> Media { get; set; } = new();
 }
 
