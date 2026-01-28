@@ -35,7 +35,15 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenuesByOwner
                 v.Status.ToString(),
                 v.AverageRating,
                 v.TotalReviews,
-                v.Fields?.Count ?? 0,
+                v.Fields?.Select(f => new OwnerVenueFieldDto(
+                    f.FieldId,
+                    f.FieldName,
+                    f.FieldType.ToString(),
+                    f.SurfaceType,
+                    f.HourlyRate,
+                    f.PeakHourSurcharge,
+                    f.IsActive
+                )).ToList() ?? new List<OwnerVenueFieldDto>(),
                 v.VenueWallet?.Balance ?? 0,
                 v.CreatedAt
             )).ToList();
