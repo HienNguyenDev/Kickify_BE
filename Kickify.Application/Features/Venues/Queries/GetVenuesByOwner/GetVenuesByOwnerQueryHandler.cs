@@ -42,10 +42,18 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenuesByOwner
                     f.SurfaceType,
                     f.HourlyRate,
                     f.PeakHourSurcharge,
-                    f.IsActive
+                    f.IsActive,
+                    f.CreatedAt,
+                    f.UpdatedAt
                 )).ToList() ?? new List<OwnerVenueFieldDto>(),
+                v.VenuePhotos?.OrderBy(p => p.DisplayOrder).Select(p => new OwnerVenuePhotoDto(
+                    p.PhotoId,
+                    p.PhotoUrl,
+                    p.DisplayOrder
+                )).ToList() ?? new List<OwnerVenuePhotoDto>(),
                 v.VenueWallet?.Balance ?? 0,
-                v.CreatedAt
+                v.CreatedAt,
+                v.UpdatedAt
             )).ToList();
 
             var response = new GetVenuesByOwnerResponse(
