@@ -1,6 +1,7 @@
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
+using Kickify.Application.Abstractions.Services;
 using Kickify.Domain.Common;
 using Kickify.Domain.Enums;
 using Kickify.Domain.Errors;
@@ -13,6 +14,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.UpdateParticipant
         private readonly IMatchRoomRepository _matchRoomRepository;
         private readonly IUserRepository _userRepository;
         private readonly IRoomParticipantRepository _roomParticipantRepository;
+        private readonly IMatchRoomHubService _matchRoomHubService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<UpdateParticipantCommandHandler> _logger;
 
@@ -20,12 +22,14 @@ namespace Kickify.Application.Features.MatchRooms.Commands.UpdateParticipant
             IMatchRoomRepository matchRoomRepository,
             IUserRepository userRepository,
             IRoomParticipantRepository roomParticipantRepository,
+            IMatchRoomHubService matchRoomHubService,
             IUnitOfWork unitOfWork,
             ILogger<UpdateParticipantCommandHandler> logger)
         {
             _matchRoomRepository = matchRoomRepository;
             _userRepository = userRepository;
             _roomParticipantRepository = roomParticipantRepository;
+            _matchRoomHubService = matchRoomHubService;
             _unitOfWork = unitOfWork;
             _logger = logger;
         }
@@ -78,6 +82,16 @@ namespace Kickify.Application.Features.MatchRooms.Commands.UpdateParticipant
                 _roomParticipantRepository.Update(participant);
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                // Send real-time notification to all room participants
+                await _matchRoomHubService.NotifyParticipantUpdatedAsync(
+                    room.RoomId,
+                    user.UserId,
+                    user.FullName ?? user.Email,
+                    user.AvatarUrl,
+                    participant.TeamAssignment.ToString(),
+                    participant.Position,
+                    cancellationToken);
 
                 _logger.LogInformation("Participant {UserId} updated in room {RoomId}. Team: {Team}, Position: {Position}",
                     request.UserId, request.RoomId, participant.TeamAssignment, participant.Position);

@@ -81,6 +81,29 @@ public class MatchRoomHubService : IMatchRoomHubService
             }, cancellationToken);
     }
 
+    public async Task NotifyParticipantUpdatedAsync(
+        Guid roomId,
+        Guid userId,
+        string userName,
+        string? avatarUrl,
+        string teamAssignment,
+        string? position,
+        CancellationToken cancellationToken = default)
+    {
+        await _hubContext.Clients
+            .Group($"room_{roomId}")
+            .SendAsync("ParticipantUpdated", new
+            {
+                RoomId = roomId,
+                UserId = userId,
+                UserName = userName,
+                AvatarUrl = avatarUrl,
+                TeamAssignment = teamAssignment,
+                Position = position,
+                UpdatedAt = DateTime.UtcNow
+            }, cancellationToken);
+    }
+
     public async Task AddToRoomGroupAsync(string connectionId, Guid roomId)
     {
         await _hubContext.Groups.AddToGroupAsync(connectionId, $"room_{roomId}");

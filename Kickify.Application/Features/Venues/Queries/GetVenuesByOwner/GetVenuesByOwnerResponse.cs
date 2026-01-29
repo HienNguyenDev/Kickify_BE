@@ -21,8 +21,10 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenuesByOwner
         decimal AverageRating,
         int TotalReviews,
         List<OwnerVenueFieldDto> Fields,
+        List<OwnerVenuePhotoDto> Photos,
         decimal WalletBalance,
-        DateTime CreatedAt
+        DateTime CreatedAt,
+        DateTime UpdatedAt
     );
 
     public record OwnerVenueFieldDto(
@@ -32,6 +34,14 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenuesByOwner
         string? SurfaceType,
         decimal HourlyRate,
         decimal PeakHourSurcharge,
-        bool IsActive
+        bool IsActive,
+        DateTime CreatedAt,
+        DateTime UpdatedAt
+    );
+
+    public record OwnerVenuePhotoDto(
+        Guid PhotoId,
+        string PhotoUrl,
+        int DisplayOrder
     );
 }
