@@ -39,6 +39,18 @@ public interface IMatchRoomHubService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Notify all participants that a player updated their team assignment or position
+    /// </summary>
+    Task NotifyParticipantUpdatedAsync(
+        Guid roomId,
+        Guid userId,
+        string userName,
+        string? avatarUrl,
+        string teamAssignment,
+        string? position,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Add a user's connection to a room group
     /// </summary>
     Task AddToRoomGroupAsync(string connectionId, Guid roomId);

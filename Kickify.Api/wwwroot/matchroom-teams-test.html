@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Kickify Match Room - Team Selection Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; margin: 20px; background: #1a1f2e; color: #fff; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .grid { display: grid; grid-template-columns: 350px 1fr; gap: 20px; }
+        .section { background: #2a3545; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        h2 { color: #7fff6f; margin-top: 0; font-size: 18px; }
+        h3 { margin-bottom: 10px; font-size: 16px; }
+        input, button, select { padding: 10px; margin: 5px 0; border-radius: 4px; border: 1px solid #3a4555; }
+        input, select { background: #1a1f2e; color: #fff; width: 100%; }
+        button { background: #7fff6f; color: #1a1f2e; cursor: pointer; font-weight: bold; margin-right: 5px; }
+        button:hover { background: #5fdf4f; }
+        button:disabled { background: #555; cursor: not-allowed; }
+        button.danger { background: #ff6b6b; }
+        button.danger:hover { background: #ff4757; }
+        button.warning { background: #ffd700; }
+        button.info { background: #6fb5ff; }
+        button.team-a { background: #6fb5ff; }
+        button.team-b { background: #ffd700; color: #1a1f2e; }
+        .status { padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .connected { background: #2a5530; }
+        .disconnected { background: #553030; }
+        .events { height: 120px; overflow-y: auto; background: #1a1f2e; padding: 10px; border-radius: 4px; font-size: 12px; }
+        .event { padding: 6px; margin: 3px 0; border-radius: 4px; }
+        .event.join { background: #2a5530; border-left: 3px solid #7fff6f; }
+        .event.leave { background: #553030; border-left: 3px solid #ff6b6b; }
+        .event.team { background: #2a3555; border-left: 3px solid #6fb5ff; }
+        .event.info { background: #2a3555; border-left: 3px solid #6fb5ff; }
+        .event.error { background: #552030; border-left: 3px solid #ff4757; }
+        .flex { display: flex; gap: 5px; flex-wrap: wrap; }
+        .current-user { background: #3a5545; padding: 10px; border-radius: 4px; margin-top: 10px; }
+        
+        /* Room Display */
+        .room-card { background: linear-gradient(135deg, #2a3545, #1e2738); border-radius: 16px; padding: 25px; min-height: 600px; }
+        .room-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #3a4555; }
+        .room-title { font-size: 22px; font-weight: bold; }
+        .room-id { font-size: 11px; color: #888; margin-top: 5px; }
+        .status-badge { padding: 6px 16px; border-radius: 20px; font-weight: bold; font-size: 13px; }
+        .status-badge.open { background: #7fff6f; color: #1a1f2e; }
+        .status-badge.full { background: #ffd700; color: #1a1f2e; }
+        
+        /* Slots Display */
+        .slots-container { text-align: center; padding: 20px; background: #1a1f2e; border-radius: 12px; margin-bottom: 20px; }
+        .slots-number { font-size: 48px; font-weight: bold; line-height: 1; }
+        .slots-filled { color: #7fff6f; }
+        .slots-total { color: #555; }
+        .slots-label { font-size: 14px; color: #888; margin-top: 8px; }
+        .slots-bar { height: 8px; background: #3a4555; border-radius: 4px; margin-top: 10px; overflow: hidden; }
+        .slots-bar-fill { height: 100%; background: linear-gradient(90deg, #7fff6f, #4faf3f); transition: width 0.5s ease; }
+        
+        /* Teams Layout */
+        .teams-container { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 20px; }
+        .team-column { background: #1a1f2e; border-radius: 12px; padding: 15px; min-height: 300px; }
+        .team-column.unassigned { border-top: 4px solid #7fff6f; }
+        .team-column.team-a { border-top: 4px solid #6fb5ff; }
+        .team-column.team-b { border-top: 4px solid #ffd700; }
+        .team-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #3a4555; }
+        .team-title { font-weight: bold; font-size: 16px; }
+        .team-title.unassigned { color: #7fff6f; }
+        .team-title.team-a { color: #6fb5ff; }
+        .team-title.team-b { color: #ffd700; }
+        .team-count { background: #3a4555; padding: 3px 10px; border-radius: 12px; font-size: 12px; }
+        .team-players { display: flex; flex-direction: column; gap: 10px; }
+        
+        /* Player Card */
+        .player-card { background: #2a3545; padding: 12px; border-radius: 8px; display: flex; align-items: center; gap: 10px; transition: all 0.3s; position: relative; }
+        .player-card.host { background: linear-gradient(135deg, #ff6b6b, #cc4444); }
+        .player-card.you { border: 2px solid #6fb5ff; }
+        .player-card.new { animation: slideIn 0.4s ease-out; }
+        .player-card.moving { animation: fadeOut 0.3s ease-out forwards; }
+        .player-avatar { width: 36px; height: 36px; border-radius: 50%; background: #555; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; flex-shrink: 0; }
+        .player-card.host .player-avatar { background: rgba(0,0,0,0.3); }
+        .player-info { flex: 1; min-width: 0; }
+        .player-name { font-weight: bold; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .player-role { font-size: 10px; color: #888; margin-top: 2px; }
+        .player-card.host .player-role { color: rgba(255,255,255,0.8); }
+        .player-position { font-size: 10px; color: #6fb5ff; margin-top: 2px; }
+        .you-badge { position: absolute; top: -6px; right: -6px; background: #6fb5ff; color: #fff; font-size: 9px; padding: 2px 6px; border-radius: 8px; font-weight: bold; }
+        .host-badge { position: absolute; top: -6px; left: -6px; background: #ff6b6b; color: #fff; font-size: 9px; padding: 2px 6px; border-radius: 8px; font-weight: bold; }
+        
+        @keyframes slideIn { 
+            0% { transform: translateX(-20px); opacity: 0; } 
+            100% { transform: translateX(0); opacity: 1; } 
+        }
+        @keyframes fadeOut { 
+            0% { opacity: 1; transform: scale(1); } 
+            100% { opacity: 0; transform: scale(0.8); } 
+        }
+        
+        /* Team Selection */
+        .team-select-section { background: #1a1f2e; padding: 15px; border-radius: 8px; margin-top: 15px; }
+        .team-select-section h4 { margin: 0 0 10px 0; color: #888; font-size: 12px; }
+        .team-buttons { display: flex; gap: 8px; }
+        .team-buttons button { flex: 1; font-size: 12px; padding: 8px; }
+        
+        /* Empty State */
+        .empty-state { text-align: center; padding: 60px 20px; color: #555; }
+        .empty-state-icon { font-size: 60px; margin-bottom: 15px; }
+        
+        /* Team Empty */
+        .team-empty { text-align: center; padding: 30px 10px; color: #555; font-size: 12px; }
+        
+        /* Notifications */
+        .toast { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; color: #fff; font-weight: bold; z-index: 1000; animation: toastIn 0.3s ease-out; }
+        .toast.success { background: #2a5530; border-left: 4px solid #7fff6f; }
+        .toast.error { background: #552030; border-left: 4px solid #ff6b6b; }
+        .toast.info { background: #2a3555; border-left: 4px solid #6fb5ff; }
+        .toast.team { background: #3a4530; border-left: 4px solid #ffd700; }
+        @keyframes toastIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        
+        /* Legend */
+        .legend { display: flex; gap: 15px; margin-top: 15px; padding: 10px; background: #1a1f2e; border-radius: 8px; font-size: 11px; }
+        .legend-item { display: flex; align-items: center; gap: 5px; }
+        .legend-color { width: 12px; height: 12px; border-radius: 3px; }
+        .legend-color.host { background: #ff6b6b; }
+        .legend-color.you { background: #6fb5ff; }
+        .legend-color.unassigned { background: #7fff6f; }
+        .legend-color.team-a { background: #6fb5ff; }
+        .legend-color.team-b { background: #ffd700; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Kickify Match Room - Team Selection Test</h1>
+        
+        <div class="grid">
+            <!-- Left Panel - Controls -->
+            <div class="left-panel">
+                <!-- Connection -->
+                <div class="section">
+                    <h2>[*] Connection</h2>
+                    <input type="text" id="accessToken" placeholder="JWT Access Token" />
+                    <input type="text" id="hubUrl" value="https://localhost:7109/hubs/matchroom" placeholder="Hub URL" />
+                    <input type="text" id="apiBaseUrl" value="https://localhost:7109/api" placeholder="API Base URL" />
+                    <div class="flex">
+                        <button id="connectBtn" onclick="connect()">Connect</button>
+                        <button id="disconnectBtn" onclick="disconnect()" disabled class="danger">Disconnect</button>
+                    </div>
+                    <div id="connectionStatus" class="status disconnected">[X] Disconnected</div>
+                    <div id="currentUser" class="current-user" style="display: none;">
+                        Player: <strong id="currentUserName"></strong>
+                        <div style="font-size: 11px; color: #888; margin-top: 3px;">ID: <span id="currentUserId"></span></div>
+                    </div>
+                </div>
+
+                <!-- Room Actions -->
+                <div class="section">
+                    <h2>[R] Room Actions</h2>
+                    <input type="text" id="roomId" placeholder="Room ID (GUID)" />
+                    <div class="flex">
+                        <button onclick="loadRoom()" id="loadBtn" disabled class="info">Load Room</button>
+                        <button onclick="refreshRoom()" id="refreshBtn" disabled class="warning">Refresh</button>
+                    </div>
+                    <div class="flex" style="margin-top: 10px;">
+                        <button onclick="joinRoom()" id="joinBtn" disabled style="flex: 1;">Join Room</button>
+                        <button onclick="leaveRoom()" id="leaveBtn" disabled class="danger" style="flex: 1;">Leave Room</button>
+                    </div>
+                    
+                    <!-- Team Selection -->
+                    <div class="team-select-section">
+                        <h4>SELECT YOUR TEAM:</h4>
+                        <div class="team-buttons">
+                            <button onclick="selectTeam('Unassigned')" id="selectUnassigned" disabled>Unassigned</button>
+                            <button onclick="selectTeam('A')" id="selectTeamA" disabled class="team-a">Team A</button>
+                            <button onclick="selectTeam('B')" id="selectTeamB" disabled class="team-b">Team B</button>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <input type="text" id="positionInput" placeholder="Position (e.g., GK, CB, ST...)" style="margin-bottom: 5px;" />
+                            <button onclick="updatePosition()" id="updatePositionBtn" disabled class="info" style="width: 100%;">Update Position</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Events Log -->
+                <div class="section">
+                    <h2>[E] Events <button onclick="clearEvents()" class="warning" style="float: right; font-size: 10px; padding: 3px 8px;">Clear</button></h2>
+                    <div id="events" class="events"></div>
+                </div>
+                
+                <!-- Legend -->
+                <div class="legend">
+                    <div class="legend-item"><div class="legend-color host"></div> Host (Red)</div>
+                    <div class="legend-item"><div class="legend-color you"></div> You (Blue border)</div>
+                </div>
+            </div>
+
+            <!-- Right Panel - Room Display -->
+            <div class="right-panel">
+                <div class="room-card">
+                    <!-- Empty State -->
+                    <div id="emptyState" class="empty-state">
+                        <div class="empty-state-icon">[?]</div>
+                        <h3>No Room Selected</h3>
+                        <p>Enter a Room ID and click "Load Room" to view team assignments</p>
+                    </div>
+
+                    <!-- Room Content -->
+                    <div id="roomContent" style="display: none;">
+                        <!-- Header -->
+                        <div class="room-header">
+                            <div>
+                                <div class="room-title" id="displayRoomName">Match Room</div>
+                                <div class="room-id">ID: <span id="displayRoomId"></span></div>
+                            </div>
+                            <span id="displayStatus" class="status-badge open">Open</span>
+                        </div>
+
+                        <!-- Slots Display -->
+                        <div class="slots-container">
+                            <div class="slots-number">
+                                <span class="slots-filled" id="displayFilled">0</span><span class="slots-total">/<span id="displayTotal">0</span></span>
+                            </div>
+                            <div class="slots-label">Players Joined</div>
+                            <div class="slots-bar">
+                                <div class="slots-bar-fill" id="slotsBar" style="width: 0%;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Teams -->
+                        <div class="teams-container">
+                            <!-- Unassigned Column -->
+                            <div class="team-column unassigned">
+                                <div class="team-header">
+                                    <span class="team-title unassigned">[U] UNASSIGNED</span>
+                                    <span class="team-count" id="unassignedCount">0</span>
+                                </div>
+                                <div class="team-players" id="unassignedPlayers">
+                                    <div class="team-empty">No players</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Team A Column -->
+                            <div class="team-column team-a">
+                                <div class="team-header">
+                                    <span class="team-title team-a">[A] TEAM A</span>
+                                    <span class="team-count" id="teamACount">0</span>
+                                </div>
+                                <div class="team-players" id="teamAPlayers">
+                                    <div class="team-empty">No players</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Team B Column -->
+                            <div class="team-column team-b">
+                                <div class="team-header">
+                                    <span class="team-title team-b">[B] TEAM B</span>
+                                    <span class="team-count" id="teamBCount">0</span>
+                                </div>
+                                <div class="team-players" id="teamBPlayers">
+                                    <div class="team-empty">No players</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let connection = null;
+        let accessToken = '';
+        let currentRoomId = null;
+        let currentUserId = null;
+        let roomData = null;
+        let hostId = null;
+
+        // ============ Utility Functions ============
+        
+        function log(msg) { console.log(`[${new Date().toLocaleTimeString()}]`, msg); }
+        
+        function addEvent(content, type = 'info') {
+            const div = document.getElementById('events');
+            const time = new Date().toLocaleTimeString();
+            div.innerHTML = `<div class="event ${type}">[${time}] ${content}</div>` + div.innerHTML;
+        }
+        
+        function clearEvents() { document.getElementById('events').innerHTML = ''; }
+        
+        function toast(message, type = 'success') {
+            const t = document.createElement('div');
+            t.className = `toast ${type}`;
+            t.textContent = message;
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
+        }
+
+        function parseJwt(token) {
+            try {
+                const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+                return JSON.parse(atob(base64));
+            } catch { return null; }
+        }
+
+        function updateConnectionUI(connected) {
+            const status = document.getElementById('connectionStatus');
+            status.className = `status ${connected ? 'connected' : 'disconnected'}`;
+            status.textContent = connected ? '[OK] Connected' : '[X] Disconnected';
+            
+            document.getElementById('connectBtn').disabled = connected;
+            document.getElementById('disconnectBtn').disabled = !connected;
+            ['loadBtn', 'refreshBtn', 'joinBtn', 'leaveBtn', 'selectUnassigned', 'selectTeamA', 'selectTeamB', 'updatePositionBtn'].forEach(id => {
+                document.getElementById(id).disabled = !connected;
+            });
+        }
+
+        // ============ Player Card Rendering ============
+
+        function createPlayerCard(player, isHost) {
+            const isYou = player.userId === currentUserId;
+            return `
+                <div class="player-card ${isHost ? 'host' : ''} ${isYou ? 'you' : ''}" data-user-id="${player.userId}" data-team="${player.teamAssignment}">
+                    ${isHost ? '<span class="host-badge">HOST</span>' : ''}
+                    ${isYou ? '<span class="you-badge">YOU</span>' : ''}
+                    <div class="player-avatar">${isHost ? 'H' : 'P'}</div>
+                    <div class="player-info">
+                        <div class="player-name">${player.fullName || player.userName || 'Player'}</div>
+                        <div class="player-role">${isHost ? 'Host' : 'Player'}</div>
+                        ${player.position ? `<div class="player-position">${player.position}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderTeamPlayers(containerId, players, countId) {
+            const container = document.getElementById(containerId);
+            const count = document.getElementById(countId);
+            
+            count.textContent = players.length;
+            
+            if (players.length === 0) {
+                container.innerHTML = '<div class="team-empty">No players</div>';
+                return;
+            }
+            
+            container.innerHTML = players.map(p => createPlayerCard(p, p.userId === hostId)).join('');
+        }
+
+        // ============ Room Display ============
+
+        function updateRoomDisplay(data) {
+            if (!data) {
+                document.getElementById('emptyState').style.display = 'block';
+                document.getElementById('roomContent').style.display = 'none';
+                return;
+            }
+
+            roomData = data;
+            hostId = data.hostId;
+            
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('roomContent').style.display = 'block';
+
+            document.getElementById('displayRoomName').textContent = data.roomName || 'Match Room';
+            document.getElementById('displayRoomId').textContent = data.roomId;
+            document.getElementById('displayFilled').textContent = data.filledSlots || 0;
+            document.getElementById('displayTotal').textContent = data.totalSlots || 0;
+
+            // Status badge
+            const badge = document.getElementById('displayStatus');
+            const filled = data.filledSlots || 0;
+            const total = data.totalSlots || 1;
+            if (filled >= total) {
+                badge.textContent = 'Full';
+                badge.className = 'status-badge full';
+            } else {
+                badge.textContent = data.status || 'Open';
+                badge.className = 'status-badge open';
+            }
+
+            // Slots bar
+            document.getElementById('slotsBar').style.width = `${(filled / total) * 100}%`;
+
+            // Render teams - API returns participants grouped by team
+            if (data.participants) {
+                renderTeamPlayers('unassignedPlayers', data.participants.unassigned || [], 'unassignedCount');
+                renderTeamPlayers('teamAPlayers', data.participants.teamA || [], 'teamACount');
+                renderTeamPlayers('teamBPlayers', data.participants.teamB || [], 'teamBCount');
+            }
+        }
+
+        function movePlayerToTeam(userId, userName, newTeam, position) {
+            // Find and remove existing card
+            const existingCard = document.querySelector(`[data-user-id="${userId}"]`);
+            if (existingCard) {
+                existingCard.classList.add('moving');
+                setTimeout(() => existingCard.remove(), 300);
+            }
+            
+            // Determine target container
+            let targetId;
+            let countId;
+            if (newTeam === 'Unassigned') {
+                targetId = 'unassignedPlayers';
+                countId = 'unassignedCount';
+            } else if (newTeam === 'A') {
+                targetId = 'teamAPlayers';
+                countId = 'teamACount';
+            } else {
+                targetId = 'teamBPlayers';
+                countId = 'teamBCount';
+            }
+            
+            setTimeout(() => {
+                const container = document.getElementById(targetId);
+                const isHost = userId === hostId;
+                const isYou = userId === currentUserId;
+                
+                // Remove empty message if exists
+                const emptyMsg = container.querySelector('.team-empty');
+                if (emptyMsg) emptyMsg.remove();
+                
+                // Create new card
+                const card = document.createElement('div');
+                card.className = `player-card new ${isHost ? 'host' : ''} ${isYou ? 'you' : ''}`;
+                card.dataset.userId = userId;
+                card.dataset.team = newTeam;
+                card.innerHTML = `
+                    ${isHost ? '<span class="host-badge">HOST</span>' : ''}
+                    ${isYou ? '<span class="you-badge">YOU</span>' : ''}
+                    <div class="player-avatar">${isHost ? 'H' : 'P'}</div>
+                    <div class="player-info">
+                        <div class="player-name">${userName}</div>
+                        <div class="player-role">${isHost ? 'Host' : 'Player'}</div>
+                        ${position ? `<div class="player-position">${position}</div>` : ''}
+                    </div>
+                `;
+                container.appendChild(card);
+                
+                // Update counts
+                updateTeamCounts();
+                
+                setTimeout(() => card.classList.remove('new'), 400);
+            }, 350);
+        }
+
+        function updateTeamCounts() {
+            document.getElementById('unassignedCount').textContent = 
+                document.querySelectorAll('#unassignedPlayers .player-card').length;
+            document.getElementById('teamACount').textContent = 
+                document.querySelectorAll('#teamAPlayers .player-card').length;
+            document.getElementById('teamBCount').textContent = 
+                document.querySelectorAll('#teamBPlayers .player-card').length;
+                
+            // Show empty messages if needed
+            ['unassignedPlayers', 'teamAPlayers', 'teamBPlayers'].forEach(id => {
+                const container = document.getElementById(id);
+                if (container.querySelectorAll('.player-card').length === 0 && !container.querySelector('.team-empty')) {
+                    container.innerHTML = '<div class="team-empty">No players</div>';
+                }
+            });
+        }
+
+        function updateSlots(filled, total) {
+            document.getElementById('displayFilled').textContent = filled;
+            document.getElementById('displayTotal').textContent = total;
+            document.getElementById('slotsBar').style.width = `${(filled / total) * 100}%`;
+            
+            const el = document.getElementById('displayFilled');
+            el.style.transform = 'scale(1.2)';
+            setTimeout(() => el.style.transform = 'scale(1)', 200);
+
+            const badge = document.getElementById('displayStatus');
+            if (filled >= total) {
+                badge.textContent = 'Full';
+                badge.className = 'status-badge full';
+            } else {
+                badge.textContent = 'Open';
+                badge.className = 'status-badge open';
+            }
+        }
+
+        function updateHost(newHostId) {
+            hostId = newHostId;
+            
+            // Remove host styling from all cards
+            document.querySelectorAll('.player-card').forEach(card => {
+                card.classList.remove('host');
+                const hostBadge = card.querySelector('.host-badge');
+                if (hostBadge) hostBadge.remove();
+                card.querySelector('.player-avatar').textContent = 'P';
+                card.querySelector('.player-role').textContent = 'Player';
+            });
+            
+            // Add host styling to new host
+            const newHostCard = document.querySelector(`[data-user-id="${newHostId}"]`);
+            if (newHostCard) {
+                newHostCard.classList.add('host');
+                const badge = document.createElement('span');
+                badge.className = 'host-badge';
+                badge.textContent = 'HOST';
+                newHostCard.appendChild(badge);
+                newHostCard.querySelector('.player-avatar').textContent = 'H';
+                newHostCard.querySelector('.player-role').textContent = 'Host';
+            }
+        }
+
+        function removePlayer(userId) {
+            const card = document.querySelector(`[data-user-id="${userId}"]`);
+            if (card) {
+                card.classList.add('moving');
+                setTimeout(() => {
+                    card.remove();
+                    updateTeamCounts();
+                }, 300);
+            }
+        }
+
+        function addPlayer(userId, userName, avatarUrl, team = 'Unassigned') {
+            // Check if already exists
+            if (document.querySelector(`[data-user-id="${userId}"]`)) return;
+            
+            let targetId = 'unassignedPlayers';
+            if (team === 'A') targetId = 'teamAPlayers';
+            else if (team === 'B') targetId = 'teamBPlayers';
+            
+            const container = document.getElementById(targetId);
+            const emptyMsg = container.querySelector('.team-empty');
+            if (emptyMsg) emptyMsg.remove();
+            
+            const isHost = userId === hostId;
+            const isYou = userId === currentUserId;
+            
+            const card = document.createElement('div');
+            card.className = `player-card new ${isHost ? 'host' : ''} ${isYou ? 'you' : ''}`;
+            card.dataset.userId = userId;
+            card.dataset.team = team;
+            card.innerHTML = `
+                ${isHost ? '<span class="host-badge">HOST</span>' : ''}
+                ${isYou ? '<span class="you-badge">YOU</span>' : ''}
+                <div class="player-avatar">${isHost ? 'H' : 'P'}</div>
+                <div class="player-info">
+                    <div class="player-name">${userName}</div>
+                    <div class="player-role">${isHost ? 'Host' : 'Player'}</div>
+                </div>
+            `;
+            container.appendChild(card);
+            
+            updateTeamCounts();
+            setTimeout(() => card.classList.remove('new'), 400);
+        }
+
+        // ============ SignalR ============
+
+        async function connect() {
+            accessToken = document.getElementById('accessToken').value;
+            if (!accessToken) { alert('Enter JWT token'); return; }
+
+            // Parse user from token
+            const payload = parseJwt(accessToken);
+            if (payload) {
+                currentUserId = payload.sub || payload.nameid || payload.userId;
+                const name = payload.name || payload.unique_name || payload.email || 'User';
+                document.getElementById('currentUser').style.display = 'block';
+                document.getElementById('currentUserName').textContent = name;
+                document.getElementById('currentUserId').textContent = currentUserId;
+            }
+
+            const hubUrl = document.getElementById('hubUrl').value;
+            connection = new signalR.HubConnectionBuilder()
+                .withUrl(hubUrl, { accessTokenFactory: () => accessToken })
+                .withAutomaticReconnect()
+                .build();
+
+            // Event: User Joined
+            connection.on("UserJoinedRoom", (data) => {
+                log('UserJoinedRoom: ' + JSON.stringify(data));
+                if (data.roomId === currentRoomId) {
+                    addPlayer(data.userId, data.userName, data.avatarUrl, 'Unassigned');
+                    updateSlots(data.filledSlots, data.totalSlots);
+                    toast(`${data.userName} joined!`, 'success');
+                }
+                addEvent(`[+] ${data.userName} joined (${data.filledSlots}/${data.totalSlots})`, 'join');
+            });
+
+            // Event: User Left
+            connection.on("UserLeftRoom", (data) => {
+                log('UserLeftRoom: ' + JSON.stringify(data));
+                if (data.roomId === currentRoomId) {
+                    removePlayer(data.userId);
+                    updateSlots(data.filledSlots, data.totalSlots);
+                    if (data.isRoomDeleted) {
+                        toast('Room deleted!', 'error');
+                        updateRoomDisplay(null);
+                        currentRoomId = null;
+                    } else {
+                        toast(`${data.userName} left`, 'info');
+                        if (data.newHostId) {
+                            updateHost(data.newHostId);
+                            addEvent(`[!] New host assigned`, 'team');
+                        }
+                    }
+                }
+                addEvent(`[-] ${data.userName} left${data.isRoomDeleted ? ' (room deleted)' : ''}`, 'leave');
+            });
+
+            // Event: Participant Updated (Team/Position changed)
+            connection.on("ParticipantUpdated", (data) => {
+                log('ParticipantUpdated: ' + JSON.stringify(data));
+                if (data.roomId === currentRoomId) {
+                    movePlayerToTeam(data.userId, data.userName, data.teamAssignment, data.position);
+                    toast(`${data.userName} -> Team ${data.teamAssignment}`, 'team');
+                }
+                addEvent(`[T] ${data.userName} moved to ${data.teamAssignment}${data.position ? ` (${data.position})` : ''}`, 'team');
+            });
+
+            // Event: Room Status Changed
+            connection.on("RoomStatusChanged", (data) => {
+                log('RoomStatusChanged: ' + JSON.stringify(data));
+                addEvent(`[S] Status: ${data.status}`, 'info');
+            });
+
+            connection.onclose(() => { updateConnectionUI(false); });
+            connection.onreconnected(() => {
+                updateConnectionUI(true);
+                if (currentRoomId) connection.invoke("JoinRoomGroup", currentRoomId);
+            });
+
+            try {
+                await connection.start();
+                updateConnectionUI(true);
+                addEvent('[OK] Connected to SignalR!', 'info');
+                toast('Connected!', 'success');
+            } catch (err) {
+                addEvent(`[ERR] ${err}`, 'error');
+            }
+        }
+
+        async function disconnect() {
+            if (connection) await connection.stop();
+            updateConnectionUI(false);
+            currentRoomId = null;
+            updateRoomDisplay(null);
+        }
+
+        // ============ API ============
+
+        async function api(endpoint, method = 'GET', body = null) {
+            const url = document.getElementById('apiBaseUrl').value + endpoint;
+            const opts = {
+                method,
+                headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' }
+            };
+            if (body) opts.body = JSON.stringify(body);
+            const res = await fetch(url, opts);
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.title || data.message || JSON.stringify(data));
+            return data;
+        }
+
+        async function loadRoom() {
+            const roomId = document.getElementById('roomId').value;
+            if (!roomId) { alert('Enter Room ID'); return; }
+
+            try {
+                await connection.invoke("JoinRoomGroup", roomId);
+                currentRoomId = roomId;
+                const data = await api(`/match-rooms/${roomId}`);
+                updateRoomDisplay(data);
+                addEvent(`[OK] Loaded room with ${data.filledSlots} players`, 'info');
+            } catch (err) {
+                addEvent(`[ERR] ${err.message}`, 'error');
+                toast(err.message, 'error');
+            }
+        }
+
+        async function refreshRoom() {
+            if (!currentRoomId) return;
+            try {
+                const data = await api(`/match-rooms/${currentRoomId}`);
+                updateRoomDisplay(data);
+                addEvent('[OK] Room refreshed', 'info');
+            } catch (err) {
+                addEvent(`[ERR] ${err.message}`, 'error');
+            }
+        }
+
+        async function joinRoom() {
+            const roomId = document.getElementById('roomId').value || currentRoomId;
+            if (!roomId) { alert('Enter Room ID'); return; }
+
+            try {
+                await api(`/match-rooms/${roomId}/join`, 'POST');
+                addEvent('[+] You joined the room!', 'join');
+                toast('Joined!', 'success');
+                if (!currentRoomId) {
+                    document.getElementById('roomId').value = roomId;
+                    await loadRoom();
+                }
+            } catch (err) {
+                addEvent(`[ERR] ${err.message}`, 'error');
+                toast(err.message, 'error');
+            }
+        }
+
+        async function leaveRoom() {
+            const roomId = document.getElementById('roomId').value || currentRoomId;
+            if (!roomId) { alert('Enter Room ID'); return; }
+
+            try {
+                await api(`/match-rooms/${roomId}/leave`, 'POST');
+                addEvent('[-] You left the room', 'leave');
+                toast('Left room', 'info');
+            } catch (err) {
+                addEvent(`[ERR] ${err.message}`, 'error');
+                toast(err.message, 'error');
+            }
+        }
+
+        async function selectTeam(team) {
+            if (!currentRoomId) { alert('Load a room first'); return; }
+
+            try {
+                await api(`/match-rooms/${currentRoomId}/participants/me`, 'PUT', { teamAssignment: team });
+                addEvent(`[T] You selected Team ${team}`, 'team');
+                toast(`Moved to Team ${team}`, 'team');
+            } catch (err) {
+                addEvent(`[ERR] ${err.message}`, 'error');
+                toast(err.message, 'error');
+            }
+        }
+
+        async function updatePosition() {
+            if (!currentRoomId) { alert('Load a room first'); return; }
+            
+            const position = document.getElementById('positionInput').value;
+            if (!position) { alert('Enter a position'); return; }
+
+            try {
+                await api(`/match-rooms/${currentRoomId}/participants/me`, 'PUT', { position: position });
+                addEvent(`[P] Position updated to ${position}`, 'team');
+                toast(`Position: ${position}`, 'team');
+            } catch (err) {
+                addEvent(`[ERR] ${err.message}`, 'error');
+                toast(err.message, 'error');
+            }
+        }
+    </script>
+</body>
+</html>
