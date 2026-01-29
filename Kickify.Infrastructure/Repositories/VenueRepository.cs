@@ -102,6 +102,7 @@ namespace Kickify.Infrastructure.Repositories
             var query = _dbSet
                 .AsNoTracking()
                 .Include(v => v.Fields)
+                .Include(v => v.VenuePhotos)
                 .Include(v => v.VenueWallet)
                 .Where(v => v.OwnerId == ownerId);
 
