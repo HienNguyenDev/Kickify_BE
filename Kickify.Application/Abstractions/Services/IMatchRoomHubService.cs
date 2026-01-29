@@ -51,6 +51,18 @@ public interface IMatchRoomHubService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Notify a specific user that they have been kicked from the room
+    /// </summary>
+    Task NotifyUserKickedAsync(
+        Guid roomId,
+        Guid kickedUserId,
+        string kickedUserName,
+        string reason,
+        int filledSlots,
+        int totalSlots,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Add a user's connection to a room group
     /// </summary>
     Task AddToRoomGroupAsync(string connectionId, Guid roomId);

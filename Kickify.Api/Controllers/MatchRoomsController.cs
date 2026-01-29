@@ -3,6 +3,7 @@ using Kickify.Api.Infrastructure;
 using Kickify.Api.Requests;
 using Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom;
 using Kickify.Application.Features.MatchRooms.Commands.JoinRoom;
+using Kickify.Application.Features.MatchRooms.Commands.KickPlayer;
 using Kickify.Application.Features.MatchRooms.Commands.LeaveRoom;
 using Kickify.Application.Features.MatchRooms.Commands.UpdateParticipant;
 using Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById;
@@ -137,6 +138,33 @@ namespace Kickify.Api.Controllers
                 id,
                 request.TeamAssignment,
                 request.Position
+            );
+
+            var result = await _sender.Send(command, cancellationToken);
+
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Kick a player from the room (Host only)
+        /// </summary>
+        /// <param name="roomId">Room ID</param>
+        /// <param name="targetUserId">User ID to kick</param>
+        /// <param name="reason">Optional reason for kicking</param>
+        [HttpDelete("{roomId}/participants/{targetUserId}")]
+        public async Task<IResult> KickPlayer(
+            Guid roomId,
+            Guid targetUserId,
+            [FromQuery] string? reason,
+            CancellationToken cancellationToken)
+        {
+            var hostId = GetCurrentUserId();
+
+            var command = new KickPlayerCommand(
+                hostId,
+                roomId,
+                targetUserId,
+                reason
             );
 
             var result = await _sender.Send(command, cancellationToken);
