@@ -9,9 +9,7 @@ namespace Kickify.Infrastructure.Repositories;
 
 public class ChatMessageRepository : GenericRepository<ChatMessage>, IChatMessageRepository
 {
-    public ChatMessageRepository(ApplicationDbContext context) : base(context)
-    {
-    }
+    public ChatMessageRepository(ApplicationDbContext context) : base(context) { }
 
     public async Task<(IEnumerable<ChatMessage> Messages, int Total)> GetPrivateConversationAsync(
         Guid userId1,
@@ -76,6 +74,7 @@ public class ChatMessageRepository : GenericRepository<ChatMessage>, IChatMessag
 
     public async Task<IEnumerable<(User OtherUser, ChatMessage LastMessage, int UnreadCount)>> GetConversationListAsync(
         Guid userId,
+        string? searchTerm = null,
         int page = 1,
         int pageSize = 20,
         CancellationToken cancellationToken = default)
@@ -111,25 +110,55 @@ public class ChatMessageRepository : GenericRepository<ChatMessage>, IChatMessag
                 var otherUser = lastMessage.SenderId == userId ? lastMessage.Receiver : lastMessage.Sender;
                 return (otherUser, lastMessage, conv.UnreadCount);
             })
-            .Where(x => x.Item1 != null && x.Item2 != null)
+            .Where(x => x.Item1 != null && x.Item2 != null);
+
+        // Apply search filter on FullName
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var searchLower = searchTerm.ToLower();
+            result = result.Where(x => x.Item1!.FullName != null && x.Item1.FullName.ToLower().Contains(searchLower));
+        }
+
+        var finalResult = result
             .OrderByDescending(x => x.Item2!.SentAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(x => (x.Item1!, x.Item2!, x.Item3))
             .ToList();
 
-        return result;
+        return finalResult;
     }
 
     public async Task<int> GetConversationCountAsync(
         Guid userId,
+        string? searchTerm = null,
         CancellationToken cancellationToken = default)
     {
-        return await _dbSet
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            return await _dbSet
+                .Where(m => m.ConversationType == ConversationType.Private &&
+                           (m.SenderId == userId || m.ReceiverId == userId))
+                .Select(m => m.SenderId == userId ? m.ReceiverId : m.SenderId)
+                .Distinct()
+                .CountAsync(cancellationToken);
+        }
+
+        // When search term is provided, need to filter by user's FullName
+        var searchLower = searchTerm.ToLower();
+        var conversationData = await _dbSet
             .Where(m => m.ConversationType == ConversationType.Private &&
                        (m.SenderId == userId || m.ReceiverId == userId))
-            .Select(m => m.SenderId == userId ? m.ReceiverId : m.SenderId)
-            .Distinct()
+            .GroupBy(m => m.SenderId == userId ? m.ReceiverId : m.SenderId)
+            .Select(g => new { OtherUserId = g.Key })
+            .ToListAsync(cancellationToken);
+
+        var otherUserIds = conversationData.Select(c => c.OtherUserId).ToList();
+        
+        var matchingUserCount = await _context.Set<User>()
+            .Where(u => otherUserIds.Contains(u.UserId) && u.FullName != null && u.FullName.ToLower().Contains(searchLower))
             .CountAsync(cancellationToken);
+
+        return matchingUserCount;
     }
 }

@@ -28,11 +28,13 @@ public interface IChatMessageRepository : IGenericRepository<ChatMessage>
 
     Task<IEnumerable<(User OtherUser, ChatMessage LastMessage, int UnreadCount)>> GetConversationListAsync(
         Guid userId,
+        string? searchTerm = null,
         int page = 1,
         int pageSize = 20,
         CancellationToken cancellationToken = default);
 
     Task<int> GetConversationCountAsync(
         Guid userId,
+        string? searchTerm = null,
         CancellationToken cancellationToken = default);
 }

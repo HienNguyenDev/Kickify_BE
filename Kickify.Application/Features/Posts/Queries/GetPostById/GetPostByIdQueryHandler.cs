@@ -1,3 +1,4 @@
+using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
@@ -8,10 +9,17 @@ namespace Kickify.Application.Features.Posts.Queries.GetPostById;
 public class GetPostByIdQueryHandler : IQueryHandler<GetPostByIdQuery, GetPostByIdQueryResponse>
 {
     private readonly IPostRepository _postRepository;
+    private readonly IPostLikeRepository _postLikeRepository;
+    private readonly IUserContext _userContext;
 
-    public GetPostByIdQueryHandler(IPostRepository postRepository)
+    public GetPostByIdQueryHandler(
+        IPostRepository postRepository,
+        IPostLikeRepository postLikeRepository,
+        IUserContext userContext)
     {
         _postRepository = postRepository;
+        _postLikeRepository = postLikeRepository;
+        _userContext = userContext;
     }
 
     public async Task<Result<GetPostByIdQueryResponse>> Handle(GetPostByIdQuery request, CancellationToken cancellationToken)
@@ -22,6 +30,8 @@ public class GetPostByIdQueryHandler : IQueryHandler<GetPostByIdQuery, GetPostBy
         {
             return Result.Failure<GetPostByIdQueryResponse>(PostErrors.NotFound(request.PostId));
         }
+
+        var isLikedByCurrentUser = await _postLikeRepository.IsPostLikedByUserAsync(post.PostId, _userContext.UserId, cancellationToken);
 
         var response = new GetPostByIdQueryResponse
         {
@@ -38,6 +48,7 @@ public class GetPostByIdQueryHandler : IQueryHandler<GetPostByIdQuery, GetPostBy
             EditedAt = post.EditedAt,
             CreatedAt = post.CreatedAt,
             UpdatedAt = post.UpdatedAt,
+            IsLikedByCurrentUser = isLikedByCurrentUser,
             Media = post.PostMedia.Select(m => new PostMediaDto
             {
                 MediaId = m.MediaId,

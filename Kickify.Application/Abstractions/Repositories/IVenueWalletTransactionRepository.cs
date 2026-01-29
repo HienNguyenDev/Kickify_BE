@@ -4,16 +4,16 @@ using Kickify.Domain.Enums;
 
 namespace Kickify.Application.Abstractions.Repositories;
 
-public interface IPlayerWalletTransactionRepository : IGenericRepository<PlayerWalletTransaction>
+public interface IVenueWalletTransactionRepository : IGenericRepository<VenueWalletTransaction>
 {
     Task<bool> ExistsByTransactionCodeAsync(string transactionCode, CancellationToken cancellationToken = default);
-    Task<(IEnumerable<PlayerWalletTransaction> Transactions, int Total)> GetByWalletIdAsync(
+    Task<(IEnumerable<VenueWalletTransaction> Transactions, int Total)> GetByWalletIdAsync(
         Guid walletId,
         TransactionType? transactionType = null,
         int page = 1,
         int pageSize = 20,
         CancellationToken cancellationToken = default);
-    Task<(IEnumerable<PlayerWalletTransaction> Transactions, int Total)> GetAllAsync(
+    Task<(IEnumerable<VenueWalletTransaction> Transactions, int Total)> GetAllAsync(
         TransactionType? transactionType = null,
         int page = 1,
         int pageSize = 20,
