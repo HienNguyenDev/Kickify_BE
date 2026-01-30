@@ -1,3 +1,4 @@
+using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
@@ -10,17 +11,22 @@ namespace Kickify.Application.Features.Fields.Commands.DeleteField
     {
         private readonly IFieldRepository _fieldRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IUserContext _userContext;
 
         public DeleteFieldCommandHandler(
             IFieldRepository fieldRepository,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            IUserContext userContext)
         {
             _fieldRepository = fieldRepository;
             _unitOfWork = unitOfWork;
+            _userContext = userContext;
         }
 
         public async Task<Result<DeleteFieldResponse>> Handle(DeleteFieldCommand request, CancellationToken cancellationToken)
         {
+            var userId = _userContext.UserId;
+            
             // Get field with tracking for delete
             var field = await _fieldRepository.GetFieldWithVenueForUpdateAsync(request.FieldId, cancellationToken);
 
@@ -30,7 +36,7 @@ namespace Kickify.Application.Features.Fields.Commands.DeleteField
             }
 
             // Check if user is the owner of the venue
-            if (field.Venue?.OwnerId != request.UserId)
+            if (field.Venue?.OwnerId != userId)
             {
                 return Result.Failure<DeleteFieldResponse>(FieldErrors.Unauthorized);
             }

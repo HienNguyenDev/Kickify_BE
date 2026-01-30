@@ -73,6 +73,7 @@
         .player-card.you { border: 2px solid #6fb5ff; }
         .player-card.new { animation: slideIn 0.4s ease-out; }
         .player-card.moving { animation: fadeOut 0.3s ease-out forwards; }
+        .player-card.kicked { animation: kickOut 0.5s ease-out forwards; background: #ff4757 !important; }
         .player-avatar { width: 36px; height: 36px; border-radius: 50%; background: #555; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; flex-shrink: 0; }
         .player-card.host .player-avatar { background: rgba(0,0,0,0.3); }
         .player-info { flex: 1; min-width: 0; }
@@ -82,6 +83,8 @@
         .player-position { font-size: 10px; color: #6fb5ff; margin-top: 2px; }
         .you-badge { position: absolute; top: -6px; right: -6px; background: #6fb5ff; color: #fff; font-size: 9px; padding: 2px 6px; border-radius: 8px; font-weight: bold; }
         .host-badge { position: absolute; top: -6px; left: -6px; background: #ff6b6b; color: #fff; font-size: 9px; padding: 2px 6px; border-radius: 8px; font-weight: bold; }
+        .kick-btn { background: #ff4757; color: #fff; font-size: 10px; padding: 4px 8px; border-radius: 4px; font-weight: bold; cursor: pointer; border: none; margin-left: auto; flex-shrink: 0; }
+        .kick-btn:hover { background: #ff2f3f; transform: scale(1.05); }
         
         @keyframes slideIn { 
             0% { transform: translateX(-20px); opacity: 0; } 
@@ -90,6 +93,15 @@
         @keyframes fadeOut { 
             0% { opacity: 1; transform: scale(1); } 
             100% { opacity: 0; transform: scale(0.8); } 
+        }
+        @keyframes kickOut {
+            0% { opacity: 1; transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { opacity: 0; transform: translateX(100px) scale(0.5); }
+        }
+        @keyframes kickedAlert {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
         }
         
         /* Team Selection */
@@ -312,17 +324,43 @@
         // ============ Player Card Rendering ============
 
         function createPlayerCard(player, isHost) {
-            const isYou = player.userId === currentUserId;
+            const isYou = (player.userId || player.UserId) === currentUserId;
+            const imHost = currentUserId === hostId;
+            const canKick = imHost && !isHost && !isYou; // I'm host, and this player is not host and not me
+            
+            // Handle both PascalCase and camelCase from API
+            const userId = player.userId || player.UserId;
+            const fullName = player.fullName || player.FullName || player.userName || player.UserName || 'Player';
+            const avatarUrl = player.avatarUrl || player.AvatarUrl;
+            const teamAssignment = player.teamAssignment || player.TeamAssignment || 'Unassigned';
+            const position = player.position || player.Position;
+            
+            console.log('createPlayerCard:', { 
+                fullName, 
+                userId, 
+                currentUserId, 
+                hostId, 
+                imHost, 
+                isHost, 
+                isYou, 
+                canKick 
+            });
+            
+            const avatarContent = avatarUrl 
+                ? `<img src="${avatarUrl}" alt="${fullName}" onerror="this.parentElement.textContent='${isHost ? 'H' : 'P'}'" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />`
+                : (isHost ? 'H' : 'P');
+            
             return `
-                <div class="player-card ${isHost ? 'host' : ''} ${isYou ? 'you' : ''}" data-user-id="${player.userId}" data-team="${player.teamAssignment}">
+                <div class="player-card ${isHost ? 'host' : ''} ${isYou ? 'you' : ''}" data-user-id="${userId}" data-user-name="${fullName}" data-team="${teamAssignment}">
                     ${isHost ? '<span class="host-badge">HOST</span>' : ''}
                     ${isYou ? '<span class="you-badge">YOU</span>' : ''}
-                    <div class="player-avatar">${isHost ? 'H' : 'P'}</div>
+                    <div class="player-avatar">${avatarContent}</div>
                     <div class="player-info">
-                        <div class="player-name">${player.fullName || player.userName || 'Player'}</div>
-                        <div class="player-role">${isHost ? 'Host' : 'Player'}</div>
-                        ${player.position ? `<div class="player-position">${player.position}</div>` : ''}
+                        <div class="player-name">${fullName}</div>
+                        <div class="player-role">${isHost ? '👑 Host' : '👤 Player'}</div>
+                        ${position ? `<div class="player-position">📍 ${position}</div>` : ''}
                     </div>
+                    ${canKick ? `<button class="kick-btn" onclick="kickPlayer('${userId}', '${fullName.replace(/'/g, "\\'")}')">KICK</button>` : ''}
                 </div>
             `;
         }
@@ -333,17 +371,23 @@
             
             count.textContent = players.length;
             
-            if (players.length === 0) {
+            if (!players || players.length === 0) {
                 container.innerHTML = '<div class="team-empty">No players</div>';
                 return;
             }
             
-            container.innerHTML = players.map(p => createPlayerCard(p, p.userId === hostId)).join('');
+            container.innerHTML = players.map(p => {
+                const playerId = p.userId || p.UserId;
+                const isPlayerHost = playerId === hostId;
+                return createPlayerCard(p, isPlayerHost);
+            }).join('');
         }
 
         // ============ Room Display ============
 
         function updateRoomDisplay(data) {
+            console.log('updateRoomDisplay called with:', data);
+            
             if (!data) {
                 document.getElementById('emptyState').style.display = 'block';
                 document.getElementById('roomContent').style.display = 'none';
@@ -351,36 +395,63 @@
             }
 
             roomData = data;
-            hostId = data.hostId;
+            // Handle both PascalCase and camelCase from API
+            hostId = data.hostId || data.HostId;
+            
+            console.log('hostId set to:', hostId);
+            console.log('currentUserId:', currentUserId);
+            console.log('Am I host?', hostId === currentUserId);
+            
+            // Update "Is Host" label in UI
+            const isHostLabel = document.getElementById('isHostLabel');
+            if (isHostLabel) {
+                const isHost = hostId === currentUserId;
+                isHostLabel.textContent = isHost ? '✅ Yes (You can kick!)' : '❌ No';
+                isHostLabel.style.color = isHost ? '#7fff6f' : '#888';
+            }
             
             document.getElementById('emptyState').style.display = 'none';
             document.getElementById('roomContent').style.display = 'block';
 
-            document.getElementById('displayRoomName').textContent = data.roomName || 'Match Room';
-            document.getElementById('displayRoomId').textContent = data.roomId;
-            document.getElementById('displayFilled').textContent = data.filledSlots || 0;
-            document.getElementById('displayTotal').textContent = data.totalSlots || 0;
+            document.getElementById('displayRoomName').textContent = data.roomName || data.RoomName || 'Match Room';
+            document.getElementById('displayRoomId').textContent = data.roomId || data.RoomId;
+            document.getElementById('displayFilled').textContent = data.filledSlots || data.FilledSlots || 0;
+            document.getElementById('displayTotal').textContent = data.totalSlots || data.TotalSlots || 0;
 
             // Status badge
             const badge = document.getElementById('displayStatus');
-            const filled = data.filledSlots || 0;
-            const total = data.totalSlots || 1;
+            const filled = data.filledSlots || data.FilledSlots || 0;
+            const total = data.totalSlots || data.TotalSlots || 1;
             if (filled >= total) {
                 badge.textContent = 'Full';
                 badge.className = 'status-badge full';
             } else {
-                badge.textContent = data.status || 'Open';
+                badge.textContent = data.status || data.Status || 'Open';
                 badge.className = 'status-badge open';
             }
 
             // Slots bar
             document.getElementById('slotsBar').style.width = `${(filled / total) * 100}%`;
 
-            // Render teams - API returns participants grouped by team
-            if (data.participants) {
-                renderTeamPlayers('unassignedPlayers', data.participants.unassigned || [], 'unassignedCount');
-                renderTeamPlayers('teamAPlayers', data.participants.teamA || [], 'teamACount');
-                renderTeamPlayers('teamBPlayers', data.participants.teamB || [], 'teamBCount');
+            // Render teams - API may return PascalCase or camelCase, handle both
+            if (data.participants || data.Participants) {
+                const p = data.participants || data.Participants;
+                console.log('Participants data:', p);
+                
+                // Handle both PascalCase (from C# API) and camelCase
+                const unassigned = p.Unassigned || p.unassigned || [];
+                const teamA = p.TeamA || p.teamA || [];
+                const teamB = p.TeamB || p.teamB || [];
+                
+                console.log('Unassigned:', unassigned.length, unassigned);
+                console.log('TeamA:', teamA.length, teamA);
+                console.log('TeamB:', teamB.length, teamB);
+                
+                renderTeamPlayers('unassignedPlayers', unassigned, 'unassignedCount');
+                renderTeamPlayers('teamAPlayers', teamA, 'teamACount');
+                renderTeamPlayers('teamBPlayers', teamB, 'teamBCount');
+            } else {
+                console.log('No participants in data:', data);
             }
         }
 
@@ -615,6 +686,40 @@
                 addEvent(`[S] Status: ${data.status}`, 'info');
             });
 
+            // Event: You Were Kicked (personal notification)
+            connection.on("YouWereKicked", (data) => {
+                log('YouWereKicked: ' + JSON.stringify(data));
+                addEvent(`[!] YOU WERE KICKED! Reason: ${data.reason}`, 'error');
+                toast(`You were kicked from the room! Reason: ${data.reason}`, 'error');
+                
+                // Clear room display and show alert
+                setTimeout(() => {
+                    alert(`You have been removed from the room.\n\nReason: ${data.reason}\n\nYou will be redirected to the lobby.`);
+                    updateRoomDisplay(null);
+                    currentRoomId = null;
+                    document.getElementById('roomId').value = '';
+                }, 100);
+            });
+
+            // Event: User Kicked (broadcast to all in room)
+            connection.on("UserKicked", (data) => {
+                log('UserKicked: ' + JSON.stringify(data));
+                if (data.roomId === currentRoomId) {
+                    // Animate kicked player
+                    const card = document.querySelector(`[data-user-id="${data.kickedUserId}"]`);
+                    if (card) {
+                        card.classList.add('kicked');
+                        setTimeout(() => {
+                            card.remove();
+                            updateTeamCounts();
+                        }, 500);
+                    }
+                    updateSlots(data.filledSlots, data.totalSlots);
+                    toast(`${data.kickedUserName} was kicked!`, 'error');
+                }
+                addEvent(`[X] ${data.kickedUserName} was kicked. Reason: ${data.reason}`, 'error');
+            });
+
             connection.onclose(() => { updateConnectionUI(false); });
             connection.onreconnected(() => {
                 updateConnectionUI(true);
@@ -660,7 +765,10 @@
             try {
                 await connection.invoke("JoinRoomGroup", roomId);
                 currentRoomId = roomId;
-                const data = await api(`/match-rooms/${roomId}`);
+                const response = await api(`/match-rooms/${roomId}`);
+                // API returns { data: { ... } } so we need to unwrap it
+                const data = response.data || response;
+                console.log('loadRoom - unwrapped data:', data);
                 updateRoomDisplay(data);
                 addEvent(`[OK] Loaded room with ${data.filledSlots} players`, 'info');
             } catch (err) {
@@ -672,7 +780,9 @@
         async function refreshRoom() {
             if (!currentRoomId) return;
             try {
-                const data = await api(`/match-rooms/${currentRoomId}`);
+                const response = await api(`/match-rooms/${currentRoomId}`);
+                // API returns { data: { ... } } so we need to unwrap it
+                const data = response.data || response;
                 updateRoomDisplay(data);
                 addEvent('[OK] Room refreshed', 'info');
             } catch (err) {
@@ -735,6 +845,46 @@
                 await api(`/match-rooms/${currentRoomId}/participants/me`, 'PUT', { position: position });
                 addEvent(`[P] Position updated to ${position}`, 'team');
                 toast(`Position: ${position}`, 'team');
+            } catch (err) {
+                addEvent(`[ERR] ${err.message}`, 'error');
+                toast(err.message, 'error');
+            }
+        }
+
+        // ============ Kick Player ============
+
+        async function kickPlayer(targetUserId, targetUserName) {
+            if (!currentRoomId) { alert('Load a room first'); return; }
+            if (currentUserId !== hostId) { 
+                alert('Only the host can kick players!'); 
+                return; 
+            }
+
+            const reason = prompt(`Kick ${targetUserName}?\n\nEnter reason (optional):`);
+            if (reason === null) return; // User cancelled
+
+            try {
+                const url = `/match-rooms/${currentRoomId}/participants/${targetUserId}` + 
+                            (reason ? `?reason=${encodeURIComponent(reason)}` : '');
+                
+                const baseUrl = document.getElementById('apiBaseUrl').value;
+                const response = await fetch(baseUrl + url, {
+                    method: 'DELETE',
+                    headers: { 
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.title || data.detail || data.message || 'Failed to kick player');
+                }
+
+                addEvent(`[X] You kicked ${targetUserName}`, 'error');
+                toast(`Kicked ${targetUserName}!`, 'success');
+                
             } catch (err) {
                 addEvent(`[ERR] ${err.message}`, 'error');
                 toast(err.message, 'error');

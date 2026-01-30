@@ -3,7 +3,6 @@ using Kickify.Application.Abstractions.Messaging;
 namespace Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom
 {
     public record CreateMatchRoomCommand(
-        Guid UserId,
         Guid FieldId,
         DateTime MatchDate,
         TimeSpan StartTime,

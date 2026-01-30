@@ -1,3 +1,4 @@
+using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
@@ -12,19 +13,24 @@ namespace Kickify.Application.Features.MatchPresets.Commands.UpdateMatchPreset
         private readonly IMatchPresetRepository _matchPresetRepository;
         private readonly IFieldRepository _fieldRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IUserContext _userContext;
 
         public UpdateMatchPresetCommandHandler(
             IMatchPresetRepository matchPresetRepository,
             IFieldRepository fieldRepository,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            IUserContext userContext)
         {
             _matchPresetRepository = matchPresetRepository;
             _fieldRepository = fieldRepository;
             _unitOfWork = unitOfWork;
+            _userContext = userContext;
         }
 
         public async Task<Result<UpdateMatchPresetResponse>> Handle(UpdateMatchPresetCommand request, CancellationToken cancellationToken)
         {
+            var userId = _userContext.UserId;
+            
             // Get preset
             var preset = await _matchPresetRepository.GetByIdAsync(request.PresetId, cancellationToken);
             if (preset == null)
@@ -33,7 +39,7 @@ namespace Kickify.Application.Features.MatchPresets.Commands.UpdateMatchPreset
             }
 
             // Check ownership
-            if (preset.UserId != request.UserId)
+            if (preset.UserId != userId)
             {
                 return Result.Failure<UpdateMatchPresetResponse>(MatchPresetErrors.Unauthorized);
             }

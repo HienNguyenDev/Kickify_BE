@@ -6,9 +6,6 @@ namespace Kickify.Application.Features.MatchPresets.Commands.UpdateMatchPreset
     {
         public UpdateMatchPresetCommandValidator()
         {
-            RuleFor(x => x.UserId)
-                .NotEmpty().WithMessage("User ID is required");
-
             RuleFor(x => x.PresetId)
                 .NotEmpty().WithMessage("Preset ID is required");
 

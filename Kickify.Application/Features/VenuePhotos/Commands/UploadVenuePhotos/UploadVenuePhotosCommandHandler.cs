@@ -1,3 +1,4 @@
+using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
@@ -15,21 +16,26 @@ namespace Kickify.Application.Features.VenuePhotos.Commands.UploadVenuePhotos
         private readonly IStorageService _storageService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<UploadVenuePhotosCommandHandler> _logger;
+        private readonly IUserContext _userContext;
 
         public UploadVenuePhotosCommandHandler(
             IVenuePhotoRepository venuePhotoRepository,
             IStorageService storageService,
             IUnitOfWork unitOfWork,
-            ILogger<UploadVenuePhotosCommandHandler> logger)
+            ILogger<UploadVenuePhotosCommandHandler> logger,
+            IUserContext userContext)
         {
             _venuePhotoRepository = venuePhotoRepository;
             _storageService = storageService;
             _unitOfWork = unitOfWork;
             _logger = logger;
+            _userContext = userContext;
         }
 
         public async Task<Result<UploadVenuePhotosResponse>> Handle(UploadVenuePhotosCommand request, CancellationToken cancellationToken)
         {
+            var userId = _userContext.UserId;
+            
             // Check if venue exists
             var venueExists = await _venuePhotoRepository.VenueExistsAsync(request.VenueId, cancellationToken);
             if (!venueExists)
@@ -38,7 +44,7 @@ namespace Kickify.Application.Features.VenuePhotos.Commands.UploadVenuePhotos
             }
 
             // Check if user is the owner
-            var isOwner = await _venuePhotoRepository.IsVenueOwnerAsync(request.VenueId, request.UserId, cancellationToken);
+            var isOwner = await _venuePhotoRepository.IsVenueOwnerAsync(request.VenueId, userId, cancellationToken);
             if (!isOwner)
             {
                 return Result.Failure<UploadVenuePhotosResponse>(VenuePhotoErrors.Unauthorized);
