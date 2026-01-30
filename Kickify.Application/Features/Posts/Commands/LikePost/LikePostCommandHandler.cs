@@ -15,7 +15,11 @@ public class LikePostCommandHandler : ICommandHandler<LikePostCommand, LikePostC
     private readonly IUnitOfWork _unitOfWork;
     private readonly IUserContext _userContext;
 
-    public LikePostCommandHandler(IPostRepository postRepository, IPostLikeRepository postLikeRepository, IUnitOfWork unitOfWork, IUserContext userContext)
+    public LikePostCommandHandler(
+        IPostRepository postRepository,
+        IPostLikeRepository postLikeRepository,
+        IUnitOfWork unitOfWork,
+        IUserContext userContext)
     {
         _postRepository = postRepository;
         _postLikeRepository = postLikeRepository;
@@ -36,12 +40,14 @@ public class LikePostCommandHandler : ICommandHandler<LikePostCommand, LikePostC
 
         if (existingLike is not null)
         {
+            // Unlike
             _postLikeRepository.Remove(existingLike);
-            post.TotalLikes--;
+            post.TotalLikes = Math.Max(0, post.TotalLikes - 1);
             isLiked = false;
         }
         else
         {
+            // Like
             var postLike = new PostLike
             {
                 LikeId = Guid.NewGuid(),

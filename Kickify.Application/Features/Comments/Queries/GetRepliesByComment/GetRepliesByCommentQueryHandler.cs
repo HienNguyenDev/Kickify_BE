@@ -1,3 +1,4 @@
+using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
@@ -8,10 +9,17 @@ namespace Kickify.Application.Features.Comments.Queries.GetRepliesByComment;
 public class GetRepliesByCommentQueryHandler : IQueryHandler<GetRepliesByCommentQuery, GetRepliesByCommentQueryResponse>
 {
     private readonly ICommentRepository _commentRepository;
+    private readonly ICommentLikeRepository _commentLikeRepository;
+    private readonly IUserContext _userContext;
 
-    public GetRepliesByCommentQueryHandler(ICommentRepository commentRepository)
+    public GetRepliesByCommentQueryHandler(
+        ICommentRepository commentRepository,
+        ICommentLikeRepository commentLikeRepository,
+        IUserContext userContext)
     {
         _commentRepository = commentRepository;
+        _commentLikeRepository = commentLikeRepository;
+        _userContext = userContext;
     }
 
     public async Task<Result<GetRepliesByCommentQueryResponse>> Handle(GetRepliesByCommentQuery request, CancellationToken cancellationToken)
@@ -21,9 +29,16 @@ public class GetRepliesByCommentQueryHandler : IQueryHandler<GetRepliesByComment
         {
             return Result.Failure<GetRepliesByCommentQueryResponse>(CommentErrors.NotFound(request.CommentId));
         }
+
         var (replies, total) = await _commentRepository.GetRepliesByCommentAsync(request.CommentId, request.Page, request.PageSize, cancellationToken);
 
-        var replyDtos = replies.Select(r => new ReplyDto
+        var replyList = replies.ToList();
+        var replyIds = replyList.Select(r => r.CommentId).ToList();
+
+        // Get liked reply ids by current user
+        var likedReplyIds = await _commentLikeRepository.GetLikedCommentIdsByUserAsync(replyIds, _userContext.UserId, cancellationToken);
+
+        var replyDtos = replyList.Select(r => new ReplyDto
         {
             CommentId = r.CommentId,
             UserId = r.UserId,
@@ -32,6 +47,7 @@ public class GetRepliesByCommentQueryHandler : IQueryHandler<GetRepliesByComment
             Content = r.Content,
             TotalLikes = r.TotalLikes,
             IsEdited = r.IsEdited,
+            IsLikedByCurrentUser = likedReplyIds.Contains(r.CommentId),
             CreatedAt = r.CreatedAt
         }).ToList();
 

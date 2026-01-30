@@ -19,5 +19,6 @@ public class ReplyDto
     public string Content { get; set; } = string.Empty;
     public int TotalLikes { get; set; }
     public bool IsEdited { get; set; }
+    public bool IsLikedByCurrentUser { get; set; }
     public DateTime CreatedAt { get; set; }
 }
