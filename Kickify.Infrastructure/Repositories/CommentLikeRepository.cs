@@ -14,4 +14,19 @@ public class CommentLikeRepository : GenericRepository<CommentLike>, ICommentLik
     {
         return await _dbSet.FirstOrDefaultAsync(cl => cl.CommentId == commentId && cl.UserId == userId, cancellationToken);
     }
+
+    public async Task<bool> IsCommentLikedByUserAsync(Guid commentId, Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await _dbSet.AnyAsync(cl => cl.CommentId == commentId && cl.UserId == userId, cancellationToken);
+    }
+
+    public async Task<HashSet<Guid>> GetLikedCommentIdsByUserAsync(IEnumerable<Guid> commentIds, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var likedCommentIds = await _dbSet
+            .Where(cl => commentIds.Contains(cl.CommentId) && cl.UserId == userId)
+            .Select(cl => cl.CommentId)
+            .ToListAsync(cancellationToken);
+
+        return likedCommentIds.ToHashSet();
+    }
 }

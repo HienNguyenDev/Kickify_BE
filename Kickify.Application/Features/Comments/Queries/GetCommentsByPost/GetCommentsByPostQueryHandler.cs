@@ -1,3 +1,4 @@
+using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
@@ -8,12 +9,20 @@ namespace Kickify.Application.Features.Comments.Queries.GetCommentsByPost;
 public class GetCommentsByPostQueryHandler : IQueryHandler<GetCommentsByPostQuery, GetCommentsByPostQueryResponse>
 {
     private readonly ICommentRepository _commentRepository;
+    private readonly ICommentLikeRepository _commentLikeRepository;
     private readonly IPostRepository _postRepository;
+    private readonly IUserContext _userContext;
 
-    public GetCommentsByPostQueryHandler(ICommentRepository commentRepository, IPostRepository postRepository)
+    public GetCommentsByPostQueryHandler(
+        ICommentRepository commentRepository,
+        ICommentLikeRepository commentLikeRepository,
+        IPostRepository postRepository,
+        IUserContext userContext)
     {
         _commentRepository = commentRepository;
+        _commentLikeRepository = commentLikeRepository;
         _postRepository = postRepository;
+        _userContext = userContext;
     }
 
     public async Task<Result<GetCommentsByPostQueryResponse>> Handle(GetCommentsByPostQuery request, CancellationToken cancellationToken)
@@ -26,7 +35,13 @@ public class GetCommentsByPostQueryHandler : IQueryHandler<GetCommentsByPostQuer
 
         var (comments, total) = await _commentRepository.GetCommentsByPostAsync(request.PostId, request.Page, request.PageSize, cancellationToken);
 
-        var commentDtos = comments.Select(c => new CommentDto
+        var commentList = comments.ToList();
+        var commentIds = commentList.Select(c => c.CommentId).ToList();
+
+        // Get liked comment ids by current user
+        var likedCommentIds = await _commentLikeRepository.GetLikedCommentIdsByUserAsync(commentIds, _userContext.UserId, cancellationToken);
+
+        var commentDtos = commentList.Select(c => new CommentDto
         {
             CommentId = c.CommentId,
             UserId = c.UserId,
@@ -36,6 +51,7 @@ public class GetCommentsByPostQueryHandler : IQueryHandler<GetCommentsByPostQuer
             TotalLikes = c.TotalLikes,
             TotalReplies = c.TotalReplies,
             IsEdited = c.IsEdited,
+            IsLikedByCurrentUser = likedCommentIds.Contains(c.CommentId),
             CreatedAt = c.CreatedAt
         }).ToList();
 
