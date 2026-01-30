@@ -1,3 +1,4 @@
+using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
@@ -7,16 +8,22 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenuesByOwner
     public class GetVenuesByOwnerQueryHandler : IQueryHandler<GetVenuesByOwnerQuery, GetVenuesByOwnerResponse>
     {
         private readonly IVenueRepository _venueRepository;
+        private readonly IUserContext _userContext;
 
-        public GetVenuesByOwnerQueryHandler(IVenueRepository venueRepository)
+        public GetVenuesByOwnerQueryHandler(
+            IVenueRepository venueRepository,
+            IUserContext userContext)
         {
             _venueRepository = venueRepository;
+            _userContext = userContext;
         }
 
         public async Task<Result<GetVenuesByOwnerResponse>> Handle(GetVenuesByOwnerQuery request, CancellationToken cancellationToken)
         {
+            var ownerId = _userContext.UserId;
+            
             var (venues, total) = await _venueRepository.GetVenuesByOwnerPagedAsync(
-                request.OwnerId,
+                ownerId,
                 request.Page,
                 request.PageSize,
                 cancellationToken

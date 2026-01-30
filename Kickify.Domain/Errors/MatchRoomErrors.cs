@@ -63,5 +63,26 @@ namespace Kickify.Domain.Errors
         public static readonly Error LeaveFailed = Error.Problem(
             "MatchRoom.LeaveFailed",
             "Failed to leave room");
+
+        // Kick Player Errors
+        public static readonly Error OnlyHostCanKick = Error.Failure(
+            "MatchRoom.OnlyHostCanKick",
+            "Only the host can kick players from the room");
+
+        public static readonly Error CannotKickSelf = Error.Problem(
+            "MatchRoom.CannotKickSelf",
+            "Host cannot kick themselves. Use 'Leave Room' or 'Cancel Room' instead");
+
+        public static readonly Error RoomNotActive = Error.Problem(
+            "MatchRoom.RoomNotActive",
+            "Cannot kick players from a completed or cancelled room");
+
+        public static Error PlayerNotInRoom(Guid userId) => Error.NotFound(
+            "MatchRoom.PlayerNotInRoom",
+            $"Player with ID {userId} is not in this room");
+
+        public static readonly Error KickFailed = Error.Problem(
+            "MatchRoom.KickFailed",
+            "Failed to kick player from room");
     }
 }

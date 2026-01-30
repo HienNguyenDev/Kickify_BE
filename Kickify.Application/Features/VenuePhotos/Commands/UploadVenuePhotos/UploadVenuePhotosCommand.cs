@@ -5,7 +5,6 @@ namespace Kickify.Application.Features.VenuePhotos.Commands.UploadVenuePhotos
 {
     public record UploadVenuePhotosCommand(
         Guid VenueId,
-        Guid UserId,
         List<FileUploadRequest> Photos
     ) : ICommand<UploadVenuePhotosResponse>;
 }

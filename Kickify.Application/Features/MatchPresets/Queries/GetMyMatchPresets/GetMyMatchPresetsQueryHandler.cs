@@ -1,3 +1,4 @@
+using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
@@ -7,16 +8,22 @@ namespace Kickify.Application.Features.MatchPresets.Queries.GetMyMatchPresets
     public class GetMyMatchPresetsQueryHandler : IQueryHandler<GetMyMatchPresetsQuery, GetMyMatchPresetsResponse>
     {
         private readonly IMatchPresetRepository _matchPresetRepository;
+        private readonly IUserContext _userContext;
 
-        public GetMyMatchPresetsQueryHandler(IMatchPresetRepository matchPresetRepository)
+        public GetMyMatchPresetsQueryHandler(
+            IMatchPresetRepository matchPresetRepository,
+            IUserContext userContext)
         {
             _matchPresetRepository = matchPresetRepository;
+            _userContext = userContext;
         }
 
         public async Task<Result<GetMyMatchPresetsResponse>> Handle(GetMyMatchPresetsQuery request, CancellationToken cancellationToken)
         {
+            var userId = _userContext.UserId;
+            
             var (presets, total) = await _matchPresetRepository.GetByUserIdPagedAsync(
-                request.UserId,
+                userId,
                 request.Page,
                 request.PageSize,
                 cancellationToken);

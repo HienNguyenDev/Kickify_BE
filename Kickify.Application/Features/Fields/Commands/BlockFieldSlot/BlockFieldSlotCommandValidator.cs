@@ -14,10 +14,6 @@ namespace Kickify.Application.Features.Fields.Commands.BlockFieldSlot
                 .NotEmpty()
                 .WithMessage("FieldId is required");
 
-            RuleFor(x => x.UserId)
-                .NotEmpty()
-                .WithMessage("UserId is required");
-
             RuleFor(x => x.Date)
                 .NotEmpty()
                 .WithMessage("Date is required")

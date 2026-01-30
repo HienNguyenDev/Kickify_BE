@@ -4,7 +4,6 @@ namespace Kickify.Application.Features.Fields.Commands.UpdateField
 {
     public record UpdateFieldCommand(
         Guid FieldId,
-        Guid UserId,
         string? FieldName,
         string? FieldType,
         string? SurfaceType,

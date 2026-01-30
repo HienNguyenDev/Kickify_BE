@@ -6,9 +6,6 @@ namespace Kickify.Application.Features.MatchPresets.Commands.CreateMatchPreset
     {
         public CreateMatchPresetCommandValidator()
         {
-            RuleFor(x => x.UserId)
-                .NotEmpty().WithMessage("User ID is required");
-
             RuleFor(x => x.PresetName)
                 .NotEmpty().WithMessage("Preset name is required")
                 .MaximumLength(100).WithMessage("Preset name cannot exceed 100 characters");

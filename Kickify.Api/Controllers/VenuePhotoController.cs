@@ -8,7 +8,6 @@ using Kickify.Application.Features.VenuePhotos.Queries.GetVenuePhotos;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace Kickify.Api.Controllers
 {
@@ -62,12 +61,6 @@ namespace Kickify.Api.Controllers
             [FromForm] List<IFormFile> photos,
             CancellationToken cancellationToken)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
-            {
-                return Results.Unauthorized();
-            }
-
             var files = new List<FileUploadRequest>();
             foreach (var photo in photos)
             {
@@ -78,7 +71,7 @@ namespace Kickify.Api.Controllers
                     photo.Length));
             }
 
-            var command = new UploadVenuePhotosCommand(venueId, userId, files);
+            var command = new UploadVenuePhotosCommand(venueId, files);
             var result = await _sender.Send(command, cancellationToken);
 
             return result.MatchOk();
@@ -94,13 +87,7 @@ namespace Kickify.Api.Controllers
             [FromBody] UpdateVenuePhotoRequest request,
             CancellationToken cancellationToken)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
-            {
-                return Results.Unauthorized();
-            }
-
-            var command = new UpdateVenuePhotoCommand(photoId, userId, request.DisplayOrder);
+            var command = new UpdateVenuePhotoCommand(photoId, request.DisplayOrder);
             var result = await _sender.Send(command, cancellationToken);
 
             return result.MatchOk();
@@ -115,13 +102,7 @@ namespace Kickify.Api.Controllers
             Guid photoId,
             CancellationToken cancellationToken)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
-            {
-                return Results.Unauthorized();
-            }
-
-            var command = new DeleteVenuePhotoCommand(photoId, userId);
+            var command = new DeleteVenuePhotoCommand(photoId);
             var result = await _sender.Send(command, cancellationToken);
 
             return result.MatchOk();

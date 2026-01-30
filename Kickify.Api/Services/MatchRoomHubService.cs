@@ -104,6 +104,42 @@ public class MatchRoomHubService : IMatchRoomHubService
             }, cancellationToken);
     }
 
+    public async Task NotifyUserKickedAsync(
+        Guid roomId,
+        Guid kickedUserId,
+        string kickedUserName,
+        string reason,
+        int filledSlots,
+        int totalSlots,
+        CancellationToken cancellationToken = default)
+    {
+        // 1. Notify the kicked user specifically
+        var kickedUserConnections = _connectionMapping.GetConnections(kickedUserId);
+        foreach (var connectionId in kickedUserConnections)
+        {
+            await _hubContext.Clients.Client(connectionId).SendAsync("YouWereKicked", new
+            {
+                RoomId = roomId,
+                Reason = reason,
+                KickedAt = DateTime.UtcNow
+            }, cancellationToken);
+        }
+
+        // 2. Notify all remaining participants in the room
+        await _hubContext.Clients
+            .Group($"room_{roomId}")
+            .SendAsync("UserKicked", new
+            {
+                RoomId = roomId,
+                KickedUserId = kickedUserId,
+                KickedUserName = kickedUserName,
+                Reason = reason,
+                FilledSlots = filledSlots,
+                TotalSlots = totalSlots,
+                KickedAt = DateTime.UtcNow
+            }, cancellationToken);
+    }
+
     public async Task AddToRoomGroupAsync(string connectionId, Guid roomId)
     {
         await _hubContext.Groups.AddToGroupAsync(connectionId, $"room_{roomId}");
