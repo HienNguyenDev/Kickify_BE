@@ -68,7 +68,7 @@ namespace Kickify.Application.Features.Auth.Commands.Login
             var response = new LoginWithRefreshTokenCommandResponse
             {
                 AccessToken = accessToken,
-                RefreshToken = refreshToken.Token
+                RefreshToken = newRefreshTokenString
             };
             return Result.Success(response);
         }
