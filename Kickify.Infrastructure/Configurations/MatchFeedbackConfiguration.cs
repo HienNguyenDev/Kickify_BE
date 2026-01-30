@@ -25,29 +25,9 @@ public class MatchFeedbackConfiguration : IEntityTypeConfiguration<MatchFeedback
         builder.Property(mf => mf.RevieweeId)
             .IsRequired();
 
-        builder.Property(mf => mf.TeamworkRating)
+        builder.Property(mf => mf.Rating)
             .IsRequired()
             .HasComment("1-5");
-
-        builder.Property(mf => mf.FairplayRating)
-            .IsRequired()
-            .HasComment("1-5");
-
-        builder.Property(mf => mf.AttackRating)
-            .IsRequired()
-            .HasComment("1-5");
-
-        builder.Property(mf => mf.DefenseRating)
-            .IsRequired()
-            .HasComment("1-5");
-
-        builder.Property(mf => mf.CommunicationRating)
-            .IsRequired()
-            .HasComment("1-5");
-
-        builder.Property(mf => mf.AverageRating)
-            .HasColumnType("decimal(3,2)")
-            .IsRequired();
 
         builder.Property(mf => mf.Comment)
             .HasColumnType("text");
@@ -58,12 +38,6 @@ public class MatchFeedbackConfiguration : IEntityTypeConfiguration<MatchFeedback
 
         builder.Property(mf => mf.SentimentLabel)
             .HasConversion<string>();
-
-        builder.Property(mf => mf.RevieweeResponse)
-            .HasColumnType("text");
-
-        builder.Property(mf => mf.ResponseDate)
-            .HasColumnType("timestamp");
 
         // Indexes
         builder.HasIndex(mf => mf.MatchId);

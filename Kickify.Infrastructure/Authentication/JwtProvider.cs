@@ -61,11 +61,11 @@ namespace BrewView.Infrastructure.Authentication
                 Issuer = issuer,
                 Audience = audience,
                 Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.UtcNow.AddMinutes(_configuration.GetValue<int>("Authentication:ExpirationInMinutes")),
+                Expires = DateTime.UtcNow.AddMonths(1),
                 SigningCredentials = new SigningCredentials(
                     new SymmetricSecurityKey(keyBytes),
                     SecurityAlgorithms.HmacSha256Signature)
-            };
+            }; 
 
             var token = tokenHandler.CreateToken(tokenDescriptor);
             return tokenHandler.WriteToken(token);
