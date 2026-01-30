@@ -1,3 +1,4 @@
+using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
@@ -18,6 +19,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.JoinRoom
         private readonly IRoomParticipantRepository _roomParticipantRepository;
         private readonly IMatchRoomHubService _matchRoomHubService;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IUserContext _userContext;
         private readonly ILogger<JoinRoomCommandHandler> _logger;
 
         public JoinRoomCommandHandler(
@@ -26,6 +28,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.JoinRoom
             IRoomParticipantRepository roomParticipantRepository,
             IMatchRoomHubService matchRoomHubService,
             IUnitOfWork unitOfWork,
+            IUserContext userContext,
             ILogger<JoinRoomCommandHandler> logger)
         {
             _matchRoomRepository = matchRoomRepository;
@@ -33,16 +36,19 @@ namespace Kickify.Application.Features.MatchRooms.Commands.JoinRoom
             _roomParticipantRepository = roomParticipantRepository;
             _matchRoomHubService = matchRoomHubService;
             _unitOfWork = unitOfWork;
+            _userContext = userContext;
             _logger = logger;
         }
 
         public async Task<Result<JoinRoomResponse>> Handle(JoinRoomCommand request, CancellationToken cancellationToken)
         {
+            var userId = _userContext.UserId;
+            
             // Verify user exists
-            var user = await _userRepository.GetByIdAsync(request.UserId);
+            var user = await _userRepository.GetByIdAsync(userId);
             if (user == null)
             {
-                return Result.Failure<JoinRoomResponse>(UserErrors.NotFound(request.UserId));
+                return Result.Failure<JoinRoomResponse>(UserErrors.NotFound(userId));
             }
 
             // Get room with participants (WITH TRACKING for FilledSlots update)
@@ -59,7 +65,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.JoinRoom
             }
 
             // RULE #4: Check if user is already in room
-            if (room.RoomParticipants.Any(p => p.UserId == request.UserId))
+            if (room.RoomParticipants.Any(p => p.UserId == userId))
             {
                 return Result.Failure<JoinRoomResponse>(MatchRoomErrors.AlreadyJoined);
             }
@@ -77,7 +83,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.JoinRoom
                 {
                     ParticipantId = Guid.NewGuid(),
                     RoomId = request.RoomId,
-                    UserId = request.UserId,
+                    UserId = userId,
                     TeamAssignment = TeamAssignment.Unassigned,
                     JoinDate = DateTime.UtcNow,
                     DepositPaid = false,
@@ -94,7 +100,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.JoinRoom
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 _logger.LogInformation("User {UserId} joined room {RoomId}. Filled: {FilledSlots}/{TotalSlots}",
-                    request.UserId, request.RoomId, room.FilledSlots, room.TotalSlots);
+                    userId, request.RoomId, room.FilledSlots, room.TotalSlots);
 
                 // Send real-time notification to all room participants
                 await _matchRoomHubService.NotifyUserJoinedAsync(
@@ -109,7 +115,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.JoinRoom
                 return Result.Success(new JoinRoomResponse(
                     participant.ParticipantId,
                     room.RoomId,
-                    request.UserId,
+                    userId,
                     room.FilledSlots,
                     room.TotalSlots,
                     participant.JoinDate
@@ -119,7 +125,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.JoinRoom
             {
                 // Handle potential concurrency conflict (multiple users joining simultaneously)
                 _logger.LogWarning(ex, "Concurrency conflict when user {UserId} tried to join room {RoomId}",
-                    request.UserId, request.RoomId);
+                    userId, request.RoomId);
 
                 return Result.Failure<JoinRoomResponse>(
                     new Error("MatchRoom.ConcurrencyConflict", "Room was just filled by another user. Please try another room.", ErrorType.Conflict));

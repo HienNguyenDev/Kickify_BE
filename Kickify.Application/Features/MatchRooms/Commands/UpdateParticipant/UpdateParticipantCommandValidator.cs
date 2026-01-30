@@ -6,9 +6,6 @@ namespace Kickify.Application.Features.MatchRooms.Commands.UpdateParticipant
     {
         public UpdateParticipantCommandValidator()
         {
-            RuleFor(x => x.UserId)
-                .NotEmpty().WithMessage("User ID is required");
-
             RuleFor(x => x.RoomId)
                 .NotEmpty().WithMessage("Room ID is required");
 

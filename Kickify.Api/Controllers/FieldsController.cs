@@ -10,7 +10,6 @@ using Kickify.Application.Features.Fields.Queries.GetFieldsByOwner;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace Kickify.Api.Controllers
 {
@@ -120,15 +119,8 @@ namespace Kickify.Api.Controllers
             [FromBody] UpdateFieldRequest request,
             CancellationToken cancellationToken)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
-            {
-                return Results.Unauthorized();
-            }
-
             var command = new UpdateFieldCommand(
                 fieldId,
-                userId,
                 request.Name,
                 request.FieldType,
                 request.SurfaceType,
@@ -149,13 +141,7 @@ namespace Kickify.Api.Controllers
         [HttpDelete("{fieldId:guid}")]
         public async Task<IResult> DeleteField(Guid fieldId, CancellationToken cancellationToken)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
-            {
-                return Results.Unauthorized();
-            }
-
-            var command = new DeleteFieldCommand(fieldId, userId);
+            var command = new DeleteFieldCommand(fieldId);
             var result = await _sender.Send(command, cancellationToken);
 
             return result.MatchOk();

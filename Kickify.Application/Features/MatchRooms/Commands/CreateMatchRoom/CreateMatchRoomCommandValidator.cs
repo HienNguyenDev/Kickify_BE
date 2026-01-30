@@ -6,9 +6,6 @@ namespace Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom
     {
         public CreateMatchRoomCommandValidator()
         {
-            RuleFor(x => x.UserId)
-                .NotEmpty().WithMessage("User ID is required");
-
             RuleFor(x => x.FieldId)
                 .NotEmpty().WithMessage("Field ID is required");
 

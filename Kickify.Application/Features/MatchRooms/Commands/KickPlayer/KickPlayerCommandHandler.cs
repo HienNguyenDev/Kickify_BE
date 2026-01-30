@@ -1,3 +1,4 @@
+using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
@@ -15,6 +16,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.KickPlayer
         private readonly IRoomParticipantRepository _roomParticipantRepository;
         private readonly IMatchRoomHubService _matchRoomHubService;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IUserContext _userContext;
         private readonly ILogger<KickPlayerCommandHandler> _logger;
 
         public KickPlayerCommandHandler(
@@ -22,17 +24,21 @@ namespace Kickify.Application.Features.MatchRooms.Commands.KickPlayer
             IRoomParticipantRepository roomParticipantRepository,
             IMatchRoomHubService matchRoomHubService,
             IUnitOfWork unitOfWork,
+            IUserContext userContext,
             ILogger<KickPlayerCommandHandler> logger)
         {
             _matchRoomRepository = matchRoomRepository;
             _roomParticipantRepository = roomParticipantRepository;
             _matchRoomHubService = matchRoomHubService;
             _unitOfWork = unitOfWork;
+            _userContext = userContext;
             _logger = logger;
         }
 
         public async Task<Result<KickPlayerResponse>> Handle(KickPlayerCommand request, CancellationToken cancellationToken)
         {
+            var hostId = _userContext.UserId;
+            
             // 1. Get room with participants (WITH TRACKING for update/delete)
             var room = await _matchRoomRepository.GetRoomWithParticipantsForUpdateAsync(request.RoomId, cancellationToken);
             if (room == null)
@@ -41,10 +47,10 @@ namespace Kickify.Application.Features.MatchRooms.Commands.KickPlayer
             }
 
             // 2. Check if current user is Host
-            if (room.HostId != request.HostId)
+            if (room.HostId != hostId)
             {
                 _logger.LogWarning("User {UserId} attempted to kick player but is not host of room {RoomId}",
-                    request.HostId, request.RoomId);
+                    hostId, request.RoomId);
                 return Result.Failure<KickPlayerResponse>(MatchRoomErrors.OnlyHostCanKick);
             }
 
@@ -55,7 +61,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.KickPlayer
             }
 
             // 4. Check if host is trying to kick themselves
-            if (request.TargetUserId == request.HostId)
+            if (request.TargetUserId == hostId)
             {
                 return Result.Failure<KickPlayerResponse>(MatchRoomErrors.CannotKickSelf);
             }
@@ -89,7 +95,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.KickPlayer
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 _logger.LogInformation("User {TargetUserId} was kicked from room {RoomId} by host {HostId}. Reason: {Reason}",
-                    request.TargetUserId, request.RoomId, request.HostId, request.Reason ?? "No reason provided");
+                    request.TargetUserId, request.RoomId, hostId, request.Reason ?? "No reason provided");
 
                 // 10. Send real-time notifications
                 var reason = request.Reason ?? "Removed by host";

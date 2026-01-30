@@ -1,4 +1,5 @@
 using AutoMapper;
+using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
@@ -13,19 +14,24 @@ namespace Kickify.Application.Features.Fields.Commands.UpdateField
         private readonly IFieldRepository _fieldRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly IUserContext _userContext;
 
         public UpdateFieldCommandHandler(
             IFieldRepository fieldRepository,
             IUnitOfWork unitOfWork,
-            IMapper mapper)
+            IMapper mapper,
+            IUserContext userContext)
         {
             _fieldRepository = fieldRepository;
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _userContext = userContext;
         }
 
         public async Task<Result<UpdateFieldResponse>> Handle(UpdateFieldCommand request, CancellationToken cancellationToken)
         {
+            var userId = _userContext.UserId;
+            
             // Get field with tracking for update
             var field = await _fieldRepository.GetFieldWithVenueForUpdateAsync(request.FieldId, cancellationToken);
 
@@ -35,7 +41,7 @@ namespace Kickify.Application.Features.Fields.Commands.UpdateField
             }
 
             // Check if user is the owner of the venue
-            if (field.Venue?.OwnerId != request.UserId)
+            if (field.Venue?.OwnerId != userId)
             {
                 return Result.Failure<UpdateFieldResponse>(FieldErrors.Unauthorized);
             }

@@ -1,3 +1,4 @@
+using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
@@ -17,6 +18,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom
         private readonly IBookingRepository _bookingRepository;
         private readonly IRoomParticipantRepository _roomParticipantRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IUserContext _userContext;
         private readonly ILogger<CreateMatchRoomCommandHandler> _logger;
 
         public CreateMatchRoomCommandHandler(
@@ -26,6 +28,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom
             IBookingRepository bookingRepository,
             IRoomParticipantRepository roomParticipantRepository,
             IUnitOfWork unitOfWork,
+            IUserContext userContext,
             ILogger<CreateMatchRoomCommandHandler> logger)
         {
             _matchRoomRepository = matchRoomRepository;
@@ -34,16 +37,19 @@ namespace Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom
             _bookingRepository = bookingRepository;
             _roomParticipantRepository = roomParticipantRepository;
             _unitOfWork = unitOfWork;
+            _userContext = userContext;
             _logger = logger;
         }
 
         public async Task<Result<CreateMatchRoomResponse>> Handle(CreateMatchRoomCommand request, CancellationToken cancellationToken)
         {
+            var userId = _userContext.UserId;
+            
             // Verify user exists
-            var user = await _userRepository.GetByIdAsync(request.UserId);
+            var user = await _userRepository.GetByIdAsync(userId);
             if (user == null)
             {
-                return Result.Failure<CreateMatchRoomResponse>(UserErrors.NotFound(request.UserId));
+                return Result.Failure<CreateMatchRoomResponse>(UserErrors.NotFound(userId));
             }
 
             // Verify field exists and get venue with operating hours
@@ -110,7 +116,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom
                 var room = new MatchRoom
                 {
                     RoomId = Guid.NewGuid(),
-                    HostId = request.UserId,
+                    HostId = userId,
                     FieldId = request.FieldId,
                     RoomName = request.RoomName,
                     MatchDate = request.MatchDate,
@@ -133,7 +139,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom
                 {
                     ParticipantId = Guid.NewGuid(),
                     RoomId = room.RoomId,
-                    UserId = request.UserId,
+                    UserId = userId,
                     TeamAssignment = TeamAssignment.Unassigned,
                     JoinDate = DateTime.UtcNow,
                     DepositPaid = false,
@@ -148,7 +154,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 _logger.LogInformation("Match room {RoomId} created by user {UserId} with {TotalSlots} slots",
-                    room.RoomId, request.UserId, totalSlots);
+                    room.RoomId, userId, totalSlots);
 
                 return Result.Success(new CreateMatchRoomResponse(
                     room.RoomId,

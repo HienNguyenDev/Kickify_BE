@@ -1,3 +1,4 @@
+using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
@@ -16,6 +17,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.UpdateParticipant
         private readonly IRoomParticipantRepository _roomParticipantRepository;
         private readonly IMatchRoomHubService _matchRoomHubService;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IUserContext _userContext;
         private readonly ILogger<UpdateParticipantCommandHandler> _logger;
 
         public UpdateParticipantCommandHandler(
@@ -24,6 +26,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.UpdateParticipant
             IRoomParticipantRepository roomParticipantRepository,
             IMatchRoomHubService matchRoomHubService,
             IUnitOfWork unitOfWork,
+            IUserContext userContext,
             ILogger<UpdateParticipantCommandHandler> logger)
         {
             _matchRoomRepository = matchRoomRepository;
@@ -31,16 +34,19 @@ namespace Kickify.Application.Features.MatchRooms.Commands.UpdateParticipant
             _roomParticipantRepository = roomParticipantRepository;
             _matchRoomHubService = matchRoomHubService;
             _unitOfWork = unitOfWork;
+            _userContext = userContext;
             _logger = logger;
         }
 
         public async Task<Result<UpdateParticipantResponse>> Handle(UpdateParticipantCommand request, CancellationToken cancellationToken)
         {
+            var userId = _userContext.UserId;
+            
             // Verify user exists
-            var user = await _userRepository.GetByIdAsync(request.UserId);
+            var user = await _userRepository.GetByIdAsync(userId);
             if (user == null)
             {
-                return Result.Failure<UpdateParticipantResponse>(UserErrors.NotFound(request.UserId));
+                return Result.Failure<UpdateParticipantResponse>(UserErrors.NotFound(userId));
             }
 
             // Get room with participants
@@ -51,7 +57,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.UpdateParticipant
             }
 
             // Find participant
-            var participant = room.RoomParticipants.FirstOrDefault(p => p.UserId == request.UserId);
+            var participant = room.RoomParticipants.FirstOrDefault(p => p.UserId == userId);
             if (participant == null)
             {
                 return Result.Failure<UpdateParticipantResponse>(MatchRoomErrors.NotParticipant);
@@ -94,12 +100,12 @@ namespace Kickify.Application.Features.MatchRooms.Commands.UpdateParticipant
                     cancellationToken);
 
                 _logger.LogInformation("Participant {UserId} updated in room {RoomId}. Team: {Team}, Position: {Position}",
-                    request.UserId, request.RoomId, participant.TeamAssignment, participant.Position);
+                    userId, request.RoomId, participant.TeamAssignment, participant.Position);
 
                 return Result.Success(new UpdateParticipantResponse(
                     participant.ParticipantId,
                     room.RoomId,
-                    request.UserId,
+                    userId,
                     participant.TeamAssignment.ToString(),
                     participant.Position,
                     DateTime.UtcNow

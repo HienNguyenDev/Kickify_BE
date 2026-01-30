@@ -6,9 +6,6 @@ namespace Kickify.Application.Features.MatchRooms.Commands.KickPlayer
     {
         public KickPlayerCommandValidator()
         {
-            RuleFor(x => x.HostId)
-                .NotEmpty().WithMessage("Host ID is required");
-
             RuleFor(x => x.RoomId)
                 .NotEmpty().WithMessage("Room ID is required");
 

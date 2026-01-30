@@ -10,10 +10,6 @@ namespace Kickify.Application.Features.Fields.Commands.UpdateField
                 .NotEmpty()
                 .WithMessage("FieldId is required");
 
-            RuleFor(x => x.UserId)
-                .NotEmpty()
-                .WithMessage("UserId is required");
-
             When(x => !string.IsNullOrEmpty(x.FieldName), () =>
             {
                 RuleFor(x => x.FieldName)

@@ -11,7 +11,6 @@ using Kickify.Application.Features.MatchRooms.Queries.GetMatchRooms;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace Kickify.Api.Controllers
 {
@@ -21,12 +20,10 @@ namespace Kickify.Api.Controllers
     public class MatchRoomsController : ControllerBase
     {
         private readonly ISender _sender;
-        private readonly ILogger<MatchRoomsController> _logger;
 
-        public MatchRoomsController(ISender sender, ILogger<MatchRoomsController> logger)
+        public MatchRoomsController(ISender sender)
         {
             _sender = sender;
-            _logger = logger;
         }
 
         /// <summary>
@@ -35,10 +32,7 @@ namespace Kickify.Api.Controllers
         [HttpPost]
         public async Task<IResult> CreateRoom([FromBody] CreateMatchRoomRequest request, CancellationToken cancellationToken)
         {
-            var userId = GetCurrentUserId();
-
             var command = new CreateMatchRoomCommand(
-                userId,
                 request.FieldId,
                 request.MatchDate,
                 request.StartTime,
@@ -98,9 +92,7 @@ namespace Kickify.Api.Controllers
         [HttpPost("{id}/join")]
         public async Task<IResult> JoinRoom(Guid id, CancellationToken cancellationToken)
         {
-            var userId = GetCurrentUserId();
-
-            var command = new JoinRoomCommand(userId, id);
+            var command = new JoinRoomCommand(id);
 
             var result = await _sender.Send(command, cancellationToken);
 
@@ -113,9 +105,7 @@ namespace Kickify.Api.Controllers
         [HttpPost("{id}/leave")]
         public async Task<IResult> LeaveRoom(Guid id, CancellationToken cancellationToken)
         {
-            var userId = GetCurrentUserId();
-
-            var command = new LeaveRoomCommand(userId, id);
+            var command = new LeaveRoomCommand(id);
 
             var result = await _sender.Send(command, cancellationToken);
 
@@ -131,10 +121,7 @@ namespace Kickify.Api.Controllers
             [FromBody] UpdateParticipantRequest request,
             CancellationToken cancellationToken)
         {
-            var userId = GetCurrentUserId();
-
             var command = new UpdateParticipantCommand(
-                userId,
                 id,
                 request.TeamAssignment,
                 request.Position
@@ -158,10 +145,7 @@ namespace Kickify.Api.Controllers
             [FromQuery] string? reason,
             CancellationToken cancellationToken)
         {
-            var hostId = GetCurrentUserId();
-
             var command = new KickPlayerCommand(
-                hostId,
                 roomId,
                 targetUserId,
                 reason
@@ -170,16 +154,6 @@ namespace Kickify.Api.Controllers
             var result = await _sender.Send(command, cancellationToken);
 
             return result.MatchOk();
-        }
-
-        private Guid GetCurrentUserId()
-        {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
-            {
-                throw new UnauthorizedAccessException("User ID not found in token");
-            }
-            return userId;
         }
     }
 }

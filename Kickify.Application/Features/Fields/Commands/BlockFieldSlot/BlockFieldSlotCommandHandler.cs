@@ -1,3 +1,4 @@
+using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
@@ -19,6 +20,7 @@ namespace Kickify.Application.Features.Fields.Commands.BlockFieldSlot
         private readonly IBookingRepository _bookingRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<BlockFieldSlotCommandHandler> _logger;
+        private readonly IUserContext _userContext;
 
         public BlockFieldSlotCommandHandler(
             IFieldRepository fieldRepository,
@@ -26,7 +28,8 @@ namespace Kickify.Application.Features.Fields.Commands.BlockFieldSlot
             IMatchRoomRepository matchRoomRepository,
             IBookingRepository bookingRepository,
             IUnitOfWork unitOfWork,
-            ILogger<BlockFieldSlotCommandHandler> logger)
+            ILogger<BlockFieldSlotCommandHandler> logger,
+            IUserContext userContext)
         {
             _fieldRepository = fieldRepository;
             _venueRepository = venueRepository;
@@ -34,12 +37,15 @@ namespace Kickify.Application.Features.Fields.Commands.BlockFieldSlot
             _bookingRepository = bookingRepository;
             _unitOfWork = unitOfWork;
             _logger = logger;
+            _userContext = userContext;
         }
 
         public async Task<Result<BlockFieldSlotResponse>> Handle(
             BlockFieldSlotCommand request, 
             CancellationToken cancellationToken)
         {
+            var userId = _userContext.UserId;
+            
             // Validate EndTime > StartTime (also validated in validator, but double-check)
             if (request.EndTime <= request.StartTime)
             {
@@ -54,7 +60,7 @@ namespace Kickify.Application.Features.Fields.Commands.BlockFieldSlot
             }
 
             // Check if user is the venue owner
-            if (venue.OwnerId != request.UserId)
+            if (venue.OwnerId != userId)
             {
                 return Result.Failure<BlockFieldSlotResponse>(BlockSlotErrors.Unauthorized);
             }
@@ -112,7 +118,7 @@ namespace Kickify.Application.Features.Fields.Commands.BlockFieldSlot
                 var ghostRoom = new MatchRoom
                 {
                     RoomId = Guid.NewGuid(),
-                    HostId = request.UserId, // Owner is the host
+                    HostId = userId, // Owner is the host
                     FieldId = request.FieldId,
                     MatchDate = request.Date,
                     StartTime = request.StartTime,
@@ -153,7 +159,7 @@ namespace Kickify.Application.Features.Fields.Commands.BlockFieldSlot
 
                 _logger.LogInformation(
                     "Field slot blocked: FieldId={FieldId}, Date={Date}, Time={StartTime}-{EndTime}, Reason={Reason}, BlockedBy={UserId}",
-                    request.FieldId, request.Date, request.StartTime, request.EndTime, request.Reason, request.UserId);
+                    request.FieldId, request.Date, request.StartTime, request.EndTime, request.Reason, userId);
 
                 return Result.Success(new BlockFieldSlotResponse(
                     ghostRoom.RoomId,

@@ -1,3 +1,4 @@
+using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
@@ -14,26 +15,31 @@ namespace Kickify.Application.Features.MatchPresets.Commands.CreateMatchPreset
         private readonly IFieldRepository _fieldRepository;
         private readonly IUserRepository _userRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IUserContext _userContext;
 
         public CreateMatchPresetCommandHandler(
             IMatchPresetRepository matchPresetRepository,
             IFieldRepository fieldRepository,
             IUserRepository userRepository,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            IUserContext userContext)
         {
             _matchPresetRepository = matchPresetRepository;
             _fieldRepository = fieldRepository;
             _userRepository = userRepository;
             _unitOfWork = unitOfWork;
+            _userContext = userContext;
         }
 
         public async Task<Result<CreateMatchPresetResponse>> Handle(CreateMatchPresetCommand request, CancellationToken cancellationToken)
         {
+            var userId = _userContext.UserId;
+            
             // Verify user exists
-            var user = await _userRepository.GetByIdAsync(request.UserId);
+            var user = await _userRepository.GetByIdAsync(userId);
             if (user == null)
             {
-                return Result.Failure<CreateMatchPresetResponse>(UserErrors.NotFound(request.UserId));
+                return Result.Failure<CreateMatchPresetResponse>(UserErrors.NotFound(userId));
             }
 
             // Parse MatchFormat enum
@@ -58,7 +64,7 @@ namespace Kickify.Application.Features.MatchPresets.Commands.CreateMatchPreset
             var preset = new MatchPreset
             {
                 PresetId = Guid.NewGuid(),
-                UserId = request.UserId,
+                UserId = userId,
                 PresetName = request.PresetName,
                 FieldId = request.FieldId,
                 CustomLocation = request.CustomLocation,

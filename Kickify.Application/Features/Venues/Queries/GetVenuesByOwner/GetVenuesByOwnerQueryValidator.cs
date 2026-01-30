@@ -6,10 +6,6 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenuesByOwner
     {
         public GetVenuesByOwnerQueryValidator()
         {
-            RuleFor(x => x.OwnerId)
-                .NotEmpty()
-                .WithMessage("OwnerId is required");
-
             RuleFor(x => x.Page)
                 .GreaterThan(0)
                 .WithMessage("Page must be greater than 0");

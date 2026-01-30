@@ -1,3 +1,4 @@
+using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
@@ -15,6 +16,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.LeaveRoom
         private readonly IRoomParticipantRepository _roomParticipantRepository;
         private readonly IMatchRoomHubService _matchRoomHubService;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IUserContext _userContext;
         private readonly ILogger<LeaveRoomCommandHandler> _logger;
 
         public LeaveRoomCommandHandler(
@@ -23,6 +25,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.LeaveRoom
             IRoomParticipantRepository roomParticipantRepository,
             IMatchRoomHubService matchRoomHubService,
             IUnitOfWork unitOfWork,
+            IUserContext userContext,
             ILogger<LeaveRoomCommandHandler> logger)
         {
             _matchRoomRepository = matchRoomRepository;
@@ -30,16 +33,19 @@ namespace Kickify.Application.Features.MatchRooms.Commands.LeaveRoom
             _roomParticipantRepository = roomParticipantRepository;
             _matchRoomHubService = matchRoomHubService;
             _unitOfWork = unitOfWork;
+            _userContext = userContext;
             _logger = logger;
         }
 
         public async Task<Result<LeaveRoomResponse>> Handle(LeaveRoomCommand request, CancellationToken cancellationToken)
         {
+            var userId = _userContext.UserId;
+            
             // Verify user exists
-            var user = await _userRepository.GetByIdAsync(request.UserId);
+            var user = await _userRepository.GetByIdAsync(userId);
             if (user == null)
             {
-                return Result.Failure<LeaveRoomResponse>(UserErrors.NotFound(request.UserId));
+                return Result.Failure<LeaveRoomResponse>(UserErrors.NotFound(userId));
             }
 
             // Get room with participants (WITH TRACKING for update/delete)
@@ -50,7 +56,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.LeaveRoom
             }
 
             // Find participant
-            var participant = room.RoomParticipants.FirstOrDefault(p => p.UserId == request.UserId);
+            var participant = room.RoomParticipants.FirstOrDefault(p => p.UserId == userId);
             if (participant == null)
             {
                 return Result.Failure<LeaveRoomResponse>(MatchRoomErrors.NotParticipant);
@@ -59,7 +65,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.LeaveRoom
             try
             {
                 // RULE #5: Check if user is host
-                bool isHost = room.HostId == request.UserId;
+                bool isHost = room.HostId == userId;
                 bool isRoomDeleted = false;
                 Guid? newHostId = null;
                 string message;
@@ -72,18 +78,18 @@ namespace Kickify.Application.Features.MatchRooms.Commands.LeaveRoom
                     message = "Room deleted as you were the last participant";
 
                     _logger.LogInformation("Room {RoomId} deleted as host {UserId} was the last participant",
-                        request.RoomId, request.UserId);
+                        request.RoomId, userId);
                 }
                 else if (isHost && room.FilledSlots > 1)
                 {
                     // Host leaves but others remain - reassign host to first non-host participant
-                    var newHost = room.RoomParticipants.FirstOrDefault(p => p.UserId != request.UserId);
+                    var newHost = room.RoomParticipants.FirstOrDefault(p => p.UserId != userId);
                     if (newHost != null)
                     {
                         room.HostId = newHost.UserId;
                         newHostId = newHost.UserId;
                         _logger.LogInformation("Room {RoomId} host reassigned from {OldHostId} to {NewHostId}",
-                            request.RoomId, request.UserId, newHost.UserId);
+                            request.RoomId, userId, newHost.UserId);
                     }
 
                     // Remove participant
@@ -101,7 +107,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.LeaveRoom
                     message = "You left the room successfully";
 
                     _logger.LogInformation("User {UserId} left room {RoomId}. Filled: {FilledSlots}/{TotalSlots}",
-                        request.UserId, request.RoomId, room.FilledSlots, room.TotalSlots);
+                        userId, request.RoomId, room.FilledSlots, room.TotalSlots);
                 }
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -119,7 +125,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.LeaveRoom
 
                 return Result.Success(new LeaveRoomResponse(
                     room.RoomId,
-                    request.UserId,
+                    userId,
                     room.FilledSlots,
                     room.TotalSlots,
                     message

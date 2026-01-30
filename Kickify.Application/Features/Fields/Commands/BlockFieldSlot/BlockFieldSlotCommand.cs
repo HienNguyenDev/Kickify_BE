@@ -9,7 +9,6 @@ namespace Kickify.Application.Features.Fields.Commands.BlockFieldSlot
     public record BlockFieldSlotCommand(
         Guid VenueId,
         Guid FieldId,
-        Guid UserId,
         DateTime Date,
         TimeSpan StartTime,
         TimeSpan EndTime,
