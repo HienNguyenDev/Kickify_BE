@@ -1,3 +1,4 @@
+using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
@@ -10,17 +11,22 @@ namespace Kickify.Application.Features.MatchPresets.Commands.DeleteMatchPreset
     {
         private readonly IMatchPresetRepository _matchPresetRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IUserContext _userContext;
 
         public DeleteMatchPresetCommandHandler(
             IMatchPresetRepository matchPresetRepository,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            IUserContext userContext)
         {
             _matchPresetRepository = matchPresetRepository;
             _unitOfWork = unitOfWork;
+            _userContext = userContext;
         }
 
         public async Task<Result<DeleteMatchPresetResponse>> Handle(DeleteMatchPresetCommand request, CancellationToken cancellationToken)
         {
+            var userId = _userContext.UserId;
+            
             // Get preset
             var preset = await _matchPresetRepository.GetByIdAsync(request.PresetId, cancellationToken);
             if (preset == null)
@@ -29,7 +35,7 @@ namespace Kickify.Application.Features.MatchPresets.Commands.DeleteMatchPreset
             }
 
             // Check ownership
-            if (preset.UserId != request.UserId)
+            if (preset.UserId != userId)
             {
                 return Result.Failure<DeleteMatchPresetResponse>(MatchPresetErrors.Unauthorized);
             }

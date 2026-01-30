@@ -14,7 +14,6 @@ using Kickify.Application.Features.Venues.Queries.GetVenuesByOwner;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace Kickify.Api.Controllers
 {
@@ -139,13 +138,7 @@ namespace Kickify.Api.Controllers
             [FromQuery] int pageSize = 10,
             CancellationToken cancellationToken = default)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
-            {
-                return Results.Unauthorized();
-            }
-
-            var query = new GetVenuesByOwnerQuery(userId, page, pageSize);
+            var query = new GetVenuesByOwnerQuery(page, pageSize);
             var result = await _sender.Send(query, cancellationToken);
 
             return result.MatchOk();
@@ -216,15 +209,8 @@ namespace Kickify.Api.Controllers
             [FromBody] UpdateVenueRequest request,
             CancellationToken cancellationToken)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
-            {
-                return Results.Unauthorized();
-            }
-
             var command = new UpdateVenueCommand(
                 venueId,
-                userId,
                 request.Name,
                 request.Address,
                 request.Latitude,
@@ -247,13 +233,7 @@ namespace Kickify.Api.Controllers
         [HttpDelete("{venueId:guid}")]
         public async Task<IResult> DeleteVenue(Guid venueId, CancellationToken cancellationToken)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
-            {
-                return Results.Unauthorized();
-            }
-
-            var command = new DeleteVenueCommand(venueId, userId);
+            var command = new DeleteVenueCommand(venueId);
             var result = await _sender.Send(command, cancellationToken);
 
             return result.MatchOk();
@@ -272,16 +252,9 @@ namespace Kickify.Api.Controllers
             [FromBody] BlockFieldSlotRequest request,
             CancellationToken cancellationToken)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
-            {
-                return Results.Unauthorized();
-            }
-
             var command = new BlockFieldSlotCommand(
                 venueId,
                 fieldId,
-                userId,
                 request.Date,
                 request.StartTime,
                 request.EndTime,

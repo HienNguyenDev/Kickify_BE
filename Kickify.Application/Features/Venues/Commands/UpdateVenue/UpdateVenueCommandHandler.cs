@@ -1,4 +1,5 @@
 using AutoMapper;
+using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
@@ -12,19 +13,24 @@ namespace Kickify.Application.Features.Venues.Commands.UpdateVenue
         private readonly IVenueRepository _venueRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly IUserContext _userContext;
 
         public UpdateVenueCommandHandler(
             IVenueRepository venueRepository,
             IUnitOfWork unitOfWork,
-            IMapper mapper)
+            IMapper mapper,
+            IUserContext userContext)
         {
             _venueRepository = venueRepository;
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _userContext = userContext;
         }
 
         public async Task<Result<UpdateVenueResponse>> Handle(UpdateVenueCommand request, CancellationToken cancellationToken)
         {
+            var userId = _userContext.UserId;
+            
             // Get venue with tracking for update
             var venue = await _venueRepository.GetVenueForUpdateAsync(request.VenueId, cancellationToken);
 
@@ -34,7 +40,7 @@ namespace Kickify.Application.Features.Venues.Commands.UpdateVenue
             }
 
             // Check if user is the owner
-            if (venue.OwnerId != request.UserId)
+            if (venue.OwnerId != userId)
             {
                 return Result.Failure<UpdateVenueResponse>(VenueErrors.Unauthorized);
             }

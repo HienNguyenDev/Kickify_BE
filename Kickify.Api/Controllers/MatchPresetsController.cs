@@ -10,7 +10,6 @@ using Kickify.Application.Features.MatchPresets.Queries.GetMyMatchPresets;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace Kickify.Api.Controllers
 {
@@ -32,10 +31,7 @@ namespace Kickify.Api.Controllers
         [Authorize]
         public async Task<IResult> CreatePreset([FromBody] CreateMatchPresetRequest request, CancellationToken cancellationToken)
         {
-            var userId = GetCurrentUserId();
-
             var command = new CreateMatchPresetCommand(
-                userId,
                 request.PresetName,
                 request.FieldId,
                 request.CustomLocation,
@@ -81,9 +77,7 @@ namespace Kickify.Api.Controllers
             [FromQuery] int pageSize = 10,
             CancellationToken cancellationToken = default)
         {
-            var userId = GetCurrentUserId();
-
-            var query = new GetMyMatchPresetsQuery(userId, page, pageSize);
+            var query = new GetMyMatchPresetsQuery(page, pageSize);
 
             var result = await _sender.Send(query, cancellationToken);
 
@@ -114,10 +108,7 @@ namespace Kickify.Api.Controllers
             [FromBody] UpdateMatchPresetRequest request,
             CancellationToken cancellationToken)
         {
-            var userId = GetCurrentUserId();
-
             var command = new UpdateMatchPresetCommand(
-                userId,
                 id,
                 request.PresetName,
                 request.FieldId,
@@ -139,23 +130,11 @@ namespace Kickify.Api.Controllers
         [Authorize]
         public async Task<IResult> DeletePreset(Guid id, CancellationToken cancellationToken)
         {
-            var userId = GetCurrentUserId();
-
-            var command = new DeleteMatchPresetCommand(userId, id);
+            var command = new DeleteMatchPresetCommand(id);
 
             var result = await _sender.Send(command, cancellationToken);
 
             return result.MatchOk();
-        }
-
-        private Guid GetCurrentUserId()
-        {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
-            {
-                throw new UnauthorizedAccessException("User ID not found in token");
-            }
-            return userId;
         }
     }
 }

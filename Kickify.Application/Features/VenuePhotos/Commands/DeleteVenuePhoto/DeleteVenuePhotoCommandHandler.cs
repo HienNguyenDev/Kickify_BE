@@ -1,3 +1,4 @@
+using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
@@ -14,21 +15,26 @@ namespace Kickify.Application.Features.VenuePhotos.Commands.DeleteVenuePhoto
         private readonly IStorageService _storageService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<DeleteVenuePhotoCommandHandler> _logger;
+        private readonly IUserContext _userContext;
 
         public DeleteVenuePhotoCommandHandler(
             IVenuePhotoRepository venuePhotoRepository,
             IStorageService storageService,
             IUnitOfWork unitOfWork,
-            ILogger<DeleteVenuePhotoCommandHandler> logger)
+            ILogger<DeleteVenuePhotoCommandHandler> logger,
+            IUserContext userContext)
         {
             _venuePhotoRepository = venuePhotoRepository;
             _storageService = storageService;
             _unitOfWork = unitOfWork;
             _logger = logger;
+            _userContext = userContext;
         }
 
         public async Task<Result<DeleteVenuePhotoResponse>> Handle(DeleteVenuePhotoCommand request, CancellationToken cancellationToken)
         {
+            var userId = _userContext.UserId;
+            
             // Get photo with venue info for ownership check
             var photo = await _venuePhotoRepository.GetPhotoWithVenueAsync(request.PhotoId, cancellationToken);
             if (photo == null)
@@ -37,7 +43,7 @@ namespace Kickify.Application.Features.VenuePhotos.Commands.DeleteVenuePhoto
             }
 
             // Check if user is the owner
-            if (photo.Venue.OwnerId != request.UserId)
+            if (photo.Venue.OwnerId != userId)
             {
                 return Result.Failure<DeleteVenuePhotoResponse>(VenuePhotoErrors.Unauthorized);
             }

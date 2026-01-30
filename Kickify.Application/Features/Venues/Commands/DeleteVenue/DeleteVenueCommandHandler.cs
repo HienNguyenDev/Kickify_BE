@@ -1,3 +1,4 @@
+using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
@@ -10,17 +11,22 @@ namespace Kickify.Application.Features.Venues.Commands.DeleteVenue
     {
         private readonly IVenueRepository _venueRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IUserContext _userContext;
 
         public DeleteVenueCommandHandler(
             IVenueRepository venueRepository,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            IUserContext userContext)
         {
             _venueRepository = venueRepository;
             _unitOfWork = unitOfWork;
+            _userContext = userContext;
         }
 
         public async Task<Result<DeleteVenueResponse>> Handle(DeleteVenueCommand request, CancellationToken cancellationToken)
         {
+            var userId = _userContext.UserId;
+            
             // Get venue with tracking for delete
             var venue = await _venueRepository.GetVenueForUpdateAsync(request.VenueId, cancellationToken);
 
@@ -30,7 +36,7 @@ namespace Kickify.Application.Features.Venues.Commands.DeleteVenue
             }
 
             // Check if user is the owner
-            if (venue.OwnerId != request.UserId)
+            if (venue.OwnerId != userId)
             {
                 return Result.Failure<DeleteVenueResponse>(VenueErrors.Unauthorized);
             }

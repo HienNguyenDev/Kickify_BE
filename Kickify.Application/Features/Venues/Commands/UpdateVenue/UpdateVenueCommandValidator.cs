@@ -10,10 +10,6 @@ namespace Kickify.Application.Features.Venues.Commands.UpdateVenue
                 .NotEmpty()
                 .WithMessage("VenueId is required");
 
-            RuleFor(x => x.UserId)
-                .NotEmpty()
-                .WithMessage("UserId is required");
-
             When(x => !string.IsNullOrEmpty(x.Name), () =>
             {
                 RuleFor(x => x.Name)
