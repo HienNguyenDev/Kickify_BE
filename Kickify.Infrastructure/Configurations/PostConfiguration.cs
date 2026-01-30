@@ -1,4 +1,5 @@
 using Kickify.Domain.Entities;
+using Kickify.Domain.Enums;
 using Kickify.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -34,13 +35,13 @@ public class PostConfiguration : IEntityTypeConfiguration<Post>
 
         builder.Property(p => p.Visibility)
             .HasConversion<string>()
-            .HasDefaultValue(Domain.Enums.PostVisibility.Public);
+            .HasDefaultValue(PostVisibility.Public);
 
         builder.Property(p => p.IsEdited)
             .HasDefaultValue(false);
 
         builder.Property(p => p.EditedAt)
-            .HasColumnType("timestamp");
+            .HasColumnType("timestamp with time zone");
 
         builder.Property(p => p.IsActive)
             .HasDefaultValue(true);

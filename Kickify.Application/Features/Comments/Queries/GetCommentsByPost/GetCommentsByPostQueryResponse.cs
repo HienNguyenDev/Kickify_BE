@@ -19,5 +19,6 @@ public class CommentDto
     public int TotalLikes { get; set; }
     public int TotalReplies { get; set; }
     public bool IsEdited { get; set; }
+    public bool IsLikedByCurrentUser { get; set; }
     public DateTime CreatedAt { get; set; }
 }

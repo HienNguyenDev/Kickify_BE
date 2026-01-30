@@ -26,7 +26,7 @@ public class LikeCommentCommandHandler : ICommandHandler<LikeCommentCommand, Lik
     public async Task<Result<LikeCommentCommandResponse>> Handle(LikeCommentCommand request, CancellationToken cancellationToken)
     {
         var comment = await _commentRepository.GetByIdAsync(request.CommentId);
-        if (comment is null || !comment.IsActive) 
+        if (comment is null || !comment.IsActive)
         {
             return Result.Failure<LikeCommentCommandResponse>(CommentErrors.NotFound(request.CommentId));
         }
@@ -36,17 +36,20 @@ public class LikeCommentCommandHandler : ICommandHandler<LikeCommentCommand, Lik
 
         if (existingLike is not null)
         {
+            // Unlike
             _commentLikeRepository.Remove(existingLike);
-            comment.TotalLikes--;
+            comment.TotalLikes = Math.Max(0, comment.TotalLikes - 1);
             isLiked = false;
         }
         else
         {
-            var commentLike = new CommentLike 
-            { 
-                LikeId = Guid.NewGuid(), 
-                CommentId = request.CommentId, 
-                UserId = _userContext.UserId 
+            // Like
+            var commentLike = new CommentLike
+            {
+                LikeId = Guid.NewGuid(),
+                CommentId = request.CommentId,
+                UserId = _userContext.UserId,
+                CreatedAt = DateTime.UtcNow
             };
             await _commentLikeRepository.AddAsync(commentLike);
             comment.TotalLikes++;
