@@ -64,12 +64,6 @@ namespace Kickify.Application.Features.MatchRooms.Commands.JoinRoom
                 return Result.Failure<JoinRoomResponse>(MatchRoomErrors.NotOpen);
             }
 
-            // RULE #4: Check if user is already in room
-            if (room.RoomParticipants.Any(p => p.UserId == userId))
-            {
-                return Result.Failure<JoinRoomResponse>(MatchRoomErrors.AlreadyJoined);
-            }
-
             // RULE #4: Check if room is full (with concurrency safety)
             if (room.FilledSlots >= room.TotalSlots)
             {
