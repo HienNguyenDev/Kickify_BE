@@ -84,6 +84,9 @@ namespace Kickify.Application.Features.MatchRooms.Commands.UpdateParticipant
                     participant.Position = request.Position;
                 }
 
+                // RULE: Track when participant was last updated (team/position change)
+                participant.UpdatedAt = DateTime.UtcNow;
+
                 // Mark participant as modified
                 _roomParticipantRepository.Update(participant);
 
@@ -108,7 +111,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.UpdateParticipant
                     userId,
                     participant.TeamAssignment.ToString(),
                     participant.Position,
-                    DateTime.UtcNow
+                    participant.UpdatedAt ?? DateTime.UtcNow
                 ));
             }
             catch (Exception ex)

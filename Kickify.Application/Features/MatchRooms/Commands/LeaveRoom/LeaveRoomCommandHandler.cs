@@ -92,6 +92,14 @@ namespace Kickify.Application.Features.MatchRooms.Commands.LeaveRoom
                             request.RoomId, userId, newHost.UserId);
                     }
 
+                    // RULE: Subtract participant's deposit from TotalDepositCollected
+                    if (participant.DepositPaid && participant.DepositAmount.HasValue)
+                    {
+                        room.TotalDepositCollected -= participant.DepositAmount.Value;
+                        _logger.LogInformation("Subtracted deposit {Deposit} from room {RoomId}. New total: {TotalDeposit}",
+                            participant.DepositAmount.Value, request.RoomId, room.TotalDepositCollected);
+                    }
+
                     // Remove participant
                     _roomParticipantRepository.Remove(participant);
                     room.FilledSlots--;
@@ -101,6 +109,15 @@ namespace Kickify.Application.Features.MatchRooms.Commands.LeaveRoom
                 else
                 {
                     // Regular participant leaves
+                    
+                    // RULE: Subtract participant's deposit from TotalDepositCollected
+                    if (participant.DepositPaid && participant.DepositAmount.HasValue)
+                    {
+                        room.TotalDepositCollected -= participant.DepositAmount.Value;
+                        _logger.LogInformation("Subtracted deposit {Deposit} from room {RoomId}. New total: {TotalDeposit}",
+                            participant.DepositAmount.Value, request.RoomId, room.TotalDepositCollected);
+                    }
+
                     _roomParticipantRepository.Remove(participant);
                     room.FilledSlots--;
                     _matchRoomRepository.Update(room);

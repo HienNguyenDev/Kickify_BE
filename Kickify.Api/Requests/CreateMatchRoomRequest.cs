@@ -8,7 +8,6 @@ namespace Kickify.Api.Requests
         string MatchFormat,
         string? RoomName,
         string? Description,
-        string? Rules,
-        decimal? DepositPerPerson
+        string? Rules
     );
 }

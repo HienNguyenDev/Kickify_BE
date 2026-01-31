@@ -66,6 +66,11 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById
                 p.JoinDate
             )).ToList();
 
+            // RULE: Calculate totalDepositCollected from participants with depositPaid = true
+            var calculatedTotalDeposit = room.RoomParticipants
+                .Where(p => p.DepositPaid && p.DepositAmount.HasValue)
+                .Sum(p => p.DepositAmount!.Value);
+
             var participantsDto = new RoomParticipantsDto(
                 TeamA: allParticipants.Where(p => p.TeamAssignment == TeamAssignment.A.ToString()).ToList(),
                 TeamB: allParticipants.Where(p => p.TeamAssignment == TeamAssignment.B.ToString()).ToList(),
@@ -90,6 +95,7 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById
                 room.FilledSlots,
                 room.DepositPerPerson,
                 room.TotalDepositCollected,
+                //calculatedTotalDeposit, // Use calculated value instead of room.TotalDepositCollected
                 room.Status.ToString(),
                 participantsDto,
                 room.CreatedAt

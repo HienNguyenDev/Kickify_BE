@@ -110,6 +110,12 @@ namespace Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom
             // RULE #1: Auto-calculate TotalSlots based on MatchFormat
             int totalSlots = CalculateTotalSlots(matchFormat);
 
+            // RULE #2: Auto-calculate DepositPerPerson based on field pricing
+            // Formula: (HourlyRate * DurationHours) / TotalSlots
+            var durationHours = (decimal)request.DurationMinutes / 60;
+            var totalAmount = field.HourlyRate * durationHours;
+            var depositPerPerson = Math.Round(totalAmount / totalSlots, 0); // Round to nearest integer for VND
+
             try
             {
                 // Create Match Room
@@ -127,7 +133,8 @@ namespace Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom
                     FilledSlots = 1, // RULE #3: Host is first participant
                     Description = request.Description,
                     Rules = request.Rules,
-                    DepositPerPerson = request.DepositPerPerson,
+                    DepositPerPerson = depositPerPerson,
+                    TotalDepositCollected = 0, // Will be updated when participants pay deposit
                     Status = RoomStatus.Open,
                     CreatedAt = DateTime.UtcNow
                 };
@@ -143,7 +150,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom
                     TeamAssignment = TeamAssignment.Unassigned,
                     JoinDate = DateTime.UtcNow,
                     DepositPaid = false,
-                    DepositAmount = request.DepositPerPerson
+                    DepositAmount = depositPerPerson
                 };
 
                 // Add host participant via repository
@@ -168,6 +175,8 @@ namespace Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom
                     room.MatchFormat.ToString(),
                     room.TotalSlots,
                     room.FilledSlots,
+                    room.DepositPerPerson ?? 0,
+                    room.TotalDepositCollected,
                     room.Status.ToString(),
                     room.CreatedAt
                 ));
