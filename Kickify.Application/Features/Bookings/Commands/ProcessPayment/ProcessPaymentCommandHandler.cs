@@ -59,9 +59,15 @@ namespace Kickify.Application.Features.Bookings.Commands.ProcessPayment
                 return Result.Failure<ProcessPaymentResponse>(BookingErrors.AlreadyPaid);
             }
 
-            // Mark as paid
+            // Mark as paid and update deposit amount
             participant.DepositPaid = true;
+            participant.DepositAmount = room.DepositPerPerson;
+            
+            // Update TotalDepositCollected in the room
+            room.TotalDepositCollected += room.DepositPerPerson ?? 0;
+            
             _roomParticipantRepository.Update(participant);
+            _matchRoomRepository.Update(room);
 
             // Check if all participants have paid
             bool allPaid = await _matchRoomRepository.AreAllParticipantsPaidAsync(request.RoomId, cancellationToken);
