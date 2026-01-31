@@ -53,6 +53,11 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenuesByOwner
                     f.CreatedAt,
                     f.UpdatedAt
                 )).ToList() ?? new List<OwnerVenueFieldDto>(),
+                v.VenueOperatingHours?.OrderBy(oh => oh.DayOfWeek).Select(oh => new OwnerVenueOperatingHoursDto(
+                    oh.DayOfWeek.ToString(),
+                    oh.OpenTime,
+                    oh.CloseTime
+                )).ToList() ?? new List<OwnerVenueOperatingHoursDto>(),
                 v.VenuePhotos?.OrderBy(p => p.DisplayOrder).Select(p => new OwnerVenuePhotoDto(
                     p.PhotoId,
                     p.PhotoUrl,
