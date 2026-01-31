@@ -23,10 +23,6 @@ namespace Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom
                 .NotEmpty().WithMessage("Match format is required")
                 .Must(f => f == "FiveVsFive" || f == "SevenVsSeven" || f == "ElevenVsEleven")
                 .WithMessage("Match format must be FiveVsFive, SevenVsSeven, or ElevenVsEleven");
-
-            RuleFor(x => x.DepositPerPerson)
-                .GreaterThanOrEqualTo(0).When(x => x.DepositPerPerson.HasValue)
-                .WithMessage("Deposit must be greater than or equal to 0");
         }
     }
 }

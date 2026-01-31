@@ -10,6 +10,7 @@ public class RoomParticipant
     public TeamAssignment TeamAssignment { get; set; } = TeamAssignment.Unassigned;
     public string? Position { get; set; } // ST, CM, CB, etc.
     public DateTime JoinDate { get; set; }
+    public DateTime? UpdatedAt { get; set; } // Track when participant updates their team/position
     public bool DepositPaid { get; set; } = false;
     public decimal? DepositAmount { get; set; }
     public bool CheckedIn { get; set; } = false;

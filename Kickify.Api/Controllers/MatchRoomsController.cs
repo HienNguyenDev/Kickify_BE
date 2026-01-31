@@ -8,6 +8,7 @@ using Kickify.Application.Features.MatchRooms.Commands.LeaveRoom;
 using Kickify.Application.Features.MatchRooms.Commands.UpdateParticipant;
 using Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById;
 using Kickify.Application.Features.MatchRooms.Queries.GetMatchRooms;
+using Kickify.Application.Features.MatchRooms.Queries.GetMyMatchRooms;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -40,8 +41,7 @@ namespace Kickify.Api.Controllers
                 request.MatchFormat,
                 request.RoomName,
                 request.Description,
-                request.Rules,
-                request.DepositPerPerson
+                request.Rules
             );
 
             var result = await _sender.Send(command, cancellationToken);
@@ -61,6 +61,22 @@ namespace Kickify.Api.Controllers
         public async Task<IResult> GetRoomById(Guid id, CancellationToken cancellationToken)
         {
             var query = new GetMatchRoomByIdQuery(id);
+
+            var result = await _sender.Send(query, cancellationToken);
+
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Get all match rooms for current user (as participant or host)
+        /// </summary>
+        [HttpGet("mine")]
+        public async Task<IResult> GetMyRooms(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
+            CancellationToken cancellationToken = default)
+        {
+            var query = new GetMyMatchRoomsQuery(page, pageSize);
 
             var result = await _sender.Send(query, cancellationToken);
 
