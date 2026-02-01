@@ -23,4 +23,16 @@ public static class ChatErrors
     public static readonly Error Unauthorized = Error.Problem(
         "Chat.Unauthorized",
         "You are not authorized to perform this action");
+
+    public static readonly Error NotRoomParticipant = Error.Problem(
+        "Chat.NotRoomParticipant",
+        "You are not a participant of this room");
+
+    public static readonly Error CannotSendToTeamChannel = Error.Problem(
+        "Chat.CannotSendToTeamChannel",
+        "You can only send messages to your team channel");
+
+    public static readonly Error CannotAccessTeamChannel = Error.Problem(
+        "Chat.CannotAccessTeamChannel",
+        "You can only access your team channel");
 }

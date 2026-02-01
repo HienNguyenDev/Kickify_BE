@@ -15,7 +15,7 @@ public class User : Entity
     public DateTime? DateOfBirth { get; set; }
     public Gender? Gender { get; set; }
     public UserRole Role { get; set; }
-    public string? Positions { get; set; }
+    public string? PreferredPositions { get; set; }
     public int? ShirtNumber { get; set; }
     public string? PreferredFoot { get; set; }
     public string? IdentityId { get; set; }

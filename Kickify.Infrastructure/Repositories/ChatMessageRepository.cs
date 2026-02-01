@@ -161,4 +161,28 @@ public class ChatMessageRepository : GenericRepository<ChatMessage>, IChatMessag
 
         return matchingUserCount;
     }
+
+    public async Task<(IEnumerable<ChatMessage> Messages, int Total)> GetRoomMessagesAsync(
+        Guid roomId,
+        RoomChatChannel channel,
+        int page = 1,
+        int pageSize = 50,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _dbSet
+            .Include(m => m.Sender)
+            .Where(m => m.ConversationType == ConversationType.Room &&
+                        m.RoomId == roomId &&
+                        m.RoomChatChannel == channel);
+
+        var total = await query.CountAsync(cancellationToken);
+
+        var messages = await query
+            .OrderByDescending(m => m.SentAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (messages.OrderBy(m => m.SentAt), total);
+    }
 }
