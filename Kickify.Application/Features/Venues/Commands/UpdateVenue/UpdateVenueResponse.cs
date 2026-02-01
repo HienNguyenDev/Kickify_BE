@@ -10,6 +10,14 @@ namespace Kickify.Application.Features.Venues.Commands.UpdateVenue
         string? ContactEmail,
         string? Description,
         string? Amenities,
+        List<UpdateVenueOperatingHourResponseDto> OperatingHours,
         DateTime UpdatedAt
+    );
+
+    public record UpdateVenueOperatingHourResponseDto(
+        string DayOfWeek,
+        TimeSpan? OpenTime,
+        TimeSpan? CloseTime,
+        bool IsClosed
     );
 }
