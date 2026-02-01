@@ -10,6 +10,7 @@ public class ChatMessage
     public Guid? ReceiverId { get; set; }
     public Guid SenderId { get; set; }
     public ConversationType ConversationType { get; set; }
+    public RoomChatChannel? RoomChatChannel { get; set; }  // null for Private chat
     public string MessageText { get; set; } = string.Empty;
     public MessageType MessageType { get; set; } = MessageType.Text;
     public bool IsEdited { get; set; } = false;

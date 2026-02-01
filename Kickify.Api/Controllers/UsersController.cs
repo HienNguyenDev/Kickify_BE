@@ -105,7 +105,10 @@ public class UsersController : ControllerBase
             AvatarUrl = request.AvatarUrl,
             Bio = request.Bio,
             DateOfBirth = request.DateOfBirth,
-            Gender = request.Gender
+            Gender = request.Gender,
+            PreferredPositions = request.PreferredPositions,
+            ShirtNumber = request.ShirtNumber,
+            PreferredFoot = request.PreferredFoot
         };
 
         Result<UpdateUserCommandResponse> result = await _mediator.Send(command, cancellationToken);

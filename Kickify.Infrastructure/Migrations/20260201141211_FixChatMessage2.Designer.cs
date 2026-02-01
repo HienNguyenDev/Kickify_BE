@@ -3,6 +3,7 @@ using System;
 using Kickify.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Kickify.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260201141211_FixChatMessage2")]
+    partial class FixChatMessage2
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -326,6 +329,9 @@ namespace Kickify.Infrastructure.Migrations
                     b.Property<Guid>("CommentId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("CommentId1")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -335,6 +341,8 @@ namespace Kickify.Infrastructure.Migrations
                     b.HasKey("LikeId");
 
                     b.HasIndex("CommentId");
+
+                    b.HasIndex("CommentId1");
 
                     b.HasIndex("UserId");
 
@@ -2107,10 +2115,14 @@ namespace Kickify.Infrastructure.Migrations
             modelBuilder.Entity("Kickify.Domain.Entities.CommentLike", b =>
                 {
                     b.HasOne("Kickify.Domain.Entities.Comment", "Comment")
-                        .WithMany("CommentLikes")
+                        .WithMany()
                         .HasForeignKey("CommentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("Kickify.Domain.Entities.Comment", null)
+                        .WithMany("CommentLikes")
+                        .HasForeignKey("CommentId1");
 
                     b.HasOne("Kickify.Domain.Entities.User", "User")
                         .WithMany("CommentLikes")

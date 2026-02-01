@@ -37,6 +37,9 @@ namespace Kickify.Application.Features.Users.Commands.UpdateUser
             user.Bio = request.Bio;
             user.DateOfBirth = request.DateOfBirth;
             user.Gender = request.Gender;
+            user.PreferredPositions = request.PreferredPositions;
+            user.ShirtNumber = request.ShirtNumber;
+            user.PreferredFoot = request.PreferredFoot;
             user.UpdatedAt = DateTime.UtcNow;
 
             _userRepository.Update(user);
@@ -52,6 +55,9 @@ namespace Kickify.Application.Features.Users.Commands.UpdateUser
                 Bio = user.Bio,
                 DateOfBirth = user.DateOfBirth,
                 Gender = user.Gender,
+                PreferredPositions = user.PreferredPositions,
+                ShirtNumber = user.ShirtNumber,
+                PreferredFoot = user.PreferredFoot,
                 UpdatedAt = user.UpdatedAt
             };
 

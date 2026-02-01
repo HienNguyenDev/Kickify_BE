@@ -157,7 +157,11 @@ namespace Kickify.Infrastructure.Database
         {
             // ChatMessage → MatchRoom
             modelBuilder.Entity<ChatMessage>()
-                .HasQueryFilter(e => e.MatchRoom.DeletedAt == null);
+                .HasQueryFilter(e => e.MatchRoom == null || e.MatchRoom.DeletedAt == null);
+
+            // CommentLike → Comment
+            modelBuilder.Entity<CommentLike>()
+                .HasQueryFilter(e => e.Comment.DeletedAt == null);
 
             // EloHistory → MatchRoom
             modelBuilder.Entity<EloHistory>()

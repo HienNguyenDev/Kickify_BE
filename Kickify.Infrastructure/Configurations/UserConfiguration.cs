@@ -48,7 +48,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .HasConversion<string>()
             .IsRequired();
 
-        builder.Property(p => p.Positions)
+        builder.Property(p => p.PreferredPositions)
             .HasMaxLength(255)
             .HasComment("JSON array: [\"ST\", \"CM\", \"CB\"]");
 

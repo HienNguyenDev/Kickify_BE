@@ -31,6 +31,10 @@ public class ChatMessageConfiguration : IEntityTypeConfiguration<ChatMessage>
             .HasDefaultValue(ConversationType.Private)
             .IsRequired();
 
+        builder.Property(cm => cm.RoomChatChannel)
+            .HasConversion<string>()
+            .IsRequired(false);
+
         builder.Property(cm => cm.MessageText)
             .HasColumnType("text") 
             .IsRequired();
@@ -68,12 +72,15 @@ public class ChatMessageConfiguration : IEntityTypeConfiguration<ChatMessage>
         //    .HasForeignKey(cm => cm.RoomId)
         //    .OnDelete(DeleteBehavior.Cascade);
 
+        // ⭐ Indexes
         builder.HasIndex(cm => cm.RoomId);
         builder.HasIndex(cm => cm.SenderId);
         builder.HasIndex(cm => cm.ReceiverId);
         builder.HasIndex(cm => cm.SentAt);
 
         builder.HasIndex(cm => new { cm.SenderId, cm.ReceiverId, cm.SentAt });
+
+        builder.HasIndex(cm => new { cm.RoomId, cm.RoomChatChannel, cm.SentAt });
 
         builder.HasIndex(cm => new { cm.ReceiverId, cm.IsRead })
             .HasFilter("\"ReceiverId\" IS NOT NULL AND \"IsRead\" = false");
