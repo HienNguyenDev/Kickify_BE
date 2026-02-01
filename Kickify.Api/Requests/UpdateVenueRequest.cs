@@ -8,5 +8,12 @@ public sealed record UpdateVenueRequest(
     string? ContactPhone,
     string? ContactEmail,
     string? Description,
-    string? Amenities
+    string? Amenities,
+    List<UpdateVenueOperatingHourDto>? OperatingHours
+);
+
+public record UpdateVenueOperatingHourDto(
+    int DayOfWeek,
+    string? OpenTime,
+    string? CloseTime
 );

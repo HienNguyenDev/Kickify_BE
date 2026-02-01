@@ -218,7 +218,12 @@ namespace Kickify.Api.Controllers
                 request.ContactPhone,
                 request.ContactEmail,
                 request.Description,
-                request.Amenities
+                request.Amenities,
+                request.OperatingHours?.Select(oh => new UpdateVenueOperatingHourItemDto(
+                    oh.DayOfWeek,
+                    oh.OpenTime,
+                    oh.CloseTime
+                )).ToList()
             );
 
             var result = await _sender.Send(command, cancellationToken);
