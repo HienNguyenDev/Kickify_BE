@@ -1,6 +1,7 @@
 ﻿using Kickify.Application.Features.Chat.Commands.MarkMessagesAsRead;
 using Kickify.Application.Features.Chat.Commands.SendPrivateMessage;
 using Kickify.Application.Features.Chat.Queries.GetPrivateConversation;
+using Kickify.Domain.Enums;
 using Kickify.Infrastructure.ChatConnection;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -9,6 +10,9 @@ using System.Security.Claims;
 
 namespace Kickify.Api.Hubs;
 
+/// <summary>
+/// Hub for private 1-1 chat. For room chat, use MatchRoomHub.
+/// </summary>
 [Authorize]
 public class ChatHub : Hub
 {
@@ -29,6 +33,8 @@ public class ChatHub : Hub
 
     private string CurrentUserName =>
         Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
+
+    #region Connection Management
 
     public override async Task OnConnectedAsync()
     {
@@ -60,25 +66,24 @@ public class ChatHub : Hub
                 });
             }
         }
-        catch
-        {
-        }
+        catch { }
 
         await base.OnDisconnectedAsync(exception);
     }
+
+    #endregion
+
+    #region Private Chat
 
     public async Task SendPrivateMessage(Guid receiverId, string messageText, int messageType = 0)
     {
         try
         {
-            var userId = CurrentUserId;
-
             var command = new SendPrivateMessageCommand
             {
-                SenderId = userId,
                 ReceiverId = receiverId,
                 MessageText = messageText,
-                MessageType = (Domain.Enums.MessageType)messageType
+                MessageType = (MessageType)messageType
             };
 
             var result = await _mediator.Send(command);
@@ -97,7 +102,6 @@ public class ChatHub : Hub
     public async Task Typing(Guid toUserId)
     {
         var connectionIds = _connectionMapping.GetConnections(toUserId).ToList();
-
         if (connectionIds.Any())
         {
             await Clients.Clients(connectionIds).SendAsync("UserTyping", new
@@ -111,7 +115,6 @@ public class ChatHub : Hub
     public async Task StopTyping(Guid toUserId)
     {
         var connectionIds = _connectionMapping.GetConnections(toUserId).ToList();
-
         if (connectionIds.Any())
         {
             await Clients.Clients(connectionIds).SendAsync("UserStopTyping", new
@@ -125,14 +128,7 @@ public class ChatHub : Hub
     {
         try
         {
-            var userId = CurrentUserId;
-
-            var command = new MarkMessagesAsReadCommand
-            {
-                CurrentUserId = userId,
-                FromUserId = fromUserId
-            };
-
+            var command = new MarkMessagesAsReadCommand { FromUserId = fromUserId };
             var result = await _mediator.Send(command);
 
             if (!result.IsSuccess)
@@ -150,11 +146,8 @@ public class ChatHub : Hub
     {
         try
         {
-            var userId = CurrentUserId;
-
             var query = new GetPrivateConversationQuery
             {
-                CurrentUserId = userId,
                 OtherUserId = otherUserId,
                 PageNumber = pageNumber,
                 PageSize = pageSize
@@ -177,6 +170,10 @@ public class ChatHub : Hub
         }
     }
 
+    #endregion
+
+    #region Online Status
+
     public async Task GetOnlineStatus(Guid userId)
     {
         var isOnline = _connectionMapping.IsOnline(userId);
@@ -192,4 +189,6 @@ public class ChatHub : Hub
         var onlineUsers = _connectionMapping.GetOnlineUsers();
         await Clients.Caller.SendAsync("OnlineUsers", onlineUsers);
     }
+
+    #endregion
 }

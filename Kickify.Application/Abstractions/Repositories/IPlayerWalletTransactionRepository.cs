@@ -1,4 +1,4 @@
-using Kickify.Application.Abstractions.Persistence;
+    using Kickify.Application.Abstractions.Persistence;
 using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
 

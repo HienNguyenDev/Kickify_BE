@@ -1,10 +1,12 @@
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Domain.Entities;
+using Kickify.Domain.Enums;
 
 namespace Kickify.Application.Abstractions.Repositories;
 
 public interface IChatMessageRepository : IGenericRepository<ChatMessage>
 {
+    // Private chat methods
     Task<(IEnumerable<ChatMessage> Messages, int Total)> GetPrivateConversationAsync(
         Guid userId1,
         Guid userId2,
@@ -36,5 +38,13 @@ public interface IChatMessageRepository : IGenericRepository<ChatMessage>
     Task<int> GetConversationCountAsync(
         Guid userId,
         string? searchTerm = null,
+        CancellationToken cancellationToken = default);
+
+    // Room chat methods
+    Task<(IEnumerable<ChatMessage> Messages, int Total)> GetRoomMessagesAsync(
+        Guid roomId,
+        RoomChatChannel channel,
+        int page = 1,
+        int pageSize = 50,
         CancellationToken cancellationToken = default);
 }

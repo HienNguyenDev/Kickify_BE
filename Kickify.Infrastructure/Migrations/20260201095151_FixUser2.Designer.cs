@@ -3,6 +3,7 @@ using System;
 using Kickify.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Kickify.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260201095151_FixUser2")]
+    partial class FixUser2
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -222,9 +225,6 @@ namespace Kickify.Infrastructure.Migrations
                     b.Property<Guid?>("ReceiverId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("RoomChatChannel")
-                        .HasColumnType("text");
-
                     b.Property<Guid?>("RoomId")
                         .HasColumnType("uuid");
 
@@ -246,8 +246,6 @@ namespace Kickify.Infrastructure.Migrations
 
                     b.HasIndex("ReceiverId", "IsRead")
                         .HasFilter("\"ReceiverId\" IS NOT NULL AND \"IsRead\" = false");
-
-                    b.HasIndex("RoomId", "RoomChatChannel", "SentAt");
 
                     b.HasIndex("SenderId", "ReceiverId", "SentAt");
 
@@ -2271,7 +2269,8 @@ namespace Kickify.Infrastructure.Migrations
                     b.HasOne("Kickify.Domain.Entities.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });

@@ -22,6 +22,6 @@ namespace Kickify.Domain.Entities
         public DateTime ExpiredAt { get; set; }
 
         // Navigation
-        public User User { get; set; } = null!;
+        public User? User { get; set; } = null!;
     }
 }

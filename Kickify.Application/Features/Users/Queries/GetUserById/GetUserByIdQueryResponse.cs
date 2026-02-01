@@ -13,6 +13,9 @@ namespace Kickify.Application.Features.Users.Queries.GetUserById
         public DateTime? DateOfBirth { get; set; }
         public Gender? Gender { get; set; }
         public UserRole Role { get; set; }
+        public string? PreferredPositions { get; set; }
+        public int? ShirtNumber { get; set; }
+        public string? PreferredFoot { get; set; }
         public bool IsEmailVerified { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
@@ -36,6 +39,5 @@ namespace Kickify.Application.Features.Users.Queries.GetUserById
         public int MaxWinStreak { get; set; }
         public int AfkCount { get; set; }
         public int ReportCount { get; set; }
-        public string? PreferredPositions { get; set; }
     }
 }
