@@ -25,6 +25,5 @@ public class Venue : BaseEntity
     public ICollection<VenuePhoto> VenuePhotos { get; set; } = new List<VenuePhoto>();
     public ICollection<VenueOperatingHour> VenueOperatingHours { get; set; } = new List<VenueOperatingHour>();
     public ICollection<Field> Fields { get; set; } = new List<Field>();
-    public VenueWallet? VenueWallet { get; set; }
     public ICollection<VenueReview> VenueReviews { get; set; } = new List<VenueReview>();
 }

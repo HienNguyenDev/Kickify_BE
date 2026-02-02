@@ -7,23 +7,23 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Kickify.Infrastructure.Repositories;
 
-public class VenueWalletTransactionRepository : GenericRepository<VenueWalletTransaction>, IVenueWalletTransactionRepository
+public class WalletTransactionRepository : GenericRepository<WalletTransaction>, IWalletTransactionRepository
 {
-    public VenueWalletTransactionRepository(ApplicationDbContext context) : base(context) { }
+    public WalletTransactionRepository(ApplicationDbContext context) : base(context) { }
 
     public async Task<bool> ExistsByTransactionCodeAsync(string transactionCode, CancellationToken cancellationToken = default)
     {
         return await _dbSet.AnyAsync(t => t.TransactionCode == transactionCode, cancellationToken);
     }
 
-    public async Task<(IEnumerable<VenueWalletTransaction> Transactions, int Total)> GetByWalletIdAsync(
+    public async Task<(IEnumerable<WalletTransaction> Transactions, int Total)> GetByWalletIdAsync(
         Guid walletId,
         TransactionType? transactionType = null,
         int page = 1,
         int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var query = _dbSet.Where(t => t.VenueWalletId == walletId);
+        var query = _dbSet.Where(t => t.WalletId == walletId);
 
         if (transactionType.HasValue)
         {
@@ -40,15 +40,22 @@ public class VenueWalletTransactionRepository : GenericRepository<VenueWalletTra
         return (transactions, total);
     }
 
-    public async Task<(IEnumerable<VenueWalletTransaction> Transactions, int Total)> GetAllAsync(
+    public async Task<(IEnumerable<WalletTransaction> Transactions, int Total)> GetAllAsync(
+        WalletType? walletType = null,
         TransactionType? transactionType = null,
         int page = 1,
         int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
         var query = _dbSet
-            .Include(t => t.VenueWallet).ThenInclude(w => w.Venue)
+            .Include(t => t.Wallet)
+            .ThenInclude(w => w.User)
             .AsQueryable();
+
+        if (walletType.HasValue)
+        {
+            query = query.Where(t => t.Wallet.WalletType == walletType.Value);
+        }
 
         if (transactionType.HasValue)
         {
