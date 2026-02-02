@@ -5,11 +5,46 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Kickify.Infrastructure.Migrations
 {
+    /// <inheritdoc />
     public partial class RefactorWallet : Migration
     {
+        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // 1. Create new Wallets table first (before dropping old tables)
+            migrationBuilder.DropTable(
+                name: "PlayerWalletTransactions",
+                schema: "payment");
+
+            migrationBuilder.DropTable(
+                name: "PlayerWithdrawals",
+                schema: "payment");
+
+            migrationBuilder.DropTable(
+                name: "VenueWalletTransactions",
+                schema: "payment");
+
+            migrationBuilder.DropTable(
+                name: "VenueWithdrawals",
+                schema: "payment");
+
+            migrationBuilder.DropTable(
+                name: "PlayerWallets",
+                schema: "payment");
+
+            migrationBuilder.DropTable(
+                name: "VenueWallets",
+                schema: "payment");
+
+            migrationBuilder.DropIndex(
+                name: "IX_PaymentRequests_UserId_Status",
+                schema: "payment",
+                table: "PaymentRequests");
+
+            migrationBuilder.DropColumn(
+                name: "UserRole",
+                schema: "payment",
+                table: "PaymentRequests");
+
             migrationBuilder.CreateTable(
                 name: "Wallets",
                 schema: "payment",
@@ -39,39 +74,6 @@ namespace Kickify.Infrastructure.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
-            migrationBuilder.CreateIndex(
-                name: "IX_Wallets_UserId",
-                schema: "payment",
-                table: "Wallets",
-                column: "UserId",
-                unique: true);
-
-            // 2. Migrate data from PlayerWallets to Wallets
-            migrationBuilder.Sql(@"
-                INSERT INTO payment.""Wallets"" (""WalletId"", ""UserId"", ""WalletType"", ""Balance"", ""BankAccountNumber"", ""BankName"", ""AccountHolderName"", ""IsBankVerified"", ""CreatedAt"", ""UpdatedAt"", ""DeletedAt"")
-                SELECT ""PlayerWalletId"", ""UserId"", 'Player', ""Balance"", ""BankAccountNumber"", ""BankName"", ""AccountHolderName"", false, ""CreatedAt"", ""UpdatedAt"", ""DeletedAt""
-                FROM payment.""PlayerWallets""
-                ON CONFLICT (""UserId"") DO NOTHING;
-            ");
-
-            // 3. Migrate data from VenueWallets to Wallets (using Venue's OwnerId)
-            migrationBuilder.Sql(@"
-                INSERT INTO payment.""Wallets"" (""WalletId"", ""UserId"", ""WalletType"", ""Balance"", ""BankAccountNumber"", ""BankName"", ""AccountHolderName"", ""IsBankVerified"", ""CreatedAt"", ""UpdatedAt"", ""DeletedAt"")
-                SELECT vw.""VenueWalletId"", v.""OwnerId"", 'VenueOwner', vw.""Balance"", vw.""BankAccountNumber"", vw.""BankName"", vw.""AccountHolderName"", vw.""IsBankVerified"", vw.""CreatedAt"", vw.""UpdatedAt"", vw.""DeletedAt""
-                FROM payment.""VenueWallets"" vw
-                JOIN venue.""Venues"" v ON vw.""VenueId"" = v.""VenueId""
-                ON CONFLICT (""UserId"") DO UPDATE SET ""Balance"" = payment.""Wallets"".""Balance"" + EXCLUDED.""Balance"";
-            ");
-
-            // 4. Update PaymentRequests.WalletId to point to new Wallets
-            migrationBuilder.Sql(@"
-                UPDATE payment.""PaymentRequests"" pr
-                SET ""WalletId"" = w.""WalletId""
-                FROM payment.""Wallets"" w
-                WHERE pr.""UserId"" = w.""UserId"";
-            ");
-
-            // 5. Create WalletTransactions table
             migrationBuilder.CreateTable(
                 name: "WalletTransactions",
                 schema: "payment",
@@ -99,21 +101,6 @@ namespace Kickify.Infrastructure.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
-            // 6. Migrate PlayerWalletTransactions to WalletTransactions
-            migrationBuilder.Sql(@"
-                INSERT INTO payment.""WalletTransactions"" (""TransactionId"", ""WalletId"", ""TransactionType"", ""Amount"", ""BalanceAfter"", ""TransactionCode"", ""ReferenceId"", ""Description"", ""CreatedAt"")
-                SELECT ""TransactionId"", ""PlayerWalletId"", ""TransactionType"", ""Amount"", ""BalanceAfter"", ""TransactionCode"", ""ReferenceId"", ""Description"", ""CreatedAt""
-                FROM payment.""PlayerWalletTransactions"";
-            ");
-
-            // 7. Migrate VenueWalletTransactions to WalletTransactions
-            migrationBuilder.Sql(@"
-                INSERT INTO payment.""WalletTransactions"" (""TransactionId"", ""WalletId"", ""TransactionType"", ""Amount"", ""BalanceAfter"", ""TransactionCode"", ""ReferenceId"", ""Description"", ""CreatedAt"")
-                SELECT ""TransactionId"", ""VenueWalletId"", ""TransactionType"", ""Amount"", ""BalanceAfter"", ""TransactionCode"", ""ReferenceId"", ""Description"", ""CreatedAt""
-                FROM payment.""VenueWalletTransactions"";
-            ");
-
-            // 8. Create WalletWithdrawals table
             migrationBuilder.CreateTable(
                 name: "WalletWithdrawals",
                 schema: "payment",
@@ -147,45 +134,18 @@ namespace Kickify.Infrastructure.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
-            // 9. Migrate PlayerWithdrawals to WalletWithdrawals
-            migrationBuilder.Sql(@"
-                INSERT INTO payment.""WalletWithdrawals"" (""WithdrawalId"", ""WalletId"", ""Amount"", ""Status"", ""RequestDate"", ""ProcessedDate"", ""ProcessedByAdminId"", ""AdminNotes"")
-                SELECT ""PlayerWithdrawalId"", ""PlayerWalletId"", ""Amount"", ""Status"", ""RequestDate"", ""ProcessedDate"", ""ProcessedByAdminId"", ""AdminNotes""
-                FROM payment.""PlayerWithdrawals"";
-            ");
-
-            // 10. Migrate VenueWithdrawals to WalletWithdrawals
-            migrationBuilder.Sql(@"
-                INSERT INTO payment.""WalletWithdrawals"" (""WithdrawalId"", ""WalletId"", ""Amount"", ""Status"", ""RequestDate"", ""ProcessedDate"", ""ProcessedByAdminId"", ""AdminNotes"")
-                SELECT ""VenueWithdrawalId"", ""VenueWalletId"", ""Amount"", ""Status"", ""RequestDate"", ""ProcessedDate"", ""ProcessedByAdminId"", ""AdminNotes""
-                FROM payment.""VenueWithdrawals"";
-            ");
-
-            // 11. Now drop old tables (after data migration)
-            migrationBuilder.DropTable(name: "PlayerWalletTransactions", schema: "payment");
-            migrationBuilder.DropTable(name: "PlayerWithdrawals", schema: "payment");
-            migrationBuilder.DropTable(name: "VenueWalletTransactions", schema: "payment");
-            migrationBuilder.DropTable(name: "VenueWithdrawals", schema: "payment");
-            migrationBuilder.DropTable(name: "PlayerWallets", schema: "payment");
-            migrationBuilder.DropTable(name: "VenueWallets", schema: "payment");
-
-            // 12. Drop old columns and indexes from PaymentRequests
-            migrationBuilder.DropIndex(
-                name: "IX_PaymentRequests_UserId_Status",
-                schema: "payment",
-                table: "PaymentRequests");
-
-            migrationBuilder.DropColumn(
-                name: "UserRole",
-                schema: "payment",
-                table: "PaymentRequests");
-
-            // 13. Create new indexes
             migrationBuilder.CreateIndex(
                 name: "IX_PaymentRequests_WalletId",
                 schema: "payment",
                 table: "PaymentRequests",
                 column: "WalletId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Wallets_UserId",
+                schema: "payment",
+                table: "Wallets",
+                column: "UserId",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_WalletTransactions_CreatedAt",
@@ -229,7 +189,6 @@ namespace Kickify.Infrastructure.Migrations
                 table: "WalletWithdrawals",
                 column: "WalletId");
 
-            // 14. Add FK for PaymentRequests -> Wallets (now data is migrated)
             migrationBuilder.AddForeignKey(
                 name: "FK_PaymentRequests_Wallets_WalletId",
                 schema: "payment",
@@ -241,6 +200,7 @@ namespace Kickify.Infrastructure.Migrations
                 onDelete: ReferentialAction.Restrict);
         }
 
+        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropForeignKey(
@@ -248,9 +208,17 @@ namespace Kickify.Infrastructure.Migrations
                 schema: "payment",
                 table: "PaymentRequests");
 
-            migrationBuilder.DropTable(name: "WalletTransactions", schema: "payment");
-            migrationBuilder.DropTable(name: "WalletWithdrawals", schema: "payment");
-            migrationBuilder.DropTable(name: "Wallets", schema: "payment");
+            migrationBuilder.DropTable(
+                name: "WalletTransactions",
+                schema: "payment");
+
+            migrationBuilder.DropTable(
+                name: "WalletWithdrawals",
+                schema: "payment");
+
+            migrationBuilder.DropTable(
+                name: "Wallets",
+                schema: "payment");
 
             migrationBuilder.DropIndex(
                 name: "IX_PaymentRequests_WalletId",

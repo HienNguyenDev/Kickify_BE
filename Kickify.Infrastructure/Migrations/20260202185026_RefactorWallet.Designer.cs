@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Kickify.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260202171520_RefactorWallet")]
+    [Migration("20260202185026_RefactorWallet")]
     partial class RefactorWallet
     {
         /// <inheritdoc />
