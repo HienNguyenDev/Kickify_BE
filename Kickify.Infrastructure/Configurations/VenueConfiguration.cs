@@ -80,11 +80,6 @@ public class VenueConfiguration : IEntityTypeConfiguration<Venue>
             .HasForeignKey(f => f.VenueId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasOne(v => v.VenueWallet)
-            .WithOne(vw => vw.Venue)
-            .HasForeignKey<VenueWallet>(vw => vw.VenueId)
-            .OnDelete(DeleteBehavior.Cascade);
-
         builder.HasMany(v => v.VenueReviews)
             .WithOne(vr => vr.Venue)
             .HasForeignKey(vr => vr.VenueId)

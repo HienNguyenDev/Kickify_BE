@@ -231,7 +231,7 @@ namespace Kickify.Api.Controllers
             return result.MatchOk();
         }
 
-        /// <summary>
+        /// <summary>       
         /// Delete venue (owner only)
         /// </summary>
         [Authorize]

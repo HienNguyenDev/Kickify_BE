@@ -8,10 +8,14 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenueById
     public class GetVenueByIdQueryHandler : IQueryHandler<GetVenueByIdQuery, GetVenueByIdResponse>
     {
         private readonly IVenueRepository _venueRepository;
+        private readonly IWalletRepository _walletRepository;
 
-        public GetVenueByIdQueryHandler(IVenueRepository venueRepository)
+        public GetVenueByIdQueryHandler(
+            IVenueRepository venueRepository,
+            IWalletRepository walletRepository)
         {
             _venueRepository = venueRepository;
+            _walletRepository = walletRepository;
         }
 
         public async Task<Result<GetVenueByIdResponse>> Handle(GetVenueByIdQuery request, CancellationToken cancellationToken)
@@ -22,6 +26,8 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenueById
             {
                 return Result.Failure<GetVenueByIdResponse>(VenueErrors.NotFound(request.VenueId));
             }
+
+            var wallet = await _walletRepository.GetByUserIdAsync(venue.OwnerId, cancellationToken);
 
             var response = new GetVenueByIdResponse(
                 venue.VenueId,
@@ -51,7 +57,7 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenueById
                     p.PhotoUrl,
                     p.DisplayOrder == 0
                 )).ToList(),
-                venue.VenueWallet?.Balance ?? 0,
+                wallet?.Balance ?? 0,
                 venue.CreatedAt
             );
 

@@ -2,10 +2,10 @@ using Kickify.Domain.Enums;
 
 namespace Kickify.Domain.Entities;
 
-public class VenueWalletTransaction
+public class WalletTransaction
 {
     public Guid TransactionId { get; set; }
-    public Guid VenueWalletId { get; set; }
+    public Guid WalletId { get; set; }
     public TransactionType TransactionType { get; set; }
     public decimal Amount { get; set; }
     public decimal BalanceAfter { get; set; }
@@ -14,6 +14,5 @@ public class VenueWalletTransaction
     public string? Description { get; set; }
     public DateTime CreatedAt { get; set; }
 
-    // Navigation properties
-    public VenueWallet VenueWallet { get; set; } = null!;
+    public Wallet Wallet { get; set; } = null!;
 }

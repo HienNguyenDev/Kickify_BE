@@ -10,9 +10,3 @@ public class GetAllWalletTransactionsQuery : IQuery<GetAllWalletTransactionsQuer
     public int Page { get; set; } = 1;
     public int PageSize { get; set; } = 20;
 }
-
-public enum WalletType
-{
-    Player,
-    Venue
-}

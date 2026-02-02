@@ -890,11 +890,6 @@ namespace Kickify.Infrastructure.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("UserRole")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
                     b.Property<string>("VnpayTransactionNo")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
@@ -911,7 +906,7 @@ namespace Kickify.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.HasIndex("UserId", "Status");
+                    b.HasIndex("WalletId");
 
                     b.ToTable("PaymentRequests", "payment");
                 });
@@ -1088,140 +1083,6 @@ namespace Kickify.Infrastructure.Migrations
                     b.HasIndex("Status");
 
                     b.ToTable("PlayerReports", "evaluation");
-                });
-
-            modelBuilder.Entity("Kickify.Domain.Entities.PlayerWallet", b =>
-                {
-                    b.Property<Guid>("PlayerWalletId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("AccountHolderName")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<decimal>("Balance")
-                        .ValueGeneratedOnAdd()
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)")
-                        .HasDefaultValue(0m);
-
-                    b.Property<string>("BankAccountNumber")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("BankName")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("PlayerWalletId");
-
-                    b.HasIndex("UserId")
-                        .IsUnique();
-
-                    b.ToTable("PlayerWallets", "payment");
-                });
-
-            modelBuilder.Entity("Kickify.Domain.Entities.PlayerWalletTransaction", b =>
-                {
-                    b.Property<Guid>("TransactionId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<decimal>("BalanceAfter")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("NOW()");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<Guid>("PlayerWalletId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("ReferenceId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("TransactionCode")
-                        .HasColumnType("text");
-
-                    b.Property<string>("TransactionType")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("TransactionId");
-
-                    b.HasIndex("CreatedAt");
-
-                    b.HasIndex("PlayerWalletId");
-
-                    b.ToTable("PlayerWalletTransactions", "payment");
-                });
-
-            modelBuilder.Entity("Kickify.Domain.Entities.PlayerWithdrawal", b =>
-                {
-                    b.Property<Guid>("PlayerWithdrawalId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("AdminNotes")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<Guid>("PlayerWalletId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("ProcessedByAdminId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("ProcessedDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("RequestDate")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("NOW()");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text")
-                        .HasDefaultValue("Pending");
-
-                    b.HasKey("PlayerWithdrawalId");
-
-                    b.HasIndex("PlayerWalletId");
-
-                    b.HasIndex("ProcessedByAdminId");
-
-                    b.HasIndex("Status");
-
-                    b.ToTable("PlayerWithdrawals", "payment");
                 });
 
             modelBuilder.Entity("Kickify.Domain.Entities.Post", b =>
@@ -1890,9 +1751,9 @@ namespace Kickify.Infrastructure.Migrations
                     b.ToTable("VenueReviews", "venue");
                 });
 
-            modelBuilder.Entity("Kickify.Domain.Entities.VenueWallet", b =>
+            modelBuilder.Entity("Kickify.Domain.Entities.Wallet", b =>
                 {
-                    b.Property<Guid>("VenueWalletId")
+                    b.Property<Guid>("WalletId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
@@ -1902,7 +1763,8 @@ namespace Kickify.Infrastructure.Migrations
 
                     b.Property<decimal>("Balance")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("decimal(12,2)")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
                         .HasDefaultValue(0m);
 
                     b.Property<string>("BankAccountNumber")
@@ -1927,38 +1789,44 @@ namespace Kickify.Infrastructure.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("VenueId")
+                    b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
-                    b.HasKey("VenueWalletId");
+                    b.Property<string>("WalletType")
+                        .IsRequired()
+                        .HasColumnType("text");
 
-                    b.HasIndex("VenueId")
+                    b.HasKey("WalletId");
+
+                    b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("VenueWallets", "payment");
+                    b.ToTable("Wallets", "payment");
                 });
 
-            modelBuilder.Entity("Kickify.Domain.Entities.VenueWalletTransaction", b =>
+            modelBuilder.Entity("Kickify.Domain.Entities.WalletTransaction", b =>
                 {
                     b.Property<Guid>("TransactionId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(10,2)");
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<decimal>("BalanceAfter")
-                        .HasColumnType("decimal(12,2)");
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Description")
-                        .HasColumnType("text");
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<Guid?>("ReferenceId")
-                        .HasColumnType("uuid")
-                        .HasComment("booking_id or withdrawal_id");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("TransactionCode")
                         .HasMaxLength(100)
@@ -1968,7 +1836,7 @@ namespace Kickify.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<Guid>("VenueWalletId")
+                    b.Property<Guid>("WalletId")
                         .HasColumnType("uuid");
 
                     b.HasKey("TransactionId");
@@ -1977,28 +1845,30 @@ namespace Kickify.Infrastructure.Migrations
 
                     b.HasIndex("TransactionCode");
 
-                    b.HasIndex("VenueWalletId");
+                    b.HasIndex("WalletId");
 
-                    b.ToTable("VenueWalletTransactions", "payment");
+                    b.ToTable("WalletTransactions", "payment");
                 });
 
-            modelBuilder.Entity("Kickify.Domain.Entities.VenueWithdrawal", b =>
+            modelBuilder.Entity("Kickify.Domain.Entities.WalletWithdrawal", b =>
                 {
-                    b.Property<Guid>("VenueWithdrawalId")
+                    b.Property<Guid>("WithdrawalId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<string>("AdminNotes")
-                        .HasColumnType("text");
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(10,2)");
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<Guid?>("ProcessedByAdminId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime?>("ProcessedDate")
-                        .HasColumnType("timestamp");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("RequestDate")
                         .HasColumnType("timestamp with time zone");
@@ -2009,18 +1879,20 @@ namespace Kickify.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasDefaultValue("Pending");
 
-                    b.Property<Guid>("VenueWalletId")
+                    b.Property<Guid>("WalletId")
                         .HasColumnType("uuid");
 
-                    b.HasKey("VenueWithdrawalId");
+                    b.HasKey("WithdrawalId");
 
                     b.HasIndex("ProcessedByAdminId");
 
+                    b.HasIndex("RequestDate");
+
                     b.HasIndex("Status");
 
-                    b.HasIndex("VenueWalletId");
+                    b.HasIndex("WalletId");
 
-                    b.ToTable("VenueWithdrawals", "payment");
+                    b.ToTable("WalletWithdrawals", "payment");
                 });
 
             modelBuilder.Entity("Kickify.Domain.Entities.Announcement", b =>
@@ -2273,7 +2145,15 @@ namespace Kickify.Infrastructure.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("Kickify.Domain.Entities.Wallet", "Wallet")
+                        .WithMany()
+                        .HasForeignKey("WalletId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("User");
+
+                    b.Navigation("Wallet");
                 });
 
             modelBuilder.Entity("Kickify.Domain.Entities.PlayerAchievement", b =>
@@ -2337,46 +2217,6 @@ namespace Kickify.Infrastructure.Migrations
                     b.Navigation("Reporter");
 
                     b.Navigation("Resolver");
-                });
-
-            modelBuilder.Entity("Kickify.Domain.Entities.PlayerWallet", b =>
-                {
-                    b.HasOne("Kickify.Domain.Entities.User", "User")
-                        .WithOne("PlayerWallet")
-                        .HasForeignKey("Kickify.Domain.Entities.PlayerWallet", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Kickify.Domain.Entities.PlayerWalletTransaction", b =>
-                {
-                    b.HasOne("Kickify.Domain.Entities.PlayerWallet", "PlayerWallet")
-                        .WithMany("Transactions")
-                        .HasForeignKey("PlayerWalletId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("PlayerWallet");
-                });
-
-            modelBuilder.Entity("Kickify.Domain.Entities.PlayerWithdrawal", b =>
-                {
-                    b.HasOne("Kickify.Domain.Entities.PlayerWallet", "PlayerWallet")
-                        .WithMany("Withdrawals")
-                        .HasForeignKey("PlayerWalletId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Kickify.Domain.Entities.User", "ProcessedByAdmin")
-                        .WithMany()
-                        .HasForeignKey("ProcessedByAdminId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("PlayerWallet");
-
-                    b.Navigation("ProcessedByAdmin");
                 });
 
             modelBuilder.Entity("Kickify.Domain.Entities.Post", b =>
@@ -2547,44 +2387,44 @@ namespace Kickify.Infrastructure.Migrations
                     b.Navigation("Venue");
                 });
 
-            modelBuilder.Entity("Kickify.Domain.Entities.VenueWallet", b =>
+            modelBuilder.Entity("Kickify.Domain.Entities.Wallet", b =>
                 {
-                    b.HasOne("Kickify.Domain.Entities.Venue", "Venue")
-                        .WithOne("VenueWallet")
-                        .HasForeignKey("Kickify.Domain.Entities.VenueWallet", "VenueId")
+                    b.HasOne("Kickify.Domain.Entities.User", "User")
+                        .WithOne("Wallet")
+                        .HasForeignKey("Kickify.Domain.Entities.Wallet", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Venue");
+                    b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Kickify.Domain.Entities.VenueWalletTransaction", b =>
+            modelBuilder.Entity("Kickify.Domain.Entities.WalletTransaction", b =>
                 {
-                    b.HasOne("Kickify.Domain.Entities.VenueWallet", "VenueWallet")
+                    b.HasOne("Kickify.Domain.Entities.Wallet", "Wallet")
                         .WithMany("Transactions")
-                        .HasForeignKey("VenueWalletId")
+                        .HasForeignKey("WalletId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("VenueWallet");
+                    b.Navigation("Wallet");
                 });
 
-            modelBuilder.Entity("Kickify.Domain.Entities.VenueWithdrawal", b =>
+            modelBuilder.Entity("Kickify.Domain.Entities.WalletWithdrawal", b =>
                 {
                     b.HasOne("Kickify.Domain.Entities.User", "ProcessedByAdmin")
                         .WithMany()
                         .HasForeignKey("ProcessedByAdminId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("Kickify.Domain.Entities.VenueWallet", "VenueWallet")
+                    b.HasOne("Kickify.Domain.Entities.Wallet", "Wallet")
                         .WithMany("Withdrawals")
-                        .HasForeignKey("VenueWalletId")
+                        .HasForeignKey("WalletId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("ProcessedByAdmin");
 
-                    b.Navigation("VenueWallet");
+                    b.Navigation("Wallet");
                 });
 
             modelBuilder.Entity("Kickify.Domain.Entities.Achievement", b =>
@@ -2630,13 +2470,6 @@ namespace Kickify.Infrastructure.Migrations
                     b.Navigation("RoomParticipants");
                 });
 
-            modelBuilder.Entity("Kickify.Domain.Entities.PlayerWallet", b =>
-                {
-                    b.Navigation("Transactions");
-
-                    b.Navigation("Withdrawals");
-                });
-
             modelBuilder.Entity("Kickify.Domain.Entities.Post", b =>
                 {
                     b.Navigation("Comments");
@@ -2674,8 +2507,6 @@ namespace Kickify.Infrastructure.Migrations
 
                     b.Navigation("PlayerProfile");
 
-                    b.Navigation("PlayerWallet");
-
                     b.Navigation("PostLikes");
 
                     b.Navigation("Posts");
@@ -2701,6 +2532,8 @@ namespace Kickify.Infrastructure.Migrations
                     b.Navigation("VenueReviews");
 
                     b.Navigation("Venues");
+
+                    b.Navigation("Wallet");
                 });
 
             modelBuilder.Entity("Kickify.Domain.Entities.Venue", b =>
@@ -2712,11 +2545,9 @@ namespace Kickify.Infrastructure.Migrations
                     b.Navigation("VenuePhotos");
 
                     b.Navigation("VenueReviews");
-
-                    b.Navigation("VenueWallet");
                 });
 
-            modelBuilder.Entity("Kickify.Domain.Entities.VenueWallet", b =>
+            modelBuilder.Entity("Kickify.Domain.Entities.Wallet", b =>
                 {
                     b.Navigation("Transactions");
 

@@ -11,6 +11,7 @@ public interface IApplicationDbContext
     DbSet<NotificationPreference> NotificationPreferences { get; set; }
     DbSet<Achievement> Achievements { get; set; }
     DbSet<PlayerAchievement> PlayerAchievements { get; set; }
+    DbSet<RefreshToken> RefreshTokens { get; set; }
 
     // Venue Schema
     DbSet<Venue> Venues { get; set; }
@@ -48,11 +49,7 @@ public interface IApplicationDbContext
 
     // Payment Schema
     DbSet<PaymentRequest> PaymentRequests { get; set; }
-    DbSet<PlayerWallet> PlayerWallets { get; set; }
-    DbSet<PlayerWalletTransaction> PlayerWalletTransactions { get; set; }
-    DbSet<PlayerWithdrawal> PlayerWithdrawals { get; set; }
-    DbSet<VenueWallet> VenueWallets { get; set; }
-    DbSet<VenueWalletTransaction> VenueWalletTransactions { get; set; }
-    DbSet<VenueWithdrawal> VenueWithdrawals { get; set; }
-
+    DbSet<Wallet> Wallets { get; set; }
+    DbSet<WalletTransaction> WalletTransactions { get; set; }
+    DbSet<WalletWithdrawal> WalletWithdrawals { get; set; }
 }

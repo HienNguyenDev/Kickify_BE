@@ -12,7 +12,6 @@ namespace Kickify.Domain.Entities
         public Guid PaymentRequestId { get; set; }
         public string TxnRef { get; set; } = null!;
         public Guid UserId { get; set; }
-        public UserRole UserRole { get; set; }
         public Guid WalletId { get; set; }
         public decimal Amount { get; set; }
         public PaymentStatus Status { get; set; }
@@ -23,5 +22,6 @@ namespace Kickify.Domain.Entities
 
         // Navigation
         public User? User { get; set; } = null!;
+        public Wallet? Wallet { get; set; }
     }
 }
