@@ -13,8 +13,7 @@ namespace Kickify.Application.Features.Wallets.Commands.CreateDeposit;
 public class CreateDepositCommandHandler : ICommandHandler<CreateDepositCommand, CreateDepositCommandResponse>
 {
     private readonly IUserRepository _userRepository;
-    private readonly IPlayerWalletRepository _playerWalletRepository;
-    private readonly IVenueWalletRepository _venueWalletRepository;
+    private readonly IWalletRepository _walletRepository;
     private readonly IPaymentRequestRepository _paymentRequestRepository;
     private readonly IVnPayService _vnPayService;
     private readonly IUserContext _userContext;
@@ -22,16 +21,14 @@ public class CreateDepositCommandHandler : ICommandHandler<CreateDepositCommand,
 
     public CreateDepositCommandHandler(
         IUserRepository userRepository,
-        IPlayerWalletRepository playerWalletRepository,
-        IVenueWalletRepository venueWalletRepository,
+        IWalletRepository walletRepository,
         IPaymentRequestRepository paymentRequestRepository,
         IVnPayService vnPayService,
         IUserContext userContext,
         IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
-        _playerWalletRepository = playerWalletRepository;
-        _venueWalletRepository = venueWalletRepository;
+        _walletRepository = walletRepository;
         _paymentRequestRepository = paymentRequestRepository;
         _vnPayService = vnPayService;
         _userContext = userContext;
@@ -48,52 +45,33 @@ public class CreateDepositCommandHandler : ICommandHandler<CreateDepositCommand,
             return Result.Failure<CreateDepositCommandResponse>(UserErrors.NotFound(_userContext.UserId));
         }
 
-        Guid walletId;
-        if (user.Role == UserRole.Player)
+        var wallet = await _walletRepository.GetByUserIdAsync(user.UserId, cancellationToken);
+        if (wallet is null)
         {
-            var wallet = await _playerWalletRepository.GetByUserIdAsync(user.UserId, cancellationToken);
-            if (wallet is null)
+            var walletType = user.Role == UserRole.VenueOwner ? WalletType.VenueOwner : WalletType.Player;
+            wallet = new Wallet
             {
-                wallet = new PlayerWallet
-                {
-                    PlayerWalletId = Guid.NewGuid(),
-                    UserId = user.UserId,
-                    Balance = 0
-                };
-                await _playerWalletRepository.AddAsync(wallet);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
-            }
-            walletId = wallet.PlayerWalletId;
-        }
-        else if (user.Role == UserRole.VenueOwner)
-        {
-            var wallet = await _venueWalletRepository.GetByOwnerIdAsync(user.UserId, cancellationToken);
-            if (wallet is null)
-            {
-                return Result.Failure<CreateDepositCommandResponse>(WalletErrors.WalletNotFound);
-            }
-            walletId = wallet.VenueWalletId;
-        }
-        else
-        {
-            return Result.Failure<CreateDepositCommandResponse>(WalletErrors.InvalidRole);
+                WalletId = Guid.NewGuid(),
+                UserId = user.UserId,
+                WalletType = walletType,
+                Balance = 0
+            };
+            await _walletRepository.AddAsync(wallet);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
 
-        // 4. Create payment URL
         var (paymentUrl, txnRef) = _vnPayService.CreatePaymentUrl(
             request.Amount,
             "Nap tien vi Kickify"
         );
 
-        // 5. Save PaymentRequest
         var expiredAt = DateTime.UtcNow.AddMinutes(15);
         var paymentRequest = new PaymentRequest
         {
             PaymentRequestId = Guid.NewGuid(),
             TxnRef = txnRef,
             UserId = user.UserId,
-            UserRole = user.Role,
-            WalletId = walletId,
+            WalletId = wallet.WalletId,
             Amount = request.Amount,
             Status = PaymentStatus.Pending,
             CreatedAt = DateTime.UtcNow,

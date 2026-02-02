@@ -1,12 +1,10 @@
 ﻿using Kickify.Api.Extensions;
-using Kickify.Api.Requests;
 using Kickify.Application.Abstractions.Services;
 using Kickify.Application.Features.Wallets.Commands.CreateDeposit;
 using Kickify.Application.Features.Wallets.Commands.ProcessDepositIpn;
 using Kickify.Application.Features.Wallets.Queries.GetAllWalletTransactions;
 using Kickify.Application.Features.Wallets.Queries.GetWalletBalance;
 using Kickify.Application.Features.Wallets.Queries.GetWalletTransactions;
-using Kickify.Domain.Common;
 using Kickify.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -104,7 +102,7 @@ public class WalletsController : ControllerBase
                 Message = result.Value?.Message ?? "Unknown error"
             });
         }
-        catch (Exception ex)
+        catch
         {
             return Ok(new { RspCode = "99", Message = "Server error" });
         }

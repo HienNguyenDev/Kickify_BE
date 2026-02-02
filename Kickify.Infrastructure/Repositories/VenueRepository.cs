@@ -20,7 +20,6 @@ namespace Kickify.Infrastructure.Repositories
                 .Include(v => v.Fields)
                 .Include(v => v.VenueOperatingHours)
                 .Include(v => v.VenuePhotos.OrderByDescending(p => p.DisplayOrder).Take(5))
-                .Include(v => v.VenueWallet)
                 .FirstOrDefaultAsync(v => v.VenueId == venueId, cancellationToken);
         }
 
@@ -104,7 +103,6 @@ namespace Kickify.Infrastructure.Repositories
                 .Include(v => v.Fields)
                 .Include(v => v.VenueOperatingHours)
                 .Include(v => v.VenuePhotos)
-                .Include(v => v.VenueWallet)
                 .Where(v => v.OwnerId == ownerId);
 
             var total = await query.CountAsync(cancellationToken);

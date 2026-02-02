@@ -35,7 +35,6 @@ namespace Kickify.Application.Common.Mappings
                 .ForMember(dest => dest.VenuePhotos, opt => opt.Ignore())
                 .ForMember(dest => dest.VenueOperatingHours, opt => opt.Ignore())
                 .ForMember(dest => dest.Fields, opt => opt.Ignore())
-                .ForMember(dest => dest.VenueWallet, opt => opt.Ignore())
                 .ForMember(dest => dest.VenueReviews, opt => opt.Ignore())
                 .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
                 .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore());

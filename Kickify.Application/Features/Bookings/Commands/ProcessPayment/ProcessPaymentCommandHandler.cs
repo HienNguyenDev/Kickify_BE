@@ -3,173 +3,194 @@ using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
 using Kickify.Domain.Entities;
+using Kickify.Domain.Enums;
 using Kickify.Domain.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace Kickify.Application.Features.Bookings.Commands.ProcessPayment
-{
-    public class ProcessPaymentCommandHandler : ICommandHandler<ProcessPaymentCommand, ProcessPaymentResponse>
-    {
-        private readonly IMatchRoomRepository _matchRoomRepository;
-        private readonly IRoomParticipantRepository _roomParticipantRepository;
-        private readonly IBookingRepository _bookingRepository;
-        private readonly IFieldRepository _fieldRepository;
-        private readonly IVenueWalletRepository _venueWalletRepository;
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly ILogger<ProcessPaymentCommandHandler> _logger;
+namespace Kickify.Application.Features.Bookings.Commands.ProcessPayment;
 
-        public ProcessPaymentCommandHandler(
-            IMatchRoomRepository matchRoomRepository,
-            IRoomParticipantRepository roomParticipantRepository,
-            IBookingRepository bookingRepository,
-            IFieldRepository fieldRepository,
-            IVenueWalletRepository venueWalletRepository,
-            IUnitOfWork unitOfWork,
-            ILogger<ProcessPaymentCommandHandler> logger)
+public class ProcessPaymentCommandHandler : ICommandHandler<ProcessPaymentCommand, ProcessPaymentResponse>
+{
+    private readonly IMatchRoomRepository _matchRoomRepository;
+    private readonly IRoomParticipantRepository _roomParticipantRepository;
+    private readonly IBookingRepository _bookingRepository;
+    private readonly IFieldRepository _fieldRepository;
+    private readonly IVenueRepository _venueRepository;
+    private readonly IWalletRepository _walletRepository;
+    private readonly IWalletTransactionRepository _walletTransactionRepository;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger<ProcessPaymentCommandHandler> _logger;
+
+    public ProcessPaymentCommandHandler(
+        IMatchRoomRepository matchRoomRepository,
+        IRoomParticipantRepository roomParticipantRepository,
+        IBookingRepository bookingRepository,
+        IFieldRepository fieldRepository,
+        IVenueRepository venueRepository,
+        IWalletRepository walletRepository,
+        IWalletTransactionRepository walletTransactionRepository,
+        IUnitOfWork unitOfWork,
+        ILogger<ProcessPaymentCommandHandler> logger)
+    {
+        _matchRoomRepository = matchRoomRepository;
+        _roomParticipantRepository = roomParticipantRepository;
+        _bookingRepository = bookingRepository;
+        _fieldRepository = fieldRepository;
+        _venueRepository = venueRepository;
+        _walletRepository = walletRepository;
+        _walletTransactionRepository = walletTransactionRepository;
+        _unitOfWork = unitOfWork;
+        _logger = logger;
+    }
+
+    public async Task<Result<ProcessPaymentResponse>> Handle(ProcessPaymentCommand request, CancellationToken cancellationToken)
+    {
+        // Get room with participants
+        var room = await _matchRoomRepository.GetRoomWithParticipantsAsync(request.RoomId, cancellationToken);
+        if (room == null)
         {
-            _matchRoomRepository = matchRoomRepository;
-            _roomParticipantRepository = roomParticipantRepository;
-            _bookingRepository = bookingRepository;
-            _fieldRepository = fieldRepository;
-            _venueWalletRepository = venueWalletRepository;
-            _unitOfWork = unitOfWork;
-            _logger = logger;
+            return Result.Failure<ProcessPaymentResponse>(BookingErrors.RoomNotFound(request.RoomId));
         }
 
-        public async Task<Result<ProcessPaymentResponse>> Handle(ProcessPaymentCommand request, CancellationToken cancellationToken)
+        // Check if user is participant
+        var participant = room.RoomParticipants.FirstOrDefault(p => p.UserId == request.UserId);
+        if (participant == null)
         {
-            // Get room with participants
-            var room = await _matchRoomRepository.GetRoomWithParticipantsAsync(request.RoomId, cancellationToken);
-            if (room == null)
+            return Result.Failure<ProcessPaymentResponse>(BookingErrors.ParticipantNotFound);
+        }
+
+        // Check if already paid
+        if (participant.DepositPaid)
+        {
+            return Result.Failure<ProcessPaymentResponse>(BookingErrors.AlreadyPaid);
+        }
+
+        // Mark as paid and update deposit amount
+        participant.DepositPaid = true;
+        participant.DepositAmount = room.DepositPerPerson;
+        room.TotalDepositCollected += room.DepositPerPerson ?? 0;
+
+        _roomParticipantRepository.Update(participant);
+        _matchRoomRepository.Update(room);
+
+        // Check if all participants have paid
+        bool allPaid = await _matchRoomRepository.AreAllParticipantsPaidAsync(request.RoomId, cancellationToken);
+
+        if (allPaid)
+        {
+            _logger.LogInformation("All participants paid for room {RoomId}. Creating booking...", request.RoomId);
+
+            // Get field details
+            var field = await _fieldRepository.GetFieldWithVenueAsync(room.FieldId!.Value, cancellationToken);
+            if (field == null)
             {
-                return Result.Failure<ProcessPaymentResponse>(BookingErrors.RoomNotFound(request.RoomId));
+                return Result.Failure<ProcessPaymentResponse>(FieldErrors.NotFound(room.FieldId));
             }
 
-            // Check if user is participant
-            var participant = room.RoomParticipants.FirstOrDefault(p => p.UserId == request.UserId);
-            if (participant == null)
+            // Calculate total amount
+            var totalAmount = room.RoomParticipants.Sum(p => p.DepositAmount ?? 0);
+
+            try
             {
-                return Result.Failure<ProcessPaymentResponse>(BookingErrors.ParticipantNotFound);
-            }
-
-            // Check if already paid
-            if (participant.DepositPaid)
-            {
-                return Result.Failure<ProcessPaymentResponse>(BookingErrors.AlreadyPaid);
-            }
-
-            // Mark as paid and update deposit amount
-            participant.DepositPaid = true;
-            participant.DepositAmount = room.DepositPerPerson;
-            
-            // Update TotalDepositCollected in the room
-            room.TotalDepositCollected += room.DepositPerPerson ?? 0;
-            
-            _roomParticipantRepository.Update(participant);
-            _matchRoomRepository.Update(room);
-
-            // Check if all participants have paid
-            bool allPaid = await _matchRoomRepository.AreAllParticipantsPaidAsync(request.RoomId, cancellationToken);
-
-            if (allPaid)
-            {
-                _logger.LogInformation("All participants paid for room {RoomId}. Creating booking...", request.RoomId);
-
-                // Get field details
-                var field = await _fieldRepository.GetFieldWithVenueAsync(room.FieldId!.Value, cancellationToken);
-                if (field == null)
+                // Create booking - THIS IS WHERE RACE CONDITION CAN HAPPEN
+                var booking = new Booking
                 {
-                    return Result.Failure<ProcessPaymentResponse>(FieldErrors.NotFound(room.FieldId));
-                }
+                    BookingId = Guid.NewGuid(),
+                    FieldId = room.FieldId.Value,
+                    RoomId = request.RoomId,
+                    BookingDate = room.MatchDate,
+                    StartTime = room.StartTime,
+                    EndTime = room.StartTime.Add(TimeSpan.FromMinutes(room.DurationMinutes)),
+                    TotalAmount = totalAmount,
+                    CreatedAt = DateTime.UtcNow
+                };
 
-                // Calculate total amount
-                var totalAmount = room.RoomParticipants.Sum(p => p.DepositAmount ?? 0);
+                await _bookingRepository.AddAsync(booking);
 
-                try
+                var venue = await _venueRepository.GetByIdAsync(field.VenueId);
+                if (venue != null)
                 {
-                    // Create booking - THIS IS WHERE RACE CONDITION CAN HAPPEN
-                    var booking = new Booking
-                    {
-                        BookingId = Guid.NewGuid(),
-                        FieldId = room.FieldId.Value,
-                        RoomId = request.RoomId,
-                        BookingDate = room.MatchDate,
-                        StartTime = room.StartTime,
-                        EndTime = room.StartTime.Add(TimeSpan.FromMinutes(room.DurationMinutes)),
-                        TotalAmount = totalAmount,
-                        CreatedAt = DateTime.UtcNow
-                    };
-
-                    await _bookingRepository.AddAsync(booking);
-
-                    // Update venue wallet
-                    var wallet = await _venueWalletRepository.GetByVenueIdAsync(field.VenueId, cancellationToken);
+                    var wallet = await _walletRepository.GetByUserIdAsync(venue.OwnerId, cancellationToken);
                     if (wallet != null)
                     {
                         wallet.Balance += totalAmount;
+                        _walletRepository.Update(wallet);
+
+                        var transaction = new WalletTransaction
+                        {
+                            TransactionId = Guid.NewGuid(),
+                            WalletId = wallet.WalletId,
+                            TransactionType = TransactionType.BookingIncome,
+                            Amount = totalAmount,
+                            BalanceAfter = wallet.Balance,
+                            ReferenceId = booking.BookingId,
+                            Description = $"Booking income from room {room.RoomName ?? room.RoomId.ToString()}",
+                            CreatedAt = DateTime.UtcNow
+                        };
+                        await _walletTransactionRepository.AddAsync(transaction);
                     }
-
-                    // Save changes - exclusion constraint will be checked here
-                    await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-                    _logger.LogInformation("Booking {BookingId} created successfully for room {RoomId}", 
-                        booking.BookingId, request.RoomId);
-
-                    return Result.Success(new ProcessPaymentResponse(
-                        true,
-                        "Payment processed successfully. Booking created.",
-                        booking.BookingId,
-                        booking.BookingDate,
-                        booking.StartTime,
-                        booking.StartTime.Add(TimeSpan.FromMinutes(room.DurationMinutes))
-                    ));
                 }
-                catch (DbUpdateException ex) when (IsExclusionConstraintViolation(ex))
-                {
-                    // RACE CONDITION DETECTED: Another room booked this slot first
-                    _logger.LogWarning("Race condition detected for room {RoomId}. Field {FieldId} already booked for {Date} {StartTime}-{EndTime}",
-                        request.RoomId, room.FieldId, room.MatchDate, room.StartTime, room.StartTime.Add(TimeSpan.FromMinutes(room.DurationMinutes)));
 
-                    return Result.Failure<ProcessPaymentResponse>(BookingErrors.DoubleBooking);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error processing payment for room {RoomId}", request.RoomId);
-                    throw;
-                }
-            }
-            else
-            {
-                // Not all paid yet, just save participant status
+                // Save changes - exclusion constraint will be checked here
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                _logger.LogInformation("User {UserId} paid for room {RoomId}. Waiting for other participants...",
-                    request.UserId, request.RoomId);
+                _logger.LogInformation("Booking {BookingId} created successfully for room {RoomId}",
+                    booking.BookingId, request.RoomId);
 
                 return Result.Success(new ProcessPaymentResponse(
-                    false,
-                    "Payment recorded. Waiting for other participants to pay.",
-                    null,
-                    null,
-                    null,
-                    null
+                    true,
+                    "Payment processed successfully. Booking created.",
+                    booking.BookingId,
+                    booking.BookingDate,
+                    booking.StartTime,
+                    booking.StartTime.Add(TimeSpan.FromMinutes(room.DurationMinutes))
                 ));
             }
-        }
-
-        private bool IsExclusionConstraintViolation(DbUpdateException ex)
-        {
-            // Check if the exception is caused by PostgreSQL exclusion constraint violation
-            // Error code 23P01 = exclusion_violation
-            var innerException = ex.InnerException;
-            if (innerException != null)
+            catch (DbUpdateException ex) when (IsExclusionConstraintViolation(ex))
             {
-                var message = innerException.Message;
-                return message.Contains("23P01") || message.Contains("no_overlap_booking") || message.Contains("exclusion_violation");
-            }
+                // RACE CONDITION DETECTED: Another room booked this slot first
+                _logger.LogWarning("Race condition detected for room {RoomId}. Field {FieldId} already booked for {Date} {StartTime}-{EndTime}",
+                    request.RoomId, room.FieldId, room.MatchDate, room.StartTime, room.StartTime.Add(TimeSpan.FromMinutes(room.DurationMinutes)));
 
-            return false;
+                return Result.Failure<ProcessPaymentResponse>(BookingErrors.DoubleBooking);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing payment for room {RoomId}", request.RoomId);
+                throw;
+            }
         }
+        else
+        {
+            // Not all paid yet, just save participant status
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("User {UserId} paid for room {RoomId}. Waiting for other participants...",
+                request.UserId, request.RoomId);
+
+            return Result.Success(new ProcessPaymentResponse(
+                false,
+                "Payment recorded. Waiting for other participants to pay.",
+                null,
+                null,
+                null,
+                null
+            ));
+        }
+    }
+
+    private bool IsExclusionConstraintViolation(DbUpdateException ex)
+    {
+        // Check if the exception is caused by PostgreSQL exclusion constraint violation
+        // Error code 23P01 = exclusion_violation
+        var innerException = ex.InnerException;
+        if (innerException != null)
+        {
+            var message = innerException.Message;
+            return message.Contains("23P01") || message.Contains("no_overlap_booking") || message.Contains("exclusion_violation");
+        }
+
+        return false;
     }
 }

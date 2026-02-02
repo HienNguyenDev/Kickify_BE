@@ -13,7 +13,7 @@ namespace Kickify.Application.Features.Venues.Commands.CreateVenue;
 public class CreateVenueCommandHandler : ICommandHandler<CreateVenueCommand, CreateVenueResponse>
 {
     private readonly IVenueRepository _venueRepository;
-    private readonly IVenueWalletRepository _venueWalletRepository;
+    private readonly IWalletRepository _walletRepository;
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IUserContext _userContext;
@@ -21,14 +21,14 @@ public class CreateVenueCommandHandler : ICommandHandler<CreateVenueCommand, Cre
 
     public CreateVenueCommandHandler(
         IVenueRepository venueRepository,
-        IVenueWalletRepository venueWalletRepository,
+        IWalletRepository walletRepository,
         IUserRepository userRepository,
         IUnitOfWork unitOfWork,
         IUserContext userContext,
         ILogger<CreateVenueCommandHandler> logger)
     {
         _venueRepository = venueRepository;
-        _venueWalletRepository = venueWalletRepository;
+        _walletRepository = walletRepository;
         _userRepository = userRepository;
         _unitOfWork = unitOfWork;
         _userContext = userContext;
@@ -37,10 +37,8 @@ public class CreateVenueCommandHandler : ICommandHandler<CreateVenueCommand, Cre
 
     public async Task<Result<CreateVenueResponse>> Handle(CreateVenueCommand request, CancellationToken cancellationToken)
     {
-        // Get owner ID from user context
         var ownerId = _userContext.UserId;
 
-        // Verify owner exists
         var owner = await _userRepository.GetByIdAsync(ownerId);
         if (owner == null)
         {
@@ -49,7 +47,6 @@ public class CreateVenueCommandHandler : ICommandHandler<CreateVenueCommand, Cre
 
         try
         {
-            
             var venue = new Venue
             {
                 VenueId = Guid.NewGuid(),
@@ -58,28 +55,30 @@ public class CreateVenueCommandHandler : ICommandHandler<CreateVenueCommand, Cre
                 Address = request.Address,
                 Latitude = request.Latitude,
                 Longitude = request.Longitude,
-                ContactPhone = request.ContactPhone, 
-                ContactEmail = request.ContactEmail, 
+                ContactPhone = request.ContactPhone,
+                ContactEmail = request.ContactEmail,
                 Description = request.Description,
-                Amenities = request.Amenities,       
+                Amenities = request.Amenities,
                 CreatedAt = DateTime.UtcNow
             };
 
             await _venueRepository.AddAsync(venue);
 
-            // 2. Auto-create VenueWallet
-            
-            var wallet = new VenueWallet
+            var wallet = await _walletRepository.GetByUserIdAsync(ownerId, cancellationToken);
+            Guid walletId;
+            if (wallet is null)
             {
-                VenueWalletId = Guid.NewGuid(), 
-                VenueId = venue.VenueId,
-                Balance = 0,
-                CreatedAt = DateTime.UtcNow
-            };
+                wallet = new Wallet
+                {
+                    WalletId = Guid.NewGuid(),
+                    UserId = ownerId,
+                    WalletType = WalletType.VenueOwner,
+                    Balance = 0
+                };
+                await _walletRepository.AddAsync(wallet);
+            }
+            walletId = wallet.WalletId;
 
-            await _venueWalletRepository.AddAsync(wallet);
-
-            // 3. Create Fields
             foreach (var fieldDto in request.Fields)
             {
                 if (!Enum.TryParse<FieldType>(fieldDto.FieldType, true, out var fieldType))
@@ -102,7 +101,6 @@ public class CreateVenueCommandHandler : ICommandHandler<CreateVenueCommand, Cre
                 venue.Fields.Add(field);
             }
 
-            // 4. Create OperatingHours
             foreach (var ohDto in request.OperatingHours)
             {
                 var operatingHour = new VenueOperatingHour
@@ -118,24 +116,21 @@ public class CreateVenueCommandHandler : ICommandHandler<CreateVenueCommand, Cre
                 venue.VenueOperatingHours.Add(operatingHour);
             }
 
-            // Save all changes
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("Venue {VenueId} created with wallet and {FieldCount} fields",
-                venue.VenueId, venue.Fields.Count);
+            _logger.LogInformation("Venue {VenueId} created with {FieldCount} fields", venue.VenueId, venue.Fields.Count);
 
-          
             return Result.Success(new CreateVenueResponse(
                 venue.VenueId,
                 venue.VenueName,
                 venue.Address,
                 venue.Latitude ?? 0,
                 venue.Longitude ?? 0,
-                venue.ContactPhone, 
-                venue.ContactEmail, 
+                venue.ContactPhone,
+                venue.ContactEmail,
                 venue.Description,
-                venue.Amenities,    
-                wallet.VenueWalletId, 
+                venue.Amenities,
+                walletId,
                 venue.Fields.Select(f => new VenueFieldDto(
                     f.FieldId,
                     f.FieldName,
@@ -143,7 +138,7 @@ public class CreateVenueCommandHandler : ICommandHandler<CreateVenueCommand, Cre
                     f.SurfaceType,
                     f.HourlyRate,
                     f.PeakHourSurcharge
-                 )).ToList(),
+                )).ToList(),
                 venue.CreatedAt
             ));
         }

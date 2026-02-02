@@ -8,20 +8,26 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenuesByOwner
     public class GetVenuesByOwnerQueryHandler : IQueryHandler<GetVenuesByOwnerQuery, GetVenuesByOwnerResponse>
     {
         private readonly IVenueRepository _venueRepository;
+        private readonly IWalletRepository _walletRepository;
         private readonly IUserContext _userContext;
 
         public GetVenuesByOwnerQueryHandler(
             IVenueRepository venueRepository,
+            IWalletRepository walletRepository,
             IUserContext userContext)
         {
             _venueRepository = venueRepository;
+            _walletRepository = walletRepository;
             _userContext = userContext;
         }
 
         public async Task<Result<GetVenuesByOwnerResponse>> Handle(GetVenuesByOwnerQuery request, CancellationToken cancellationToken)
         {
             var ownerId = _userContext.UserId;
-            
+
+            var wallet = await _walletRepository.GetByUserIdAsync(ownerId, cancellationToken);
+            var walletBalance = wallet?.Balance ?? 0;
+
             var (venues, total) = await _venueRepository.GetVenuesByOwnerPagedAsync(
                 ownerId,
                 request.Page,
@@ -63,7 +69,7 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenuesByOwner
                     p.PhotoUrl,
                     p.DisplayOrder
                 )).ToList() ?? new List<OwnerVenuePhotoDto>(),
-                v.VenueWallet?.Balance ?? 0,
+                walletBalance,
                 v.CreatedAt,
                 v.UpdatedAt
             )).ToList();
