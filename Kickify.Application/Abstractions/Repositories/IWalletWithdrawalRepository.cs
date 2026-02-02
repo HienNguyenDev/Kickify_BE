@@ -12,4 +12,13 @@ public interface IWalletWithdrawalRepository : IGenericRepository<WalletWithdraw
         int page = 1,
         int pageSize = 20,
         CancellationToken cancellationToken = default);
+
+    Task<(IEnumerable<WalletWithdrawal> Withdrawals, int Total)> GetAllAsync(
+        WithdrawalStatus? status = null,
+        WalletType? walletType = null,
+        int page = 1,
+        int pageSize = 20,
+        CancellationToken cancellationToken = default);
+
+    Task<bool> HasPendingWithdrawalAsync(Guid walletId, CancellationToken cancellationToken = default);
 }

@@ -2,6 +2,7 @@
 using Kickify.Application.Abstractions.Services;
 using Kickify.Application.Features.Wallets.Commands.CreateDeposit;
 using Kickify.Application.Features.Wallets.Commands.ProcessDepositIpn;
+using Kickify.Application.Features.Wallets.Commands.UpdateBankInfo;
 using Kickify.Application.Features.Wallets.Queries.GetAllWalletTransactions;
 using Kickify.Application.Features.Wallets.Queries.GetWalletBalance;
 using Kickify.Application.Features.Wallets.Queries.GetWalletTransactions;
@@ -31,6 +32,16 @@ public class WalletsController : ControllerBase
     {
         var query = new GetWalletBalanceQuery();
         var result = await _mediator.Send(query, cancellationToken);
+        return result.MatchOk();
+    }
+
+    [HttpPut("bank-info")]
+    [Authorize]
+    public async Task<IResult> UpdateBankInfo(
+        [FromBody] UpdateBankInfoCommand command,
+        CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(command, cancellationToken);
         return result.MatchOk();
     }
 
@@ -74,12 +85,12 @@ public class WalletsController : ControllerBase
 
     [HttpPost("deposit")]
     [Authorize]
-    public async Task<IActionResult> CreateDeposit(
+    public async Task<IResult> CreateDeposit(
         [FromBody] CreateDepositCommand command,
         CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(command, cancellationToken);
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(result.Error);
+        return result.MatchCreated(d => $"/api/wallets/transactions");
     }
 
     [HttpGet("ipn")]

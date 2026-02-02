@@ -121,7 +121,7 @@ namespace Kickify.Infrastructure
             services.AddScoped<IMatchPresetRepository, MatchPresetRepository>();
             services.AddScoped<IMatchFeedbackRepository, MatchFeedbackRepository>();
             services.AddScoped<IRoomParticipantRepository, RoomParticipantRepository>();
-            services.AddScoped<IPostLikeRepository, PostLikeRepository>();
+            services.AddScoped<IPostLikeRepository, PostLikeRepository>();  
             services.AddScoped<IChatMessageRepository, ChatMessageRepository>();
             services.AddScoped<ICommentRepository, CommentRepository>();
             services.AddScoped<ICommentLikeRepository, CommentLikeRepository>();
