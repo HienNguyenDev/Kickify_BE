@@ -94,16 +94,15 @@ namespace Kickify.Application.Features.MatchRooms.Commands.KickPlayer
                 // 9. Save changes
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                _logger.LogInformation("User {TargetUserId} was kicked from room {RoomId} by host {HostId}. Reason: {Reason}",
-                    request.TargetUserId, request.RoomId, hostId, request.Reason ?? "No reason provided");
+                _logger.LogInformation("User {TargetUserId} was kicked from room {RoomId} by host {HostId}",
+                    request.TargetUserId, request.RoomId, hostId);
 
                 // 10. Send real-time notifications
-                var reason = request.Reason ?? "Removed by host";
                 await _matchRoomHubService.NotifyUserKickedAsync(
                     request.RoomId,
                     request.TargetUserId,
                     kickedUserName,
-                    reason,
+                    "Removed by host",
                     room.FilledSlots,
                     room.TotalSlots,
                     cancellationToken);
