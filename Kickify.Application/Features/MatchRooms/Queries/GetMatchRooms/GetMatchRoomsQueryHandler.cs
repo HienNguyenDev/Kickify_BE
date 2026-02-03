@@ -30,6 +30,7 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRooms
 
                 return new MatchRoomItemDto(
                     r.RoomId,
+                    r.RoomName,
                     r.HostId,
                     r.Host.FullName ?? "Unknown",
                     r.Host.AvatarUrl,
