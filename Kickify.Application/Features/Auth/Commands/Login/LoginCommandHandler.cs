@@ -71,6 +71,7 @@ namespace Kickify.Application.Features.Auth.Commands.Login
                 Email = user.Email,
                 FullName = user.FullName,
                 Role = user.Role.ToString(),
+                AvatarUrl = user.AvatarUrl,
                 IsEmailVerified = user.IsEmailVerified,
                 IsActive = user.IsActive,
                 AccessToken = token,

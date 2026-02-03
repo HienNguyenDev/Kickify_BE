@@ -9,21 +9,20 @@ using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace Kickify.Application.Features.Auth.Commands.Login
 {
-    public class LoginWithFirebase : ICommandHandler<LoginWithFirebaseCommand, LoginWithFirebaseCommandResponse>
+    public class LoginWithFirebaseForVenueOwner : ICommandHandler<LoginWithFirebaseForVenueOwnerCommand, LoginWithFirebaseForVenueOwnerCommandResponse>
     {
         private readonly IJwtProvider _jwtProvider;
         private readonly IUserRepository _userRepository;
         private readonly IRefreshTokenRepository _refreshTokenRepository;
         private readonly IWalletRepository _walletRepository;
         private readonly IUnitOfWork _unitOfWork;
-        public LoginWithFirebase(IJwtProvider jwtProvider, IUserRepository userRepository, IRefreshTokenRepository refreshTokenRepository, IWalletRepository walletRepository, IUnitOfWork unitOfWork)
+        public LoginWithFirebaseForVenueOwner(IJwtProvider jwtProvider, IUserRepository userRepository, IRefreshTokenRepository refreshTokenRepository, IWalletRepository walletRepository, IUnitOfWork unitOfWork)
         {
             _jwtProvider = jwtProvider;
             _userRepository = userRepository;
@@ -32,7 +31,7 @@ namespace Kickify.Application.Features.Auth.Commands.Login
             _unitOfWork = unitOfWork;
         }
 
-        public async Task<Result<LoginWithFirebaseCommandResponse>> Handle(LoginWithFirebaseCommand command, CancellationToken cancellationToken)
+        public async Task<Result<LoginWithFirebaseForVenueOwnerCommandResponse>> Handle(LoginWithFirebaseForVenueOwnerCommand command, CancellationToken cancellationToken)
         {
             var userRecord = await FirebaseAuth.DefaultInstance.GetUserAsync(command.Uid, cancellationToken);
 
@@ -48,7 +47,7 @@ namespace Kickify.Application.Features.Auth.Commands.Login
                     UserId = Guid.NewGuid(),
                     Email = email,
                     FullName = name,
-                    Role = UserRole.Player,
+                    Role = UserRole.VenueOwner,
                     CreatedAt = DateTime.UtcNow,
                     IdentityId = identityId,
                     IsEmailVerified = true
@@ -59,7 +58,7 @@ namespace Kickify.Application.Features.Auth.Commands.Login
                 {
                     WalletId = Guid.NewGuid(),
                     UserId = user.UserId,
-                    WalletType = WalletType.Player,
+                    WalletType = WalletType.VenueOwner,
                     Balance = 0,
                 };
                 await _walletRepository.AddAsync(wallet);
@@ -83,7 +82,7 @@ namespace Kickify.Application.Features.Auth.Commands.Login
             await _refreshTokenRepository.AddAsync(refreshToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            var response = new LoginWithFirebaseCommandResponse
+            var response = new LoginWithFirebaseForVenueOwnerCommandResponse
             {
                 AccessToken = accessToken,
                 RefreshToken = refreshToken.Token,
@@ -100,12 +99,12 @@ namespace Kickify.Application.Features.Auth.Commands.Login
         }
     }
 
-    public class LoginWithFirebaseCommand() : ICommand<LoginWithFirebaseCommandResponse>
+    public class LoginWithFirebaseForVenueOwnerCommand() : ICommand<LoginWithFirebaseForVenueOwnerCommandResponse>
     {
         public string Uid { get; set; } = string.Empty;
     }
 
-    public sealed class LoginWithFirebaseCommandResponse
+    public sealed class LoginWithFirebaseForVenueOwnerCommandResponse
     {
         public Guid UserId { get; set; }
         public string? Email { get; set; }
@@ -119,9 +118,9 @@ namespace Kickify.Application.Features.Auth.Commands.Login
         public bool IsActive { get; set; }
     }
 
-    public class LoginWithFirebaseCommandValidator : AbstractValidator<LoginWithFirebaseCommand>
+    public class LoginWithFirebaseForVenueOwnerCommandValidator : AbstractValidator<LoginWithFirebaseForVenueOwnerCommand>
     {
-        public LoginWithFirebaseCommandValidator()
+        public LoginWithFirebaseForVenueOwnerCommandValidator()
         {
             RuleFor(x => x.Uid).NotEmpty();
         }
