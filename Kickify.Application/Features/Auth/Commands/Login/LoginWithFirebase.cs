@@ -21,12 +21,14 @@ namespace Kickify.Application.Features.Auth.Commands.Login
         private readonly IJwtProvider _jwtProvider;
         private readonly IUserRepository _userRepository;
         private readonly IRefreshTokenRepository _refreshTokenRepository;
+        private readonly IWalletRepository _walletRepository;
         private readonly IUnitOfWork _unitOfWork;
-        public LoginWithFirebase(IJwtProvider jwtProvider, IUserRepository userRepository, IRefreshTokenRepository refreshTokenRepository, IUnitOfWork unitOfWork)
+        public LoginWithFirebase(IJwtProvider jwtProvider, IUserRepository userRepository, IRefreshTokenRepository refreshTokenRepository, IWalletRepository walletRepository, IUnitOfWork unitOfWork)
         {
             _jwtProvider = jwtProvider;
             _userRepository = userRepository;
             _refreshTokenRepository = refreshTokenRepository;
+            _walletRepository = walletRepository;
             _unitOfWork = unitOfWork;
         }
 
@@ -52,6 +54,15 @@ namespace Kickify.Application.Features.Auth.Commands.Login
                     IsEmailVerified = true
                 };
                 await _userRepository.AddAsync(user);
+
+                var wallet = new Wallet
+                {
+                    WalletId = Guid.NewGuid(),
+                    UserId = user.UserId,
+                    WalletType = WalletType.Player,
+                    Balance = 0,
+                };
+                await _walletRepository.AddAsync(wallet);
             }
 
             var accessToken = _jwtProvider.GenerateBackendJwt(user);
