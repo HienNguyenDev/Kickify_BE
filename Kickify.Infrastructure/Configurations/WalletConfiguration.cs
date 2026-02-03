@@ -21,7 +21,6 @@ public class WalletConfiguration : IEntityTypeConfiguration<Wallet>
         builder.Property(w => w.BankAccountNumber).HasMaxLength(50);
         builder.Property(w => w.BankName).HasMaxLength(100);
         builder.Property(w => w.AccountHolderName).HasMaxLength(100);
-        builder.Property(w => w.IsBankVerified).HasDefaultValue(false);
 
         builder.HasIndex(w => w.UserId).IsUnique();
 

@@ -12,7 +12,6 @@ public class Wallet : BaseEntity
     public string? BankAccountNumber { get; set; }
     public string? BankName { get; set; }
     public string? AccountHolderName { get; set; }
-    public bool IsBankVerified { get; set; } = false;
 
     public User User { get; set; } = null!;
     public ICollection<WalletTransaction> Transactions { get; set; } = new List<WalletTransaction>();

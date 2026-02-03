@@ -44,8 +44,7 @@ public class GetWalletBalanceQueryHandler : IQueryHandler<GetWalletBalanceQuery,
             Balance = wallet.Balance,
             BankAccountNumber = wallet.BankAccountNumber,
             BankName = wallet.BankName,
-            AccountHolderName = wallet.AccountHolderName,
-            IsBankVerified = wallet.IsBankVerified
+            AccountHolderName = wallet.AccountHolderName
         });
     }
 }

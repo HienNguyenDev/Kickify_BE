@@ -9,5 +9,4 @@ public class GetWalletBalanceQueryResponse
     public string? BankAccountNumber { get; set; }
     public string? BankName { get; set; }
     public string? AccountHolderName { get; set; }
-    public bool IsBankVerified { get; set; }
 }
