@@ -10,6 +10,7 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRooms
 
     public record MatchRoomItemDto(
         Guid RoomId,
+        string? RoomName,
         Guid HostId,
         string HostName,
         string? HostAvatar,
