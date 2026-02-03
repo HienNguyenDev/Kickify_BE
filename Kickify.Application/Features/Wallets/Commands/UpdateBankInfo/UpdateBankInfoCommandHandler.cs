@@ -36,7 +36,6 @@ public class UpdateBankInfoCommandHandler : ICommandHandler<UpdateBankInfoComman
         wallet.BankAccountNumber = request.BankAccountNumber;
         wallet.BankName = request.BankName;
         wallet.AccountHolderName = request.AccountHolderName;
-        wallet.IsBankVerified = false;
 
         _walletRepository.Update(wallet);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -47,7 +46,6 @@ public class UpdateBankInfoCommandHandler : ICommandHandler<UpdateBankInfoComman
             BankAccountNumber = wallet.BankAccountNumber,
             BankName = wallet.BankName,
             AccountHolderName = wallet.AccountHolderName,
-            IsBankVerified = wallet.IsBankVerified,
             Message = "Bank information updated successfully"
         });
     }
