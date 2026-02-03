@@ -11,9 +11,6 @@ namespace Kickify.Application.Features.MatchRooms.Commands.KickPlayer
 
             RuleFor(x => x.TargetUserId)
                 .NotEmpty().WithMessage("Target user ID is required");
-
-            RuleFor(x => x.Reason)
-                .MaximumLength(500).WithMessage("Reason cannot exceed 500 characters");
         }
     }
 }

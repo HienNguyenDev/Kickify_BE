@@ -153,18 +153,15 @@ namespace Kickify.Api.Controllers
         /// </summary>
         /// <param name="roomId">Room ID</param>
         /// <param name="targetUserId">User ID to kick</param>
-        /// <param name="reason">Optional reason for kicking</param>
         [HttpDelete("{roomId}/participants/{targetUserId}")]
         public async Task<IResult> KickPlayer(
             Guid roomId,
             Guid targetUserId,
-            [FromQuery] string? reason,
             CancellationToken cancellationToken)
         {
             var command = new KickPlayerCommand(
                 roomId,
-                targetUserId,
-                reason
+                targetUserId
             );
 
             var result = await _sender.Send(command, cancellationToken);
