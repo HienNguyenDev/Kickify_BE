@@ -58,6 +58,7 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById
         string TeamAssignment,
         string? Position,
         bool DepositPaid,
+        bool IsCaptain,
         DateTime JoinDate
     );
 }

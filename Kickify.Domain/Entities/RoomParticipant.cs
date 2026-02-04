@@ -11,6 +11,7 @@ public class RoomParticipant
     public string? Position { get; set; } // ST, CM, CB, etc.
     public DateTime JoinDate { get; set; }
     public DateTime? UpdatedAt { get; set; } // Track when participant updates their team/position
+    public bool IsCaptain { get; set; } = false; // Team captain flag
     public bool DepositPaid { get; set; } = false;
     public decimal? DepositAmount { get; set; }
     public bool CheckedIn { get; set; } = false;

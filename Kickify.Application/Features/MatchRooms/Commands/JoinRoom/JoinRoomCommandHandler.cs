@@ -97,6 +97,8 @@ namespace Kickify.Application.Features.MatchRooms.Commands.JoinRoom
             try
             {
                 // Add participant
+                // RULE: New participants join as Unassigned with IsCaptain = false (default)
+                // They will become captain when they switch to Team A/B if that team has no captain
                 var participant = new RoomParticipant
                 {
                     ParticipantId = Guid.NewGuid(),
@@ -105,7 +107,8 @@ namespace Kickify.Application.Features.MatchRooms.Commands.JoinRoom
                     TeamAssignment = TeamAssignment.Unassigned,
                     JoinDate = DateTime.UtcNow,
                     DepositPaid = false,
-                    DepositAmount = room.DepositPerPerson
+                    DepositAmount = room.DepositPerPerson,
+                    IsCaptain = false // Explicitly set - Unassigned players cannot be captains
                 };
 
                 // Add participant via repository

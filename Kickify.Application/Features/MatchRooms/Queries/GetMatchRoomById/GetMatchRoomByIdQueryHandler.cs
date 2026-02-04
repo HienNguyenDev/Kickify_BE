@@ -63,6 +63,7 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById
                 p.TeamAssignment.ToString(),
                 p.Position,
                 p.DepositPaid,
+                p.IsCaptain,
                 p.JoinDate
             )).ToList();
 

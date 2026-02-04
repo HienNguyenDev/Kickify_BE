@@ -78,6 +78,20 @@ namespace Kickify.Application.Features.MatchRooms.Commands.KickPlayer
 
             try
             {
+                // CAPTAIN LOGIC: Handle succession before removal
+                if (targetParticipant.IsCaptain && targetParticipant.TeamAssignment != TeamAssignment.Unassigned)
+                {
+                    // Find heir for the team (exclude kicked user)
+                    var newCaptainId = await _roomParticipantRepository.AssignNewCaptainAsync(
+                        request.RoomId, targetParticipant.TeamAssignment, request.TargetUserId, cancellationToken);
+                    
+                    if (newCaptainId.HasValue)
+                    {
+                        _logger.LogInformation("Captain succession: User {OldCaptain} kicked from team {Team}, new captain is {NewCaptain}",
+                            request.TargetUserId, targetParticipant.TeamAssignment, newCaptainId.Value);
+                    }
+                }
+
                 // 6. Remove the participant
                 _roomParticipantRepository.Remove(targetParticipant);
 
