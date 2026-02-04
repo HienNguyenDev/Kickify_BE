@@ -51,6 +51,30 @@ namespace Kickify.Application.Features.MatchRooms.Commands.JoinRoom
                 return Result.Failure<JoinRoomResponse>(UserErrors.NotFound(userId));
             }
 
+            // Check if user is already in this room
+            var existingParticipant = await _roomParticipantRepository.GetParticipantByRoomAndUserAsync(request.RoomId, userId, cancellationToken);
+            if (existingParticipant != null)
+            {
+                // User already in room, get room info and return success
+                var existingRoom = await _matchRoomRepository.GetByIdAsync(request.RoomId);
+                if (existingRoom == null)
+                {
+                    return Result.Failure<JoinRoomResponse>(MatchRoomErrors.NotFound(request.RoomId));
+                }
+
+                _logger.LogInformation("User {UserId} is already in room {RoomId}. Returning existing participant info.",
+                    userId, request.RoomId);
+
+                return Result.Success(new JoinRoomResponse(
+                    existingParticipant.ParticipantId,
+                    existingRoom.RoomId,
+                    userId,
+                    existingRoom.FilledSlots,
+                    existingRoom.TotalSlots,
+                    existingParticipant.JoinDate
+                ));
+            }
+
             // Get room with participants (WITH TRACKING for FilledSlots update)
             var room = await _matchRoomRepository.GetRoomWithParticipantsForUpdateAsync(request.RoomId, cancellationToken);
             if (room == null)
