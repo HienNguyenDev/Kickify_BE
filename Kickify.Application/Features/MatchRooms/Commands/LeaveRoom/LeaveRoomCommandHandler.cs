@@ -4,6 +4,7 @@ using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Application.Abstractions.Services;
 using Kickify.Domain.Common;
+using Kickify.Domain.Enums;
 using Kickify.Domain.Errors;
 using Microsoft.Extensions.Logging;
 
@@ -64,6 +65,20 @@ namespace Kickify.Application.Features.MatchRooms.Commands.LeaveRoom
 
             try
             {
+                // CAPTAIN LOGIC: Handle succession before removal
+                if (participant.IsCaptain && participant.TeamAssignment != TeamAssignment.Unassigned)
+                {
+                    // Find heir for the team (exclude current user since they're leaving)
+                    var newCaptainId = await _roomParticipantRepository.AssignNewCaptainAsync(
+                        request.RoomId, participant.TeamAssignment, userId, cancellationToken);
+                    
+                    if (newCaptainId.HasValue)
+                    {
+                        _logger.LogInformation("Captain succession: User {OldCaptain} leaving team {Team}, new captain is {NewCaptain}",
+                            userId, participant.TeamAssignment, newCaptainId.Value);
+                    }
+                }
+
                 // RULE #5: Check if user is host
                 bool isHost = room.HostId == userId;
                 bool isRoomDeleted = false;

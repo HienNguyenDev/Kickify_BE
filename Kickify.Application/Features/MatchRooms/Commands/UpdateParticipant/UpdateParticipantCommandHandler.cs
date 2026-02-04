@@ -49,8 +49,8 @@ namespace Kickify.Application.Features.MatchRooms.Commands.UpdateParticipant
                 return Result.Failure<UpdateParticipantResponse>(UserErrors.NotFound(userId));
             }
 
-            // Get room with participants
-            var room = await _matchRoomRepository.GetRoomWithParticipantsAsync(request.RoomId, cancellationToken);
+            // Get room with participants (WITH TRACKING for update)
+            var room = await _matchRoomRepository.GetRoomWithParticipantsForUpdateAsync(request.RoomId, cancellationToken);
             if (room == null)
             {
                 return Result.Failure<UpdateParticipantResponse>(MatchRoomErrors.NotFound(request.RoomId));
@@ -65,16 +65,65 @@ namespace Kickify.Application.Features.MatchRooms.Commands.UpdateParticipant
 
             try
             {
+                // Capture old state for captain succession logic
+                var wasCaptain = participant.IsCaptain;
+                var oldTeam = participant.TeamAssignment;
+                TeamAssignment newTeam = oldTeam;
+
                 // Update team assignment if provided
                 if (!string.IsNullOrEmpty(request.TeamAssignment))
                 {
-                    if (Enum.TryParse<TeamAssignment>(request.TeamAssignment, true, out var teamAssignment))
+                    if (Enum.TryParse<TeamAssignment>(request.TeamAssignment, true, out var parsedTeam))
                     {
-                        participant.TeamAssignment = teamAssignment;
+                        newTeam = parsedTeam;
                     }
                     else
                     {
                         return Result.Failure<UpdateParticipantResponse>(MatchRoomErrors.InvalidTeam(request.TeamAssignment));
+                    }
+                }
+
+                // CAPTAIN LOGIC: Handle team change
+                if (newTeam != oldTeam)
+                {
+                    // Step 1: Handle Old Team Succession (if was captain and leaving a real team)
+                    if (wasCaptain && oldTeam != TeamAssignment.Unassigned)
+                    {
+                        participant.IsCaptain = false;
+                        
+                        // Find heir for old team (exclude current user)
+                        var newCaptainId = await _roomParticipantRepository.AssignNewCaptainAsync(
+                            request.RoomId, oldTeam, userId, cancellationToken);
+                        
+                        if (newCaptainId.HasValue)
+                        {
+                            _logger.LogInformation("Captain succession: User {OldCaptain} left team {Team}, new captain is {NewCaptain}",
+                                userId, oldTeam, newCaptainId.Value);
+                        }
+                    }
+
+                    // Step 2: Update team assignment
+                    participant.TeamAssignment = newTeam;
+
+                    // Step 3: Handle New Team Captain Assignment
+                    if (newTeam != TeamAssignment.Unassigned)
+                    {
+                        // Check if new team has a captain
+                        var hasNewTeamCaptain = await _roomParticipantRepository.HasTeamCaptainAsync(
+                            request.RoomId, newTeam, cancellationToken);
+                        
+                        if (!hasNewTeamCaptain)
+                        {
+                            // No captain in new team - this user becomes captain
+                            participant.IsCaptain = true;
+                            _logger.LogInformation("User {UserId} became captain of team {Team} (first to join)",
+                                userId, newTeam);
+                        }
+                    }
+                    else
+                    {
+                        // Moving to Unassigned - cannot be captain
+                        participant.IsCaptain = false;
                     }
                 }
 
@@ -102,8 +151,8 @@ namespace Kickify.Application.Features.MatchRooms.Commands.UpdateParticipant
                     participant.Position,
                     cancellationToken);
 
-                _logger.LogInformation("Participant {UserId} updated in room {RoomId}. Team: {Team}, Position: {Position}",
-                    userId, request.RoomId, participant.TeamAssignment, participant.Position);
+                _logger.LogInformation("Participant {UserId} updated in room {RoomId}. Team: {Team}, Position: {Position}, IsCaptain: {IsCaptain}",
+                    userId, request.RoomId, participant.TeamAssignment, participant.Position, participant.IsCaptain);
 
                 return Result.Success(new UpdateParticipantResponse(
                     participant.ParticipantId,
