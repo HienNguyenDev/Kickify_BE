@@ -108,7 +108,6 @@ public class MatchRoomHubService : IMatchRoomHubService
         Guid roomId,
         Guid kickedUserId,
         string kickedUserName,
-        string reason,
         int filledSlots,
         int totalSlots,
         CancellationToken cancellationToken = default)
@@ -120,7 +119,6 @@ public class MatchRoomHubService : IMatchRoomHubService
             await _hubContext.Clients.Client(connectionId).SendAsync("YouWereKicked", new
             {
                 RoomId = roomId,
-                Reason = reason,
                 KickedAt = DateTime.UtcNow
             }, cancellationToken);
         }
@@ -133,7 +131,6 @@ public class MatchRoomHubService : IMatchRoomHubService
                 RoomId = roomId,
                 KickedUserId = kickedUserId,
                 KickedUserName = kickedUserName,
-                Reason = reason,
                 FilledSlots = filledSlots,
                 TotalSlots = totalSlots,
                 KickedAt = DateTime.UtcNow

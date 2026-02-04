@@ -57,7 +57,6 @@ public interface IMatchRoomHubService
         Guid roomId,
         Guid kickedUserId,
         string kickedUserName,
-        string reason,
         int filledSlots,
         int totalSlots,
         CancellationToken cancellationToken = default);
