@@ -36,7 +36,7 @@ namespace Kickify.Api.Controllers
             return result.MatchOk();
         }
 
-        [HttpPost("auth/firbase/venue-owner/login")]
+        [HttpPost("auth/firebase/venue-owner/login")]
         public async Task<IResult> LoginVenueOwnerWithFirebase([FromBody] LoginWithFirebaseForVenueOwnerRequest request, CancellationToken cancellationToken)
         {
             var command = new LoginWithFirebaseForVenueOwnerCommand

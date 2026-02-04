@@ -102,7 +102,6 @@ namespace Kickify.Application.Features.MatchRooms.Commands.KickPlayer
                     request.RoomId,
                     request.TargetUserId,
                     kickedUserName,
-                    "Removed by host",
                     room.FilledSlots,
                     room.TotalSlots,
                     cancellationToken);
