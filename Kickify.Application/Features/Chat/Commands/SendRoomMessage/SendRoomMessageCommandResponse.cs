@@ -10,6 +10,7 @@ public class SendRoomMessageCommandResponse
     public Guid SenderId { get; set; }
     public string SenderFullName { get; set; } = string.Empty;
     public string? SenderAvatarUrl { get; set; }
+    public TeamAssignment SenderTeam { get; set; }
     public string MessageText { get; set; } = string.Empty;
     public DateTime SentAt { get; set; }
 }

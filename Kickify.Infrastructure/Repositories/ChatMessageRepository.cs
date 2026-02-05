@@ -165,6 +165,7 @@ public class ChatMessageRepository : GenericRepository<ChatMessage>, IChatMessag
     public async Task<(IEnumerable<ChatMessage> Messages, int Total)> GetRoomMessagesAsync(
         Guid roomId,
         RoomChatChannel channel,
+        DateTime? visibleFromDate = null,
         int page = 1,
         int pageSize = 50,
         CancellationToken cancellationToken = default)
@@ -174,6 +175,12 @@ public class ChatMessageRepository : GenericRepository<ChatMessage>, IChatMessag
             .Where(m => m.ConversationType == ConversationType.Room &&
                         m.RoomId == roomId &&
                         m.RoomChatChannel == channel);
+
+        // Filter messages by visibleFromDate for team channels
+        if (visibleFromDate.HasValue)
+        {
+            query = query.Where(m => m.SentAt >= visibleFromDate.Value);
+        }
 
         var total = await query.CountAsync(cancellationToken);
 

@@ -60,6 +60,9 @@ public class SendRoomMessageCommandHandler : ICommandHandler<SendRoomMessageComm
         }
 
         // Check if user can send to this channel
+        // General channel: Everyone can send (Unassigned, TeamA, TeamB)
+        // TeamA channel: Only TeamA members
+        // TeamB channel: Only TeamB members
         if (request.Channel == RoomChatChannel.TeamA && participant.TeamAssignment != TeamAssignment.A)
         {
             return Result.Failure<SendRoomMessageCommandResponse>(ChatErrors.CannotSendToTeamChannel);
@@ -68,6 +71,7 @@ public class SendRoomMessageCommandHandler : ICommandHandler<SendRoomMessageComm
         {
             return Result.Failure<SendRoomMessageCommandResponse>(ChatErrors.CannotSendToTeamChannel);
         }
+        // General channel: No restriction, all participants can send
 
         // Create message
         var message = new ChatMessage
@@ -93,6 +97,7 @@ public class SendRoomMessageCommandHandler : ICommandHandler<SendRoomMessageComm
             SenderId = message.SenderId,
             SenderFullName = sender.FullName ?? string.Empty,
             SenderAvatarUrl = sender.AvatarUrl,
+            SenderTeam = participant.TeamAssignment,
             MessageText = message.MessageText,
             SentAt = message.SentAt
         };

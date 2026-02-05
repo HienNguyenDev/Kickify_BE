@@ -44,14 +44,33 @@ public class GetRoomMessagesQueryHandler : IQueryHandler<GetRoomMessagesQuery, G
             return Result.Failure<GetRoomMessagesQueryResponse>(ChatErrors.NotRoomParticipant);
         }
 
-        // Check if user can access this channel
-        if (request.Channel == RoomChatChannel.TeamA && participant.TeamAssignment != TeamAssignment.A)
+        // Determine visibleFromDate based on channel
+        DateTime? visibleFromDate = null;
+
+        if (request.Channel == RoomChatChannel.General)
         {
-            return Result.Failure<GetRoomMessagesQueryResponse>(ChatErrors.CannotAccessTeamChannel);
+            // General channel: Everyone can read all messages, no date restriction
+            visibleFromDate = null;
         }
-        if (request.Channel == RoomChatChannel.TeamB && participant.TeamAssignment != TeamAssignment.B)
+        else if (request.Channel == RoomChatChannel.TeamA)
         {
-            return Result.Failure<GetRoomMessagesQueryResponse>(ChatErrors.CannotAccessTeamChannel);
+            // TeamA channel: Only TeamA members can access
+            if (participant.TeamAssignment != TeamAssignment.A)
+            {
+                return Result.Failure<GetRoomMessagesQueryResponse>(ChatErrors.CannotAccessTeamChannel);
+            }
+            // Can only see messages from when they joined/switched to TeamA
+            visibleFromDate = participant.UpdatedAt ?? participant.JoinDate;
+        }
+        else if (request.Channel == RoomChatChannel.TeamB)
+        {
+            // TeamB channel: Only TeamB members can access
+            if (participant.TeamAssignment != TeamAssignment.B)
+            {
+                return Result.Failure<GetRoomMessagesQueryResponse>(ChatErrors.CannotAccessTeamChannel);
+            }
+            // Can only see messages from when they joined/switched to TeamB
+            visibleFromDate = participant.UpdatedAt ?? participant.JoinDate;
         }
 
         // Get room participants for team info lookup
@@ -59,10 +78,11 @@ public class GetRoomMessagesQueryHandler : IQueryHandler<GetRoomMessagesQuery, G
         var participantsDict = roomWithParticipants?.RoomParticipants.ToDictionary(p => p.UserId, p => p.TeamAssignment) 
                                ?? new Dictionary<Guid, TeamAssignment>();
 
-        // Get messages
+        // Get messages with visibleFromDate filter
         var (messages, total) = await _chatMessageRepository.GetRoomMessagesAsync(
             request.RoomId,
             request.Channel,
+            visibleFromDate,
             request.Page,
             request.PageSize,
             cancellationToken);
