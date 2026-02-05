@@ -23,6 +23,21 @@ namespace Kickify.Infrastructure.Repositories
                 .ToListAsync(cancellationToken);
         }
 
+        public async Task<Dictionary<Guid, List<VenuePhoto>>> GetPhotosByVenueIdsAsync(
+            IEnumerable<Guid> venueIds,
+            CancellationToken cancellationToken = default)
+        {
+            var photos = await _dbSet
+                .AsNoTracking()
+                .Where(vp => venueIds.Contains(vp.VenueId))
+                .OrderBy(vp => vp.DisplayOrder)
+                .ToListAsync(cancellationToken);
+
+            return photos
+                .GroupBy(vp => vp.VenueId)
+                .ToDictionary(g => g.Key, g => g.ToList());
+        }
+
         public async Task<VenuePhoto?> GetPhotoForUpdateAsync(
             Guid photoId,
             CancellationToken cancellationToken = default)
