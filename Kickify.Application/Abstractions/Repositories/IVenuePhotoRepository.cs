@@ -13,6 +13,13 @@ namespace Kickify.Application.Abstractions.Repositories
             CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Get all photos for multiple venues in a single query
+        /// </summary>
+        Task<Dictionary<Guid, List<VenuePhoto>>> GetPhotosByVenueIdsAsync(
+            IEnumerable<Guid> venueIds,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// Get photo by ID with tracking for update
         /// </summary>
         Task<VenuePhoto?> GetPhotoForUpdateAsync(
