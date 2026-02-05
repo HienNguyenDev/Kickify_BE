@@ -18,6 +18,7 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRooms
         string? FieldName,
         string? VenueName,
         string? VenueAddress,
+        List<VenuePhotoDto> VenuePhotos,
         DateTime MatchDate,
         TimeSpan StartTime,
         TimeSpan EndTime,
@@ -28,5 +29,11 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRooms
         decimal? DepositPerPerson,
         string Status,
         DateTime CreatedAt
+    );
+
+    public record VenuePhotoDto(
+        Guid PhotoId,
+        string PhotoUrl,
+        int DisplayOrder
     );
 }
