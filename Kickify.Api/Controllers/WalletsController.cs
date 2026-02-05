@@ -4,6 +4,7 @@ using Kickify.Application.Features.Wallets.Commands.CreateDeposit;
 using Kickify.Application.Features.Wallets.Commands.ProcessDepositIpn;
 using Kickify.Application.Features.Wallets.Commands.UpdateBankInfo;
 using Kickify.Application.Features.Wallets.Queries.GetAllWalletTransactions;
+using Kickify.Application.Features.Wallets.Queries.GetMyBankInfo;
 using Kickify.Application.Features.Wallets.Queries.GetWalletBalance;
 using Kickify.Application.Features.Wallets.Queries.GetWalletTransactions;
 using Kickify.Domain.Enums;
@@ -31,6 +32,15 @@ public class WalletsController : ControllerBase
     public async Task<IResult> GetWalletBalance(CancellationToken cancellationToken)
     {
         var query = new GetWalletBalanceQuery();
+        var result = await _mediator.Send(query, cancellationToken);
+        return result.MatchOk();
+    }
+
+    [HttpGet("bank-info")]
+    [Authorize]
+    public async Task<IResult> GetMyBankInfo(CancellationToken cancellationToken)
+    {
+        var query = new GetMyBankInfoQuery();
         var result = await _mediator.Send(query, cancellationToken);
         return result.MatchOk();
     }
