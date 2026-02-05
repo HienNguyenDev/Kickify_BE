@@ -44,6 +44,7 @@ public interface IChatMessageRepository : IGenericRepository<ChatMessage>
     Task<(IEnumerable<ChatMessage> Messages, int Total)> GetRoomMessagesAsync(
         Guid roomId,
         RoomChatChannel channel,
+        DateTime? visibleFromDate = null,
         int page = 1,
         int pageSize = 50,
         CancellationToken cancellationToken = default);
