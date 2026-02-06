@@ -1,6 +1,8 @@
+using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
+using Kickify.Application.Abstractions.Services;
 using Kickify.Domain.Common;
 using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
@@ -19,6 +21,9 @@ public class ProcessPaymentCommandHandler : ICommandHandler<ProcessPaymentComman
     private readonly IVenueRepository _venueRepository;
     private readonly IWalletRepository _walletRepository;
     private readonly IWalletTransactionRepository _walletTransactionRepository;
+    private readonly IUserRepository _userRepository;
+    private readonly IMatchRoomHubService _matchRoomHubService;
+    private readonly IUserContext _userContext;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<ProcessPaymentCommandHandler> _logger;
 
@@ -30,6 +35,9 @@ public class ProcessPaymentCommandHandler : ICommandHandler<ProcessPaymentComman
         IVenueRepository venueRepository,
         IWalletRepository walletRepository,
         IWalletTransactionRepository walletTransactionRepository,
+        IUserRepository userRepository,
+        IMatchRoomHubService matchRoomHubService,
+        IUserContext userContext,
         IUnitOfWork unitOfWork,
         ILogger<ProcessPaymentCommandHandler> logger)
     {
@@ -40,12 +48,24 @@ public class ProcessPaymentCommandHandler : ICommandHandler<ProcessPaymentComman
         _venueRepository = venueRepository;
         _walletRepository = walletRepository;
         _walletTransactionRepository = walletTransactionRepository;
+        _userRepository = userRepository;
+        _matchRoomHubService = matchRoomHubService;
+        _userContext = userContext;
         _unitOfWork = unitOfWork;
         _logger = logger;
     }
 
     public async Task<Result<ProcessPaymentResponse>> Handle(ProcessPaymentCommand request, CancellationToken cancellationToken)
     {
+        var currentUserId = _userContext.UserId;
+
+        // Get current user info for notifications
+        var currentUser = await _userRepository.GetByIdAsync(currentUserId);
+        if (currentUser == null)
+        {
+            return Result.Failure<ProcessPaymentResponse>(UserErrors.NotFound(currentUserId));
+        }
+
         // Get room with participants
         var room = await _matchRoomRepository.GetRoomWithParticipantsAsync(request.RoomId, cancellationToken);
         if (room == null)
@@ -54,7 +74,7 @@ public class ProcessPaymentCommandHandler : ICommandHandler<ProcessPaymentComman
         }
 
         // Check if user is participant
-        var participant = room.RoomParticipants.FirstOrDefault(p => p.UserId == request.UserId);
+        var participant = room.RoomParticipants.FirstOrDefault(p => p.UserId == currentUserId);
         if (participant == null)
         {
             return Result.Failure<ProcessPaymentResponse>(BookingErrors.ParticipantNotFound);
@@ -66,10 +86,44 @@ public class ProcessPaymentCommandHandler : ICommandHandler<ProcessPaymentComman
             return Result.Failure<ProcessPaymentResponse>(BookingErrors.AlreadyPaid);
         }
 
-        // Mark as paid and update deposit amount
+        var depositAmount = room.DepositPerPerson ?? 0;
+
+        // Get player's wallet and validate balance
+        var playerWallet = await _walletRepository.GetByUserIdAsync(currentUserId, cancellationToken);
+        if (playerWallet == null)
+        {
+            return Result.Failure<ProcessPaymentResponse>(WalletErrors.WalletNotFound);
+        }
+
+        if (playerWallet.Balance < depositAmount)
+        {
+            return Result.Failure<ProcessPaymentResponse>(WalletErrors.InsufficientBalance);
+        }
+
+        // Deduct from player's wallet
+        playerWallet.Balance -= depositAmount;
+        _walletRepository.Update(playerWallet);
+
+        // Create transaction record for player payment
+        var playerTransaction = new WalletTransaction
+        {
+            TransactionId = Guid.NewGuid(),
+            WalletId = playerWallet.WalletId,
+            TransactionType = TransactionType.BookingPayment,
+            Amount = -depositAmount,
+            BalanceAfter = playerWallet.Balance,
+            ReferenceId = room.RoomId,
+            Description = $"Payment for room {room.RoomName ?? room.RoomId.ToString()}",
+            CreatedAt = DateTime.UtcNow
+        };
+        await _walletTransactionRepository.AddAsync(playerTransaction);
+
+        // Mark as paid, checked in, and update deposit amount
         participant.DepositPaid = true;
-        participant.DepositAmount = room.DepositPerPerson;
-        room.TotalDepositCollected += room.DepositPerPerson ?? 0;
+        participant.CheckedIn = true;
+        participant.CheckInTime = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+        participant.DepositAmount = depositAmount;
+        room.TotalDepositCollected += depositAmount;
 
         _roomParticipantRepository.Update(participant);
         _matchRoomRepository.Update(room);
@@ -138,6 +192,24 @@ public class ProcessPaymentCommandHandler : ICommandHandler<ProcessPaymentComman
                 _logger.LogInformation("Booking {BookingId} created successfully for room {RoomId}",
                     booking.BookingId, request.RoomId);
 
+                // Notify all participants about payment
+                await _matchRoomHubService.NotifyParticipantPaidAsync(
+                    request.RoomId,
+                    currentUserId,
+                    currentUser.FullName ?? "Unknown",
+                    depositAmount,
+                    room.TotalDepositCollected,
+                    cancellationToken);
+
+                // Notify all participants that booking is confirmed
+                await _matchRoomHubService.NotifyBookingCreatedAsync(
+                    request.RoomId,
+                    booking.BookingId,
+                    booking.BookingDate,
+                    booking.StartTime,
+                    booking.EndTime,
+                    cancellationToken);
+
                 return Result.Success(new ProcessPaymentResponse(
                     true,
                     "Payment processed successfully. Booking created.",
@@ -167,7 +239,16 @@ public class ProcessPaymentCommandHandler : ICommandHandler<ProcessPaymentComman
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("User {UserId} paid for room {RoomId}. Waiting for other participants...",
-                request.UserId, request.RoomId);
+                currentUserId, request.RoomId);
+
+            // Notify all participants about this payment
+            await _matchRoomHubService.NotifyParticipantPaidAsync(
+                request.RoomId,
+                currentUserId,
+                currentUser.FullName ?? "Unknown",
+                depositAmount,
+                room.TotalDepositCollected,
+                cancellationToken);
 
             return Result.Success(new ProcessPaymentResponse(
                 false,

@@ -98,7 +98,11 @@ namespace Kickify.Infrastructure.Repositories
 
             if (room == null) return false;
 
-            return room.RoomParticipants.All(p => p.DepositPaid);
+            // Check if room is full (FilledSlots == TotalSlots) AND all participants have paid
+            var isRoomFull = room.FilledSlots >= room.TotalSlots;
+            var allParticipantsPaid = room.RoomParticipants.All(p => p.DepositPaid);
+
+            return isRoomFull && allParticipantsPaid;
         }
 
         public async Task<decimal> GetTotalPaidAmountAsync(Guid roomId, CancellationToken cancellationToken = default)

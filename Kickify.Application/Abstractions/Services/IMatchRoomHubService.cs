@@ -70,4 +70,26 @@ public interface IMatchRoomHubService
     /// Remove a user's connection from a room group
     /// </summary>
     Task RemoveFromRoomGroupAsync(string connectionId, Guid roomId);
+
+    /// <summary>
+    /// Notify all participants in a room that a user has paid their deposit
+    /// </summary>
+    Task NotifyParticipantPaidAsync(
+        Guid roomId,
+        Guid userId,
+        string userName,
+        decimal amountPaid,
+        decimal totalDepositCollected,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Notify all participants that the booking has been created and confirmed
+    /// </summary>
+    Task NotifyBookingCreatedAsync(
+        Guid roomId,
+        Guid bookingId,
+        DateTime matchDate,
+        TimeSpan startTime,
+        TimeSpan endTime,
+        CancellationToken cancellationToken = default);
 }
