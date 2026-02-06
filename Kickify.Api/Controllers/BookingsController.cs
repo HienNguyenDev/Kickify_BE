@@ -7,6 +7,7 @@ using Kickify.Application.Features.Bookings.Queries.GetAllBookings;
 using Kickify.Application.Features.Bookings.Queries.GetBookingById;
 using Kickify.Application.Features.Bookings.Queries.GetBookingPreview;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Kickify.Api.Controllers
@@ -79,15 +80,16 @@ namespace Kickify.Api.Controllers
 
         /// <summary>
         /// Process payment for a room participant (with race condition handling)
+        /// Uses current authenticated user from token
         /// </summary>
         [HttpPost("process-payment")]
+        [Authorize]
         public async Task<IResult> ProcessPayment(
             [FromBody] ProcessPaymentRequest request,
             CancellationToken cancellationToken)
         {
             var command = new ProcessPaymentCommand(
-                request.RoomId,
-                request.UserId
+                request.RoomId
             );
 
             var result = await _sender.Send(command, cancellationToken);
