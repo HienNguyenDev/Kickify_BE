@@ -146,4 +146,47 @@ public class MatchRoomHubService : IMatchRoomHubService
     {
         await _hubContext.Groups.RemoveFromGroupAsync(connectionId, $"room_{roomId}");
     }
+
+    public async Task NotifyParticipantPaidAsync(
+        Guid roomId,
+        Guid userId,
+        string userName,
+        decimal amountPaid,
+        decimal totalDepositCollected,
+        CancellationToken cancellationToken = default)
+    {
+        await _hubContext.Clients
+            .Group($"room_{roomId}")
+            .SendAsync("ParticipantPaid", new
+            {
+                RoomId = roomId,
+                UserId = userId,
+                UserName = userName,
+                AmountPaid = amountPaid,
+                TotalDepositCollected = totalDepositCollected,
+                PaidAt = DateTime.UtcNow
+            }, cancellationToken);
+    }
+
+    public async Task NotifyBookingCreatedAsync(
+        Guid roomId,
+        Guid bookingId,
+        DateTime matchDate,
+        TimeSpan startTime,
+        TimeSpan endTime,
+        CancellationToken cancellationToken = default)
+    {
+        await _hubContext.Clients
+            .Group($"room_{roomId}")
+            .SendAsync("BookingConfirmed", new
+            {
+                RoomId = roomId,
+                BookingId = bookingId,
+                MatchDate = matchDate,
+                StartTime = startTime,
+                EndTime = endTime,
+                Status = "Confirmed",
+                ConfirmedAt = DateTime.UtcNow
+            }, cancellationToken);
+    }
 }

@@ -8,9 +8,6 @@ namespace Kickify.Application.Features.Bookings.Commands.ProcessPayment
         {
             RuleFor(x => x.RoomId)
                 .NotEmpty().WithMessage("RoomId is required");
-
-            RuleFor(x => x.UserId)
-                .NotEmpty().WithMessage("UserId is required");
         }
     }
 }
