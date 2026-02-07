@@ -8,6 +8,8 @@ namespace Kickify.Api.Requests
         string MatchFormat,
         string? RoomName,
         string? Description,
-        string? Rules
+        string? Rules,
+        string? Visibility,
+        string? Password
     );
 }

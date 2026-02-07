@@ -83,6 +83,8 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMyMatchRooms
                     room.FilledSlots,
                     room.DepositPerPerson,
                     calculatedTotalDeposit,
+                    room.Visibility.ToString(),
+                    room.Visibility == Domain.Enums.Visibility.Private,
                     room.Status.ToString(),
                     room.CreatedAt
                 );

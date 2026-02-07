@@ -107,6 +107,14 @@ namespace Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom
                 return Result.Failure<CreateMatchRoomResponse>(MatchRoomErrors.InvalidFormat(request.MatchFormat));
             }
 
+            // Parse Visibility enum (default to Public if not specified)
+            var visibility = Visibility.Public;
+            if (!string.IsNullOrEmpty(request.Visibility) && !Enum.TryParse<Visibility>(request.Visibility, true, out visibility))
+            {
+                return Result.Failure<CreateMatchRoomResponse>(
+                    new Error("MatchRoom.InvalidVisibility", "Visibility must be Public or Private", ErrorType.Validation));
+            }
+
             // RULE #1: Auto-calculate TotalSlots based on MatchFormat
             int totalSlots = CalculateTotalSlots(matchFormat);
 
@@ -135,6 +143,8 @@ namespace Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom
                     Rules = request.Rules,
                     DepositPerPerson = depositPerPerson,
                     TotalDepositCollected = 0, // Will be updated when participants pay deposit
+                    Visibility = visibility,
+                    RoomPassword = visibility == Visibility.Private ? request.Password : null,
                     Status = RoomStatus.Open,
                     CreatedAt = DateTime.UtcNow
                 };
@@ -177,6 +187,8 @@ namespace Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom
                     room.FilledSlots,
                     room.DepositPerPerson ?? 0,
                     room.TotalDepositCollected,
+                    room.Visibility.ToString(),
+                    room.Visibility == Visibility.Private,
                     room.Status.ToString(),
                     room.CreatedAt
                 ));

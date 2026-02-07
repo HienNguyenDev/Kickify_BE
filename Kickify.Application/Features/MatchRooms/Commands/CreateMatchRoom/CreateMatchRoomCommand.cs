@@ -10,6 +10,8 @@ namespace Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom
         string MatchFormat,
         string? RoomName,
         string? Description,
-        string? Rules
+        string? Rules,
+        string? Visibility,
+        string? Password
     ) : ICommand<CreateMatchRoomResponse>;
 }

@@ -27,6 +27,8 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRooms
         int TotalSlots,
         int FilledSlots,
         decimal? DepositPerPerson,
+        string Visibility,
+        bool IsPrivate,
         string Status,
         DateTime CreatedAt
     );

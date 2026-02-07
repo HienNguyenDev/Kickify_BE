@@ -92,4 +92,13 @@ public interface IMatchRoomHubService
         TimeSpan startTime,
         TimeSpan endTime,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Notify all participants that the room privacy settings have been updated
+    /// </summary>
+    Task NotifyRoomPrivacyUpdatedAsync(
+        Guid roomId,
+        string visibility,
+        bool isPrivate,
+        CancellationToken cancellationToken = default);
 }

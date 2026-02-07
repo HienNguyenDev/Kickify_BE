@@ -84,5 +84,18 @@ namespace Kickify.Domain.Errors
         public static readonly Error KickFailed = Error.Problem(
             "MatchRoom.KickFailed",
             "Failed to kick player from room");
+
+        // Private Room Errors
+        public static readonly Error PasswordRequiredForPrivateRoom = Error.Problem(
+            "MatchRoom.PasswordRequired",
+            "Password is required for private rooms");
+
+        public static readonly Error IncorrectRoomPassword = Error.Problem(
+            "MatchRoom.IncorrectPassword",
+            "Incorrect password for private room");
+
+        public static readonly Error OnlyHostCanUpdatePrivacy = Error.Failure(
+            "MatchRoom.OnlyHostCanUpdatePrivacy",
+            "Only the host can update room privacy settings");
     }
 }
