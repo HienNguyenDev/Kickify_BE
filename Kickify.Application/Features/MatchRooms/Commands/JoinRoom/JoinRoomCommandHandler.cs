@@ -55,24 +55,10 @@ namespace Kickify.Application.Features.MatchRooms.Commands.JoinRoom
             var existingParticipant = await _roomParticipantRepository.GetParticipantByRoomAndUserAsync(request.RoomId, userId, cancellationToken);
             if (existingParticipant != null)
             {
-                // User already in room, get room info and return success
-                var existingRoom = await _matchRoomRepository.GetByIdAsync(request.RoomId);
-                if (existingRoom == null)
-                {
-                    return Result.Failure<JoinRoomResponse>(MatchRoomErrors.NotFound(request.RoomId));
-                }
-
-                _logger.LogInformation("User {UserId} is already in room {RoomId}. Returning existing participant info.",
+                _logger.LogInformation("User {UserId} is already in room {RoomId}.",
                     userId, request.RoomId);
 
-                return Result.Success(new JoinRoomResponse(
-                    existingParticipant.ParticipantId,
-                    existingRoom.RoomId,
-                    userId,
-                    existingRoom.FilledSlots,
-                    existingRoom.TotalSlots,
-                    existingParticipant.JoinDate
-                ));
+                return Result.Failure<JoinRoomResponse>(MatchRoomErrors.AlreadyJoined);
             }
 
             // Get room with participants (WITH TRACKING for FilledSlots update)
@@ -86,6 +72,20 @@ namespace Kickify.Application.Features.MatchRooms.Commands.JoinRoom
             if (room.Status != RoomStatus.Open)
             {
                 return Result.Failure<JoinRoomResponse>(MatchRoomErrors.NotOpen);
+            }
+
+            // RULE: Validate password for private rooms
+            if (room.Visibility == Visibility.Private)
+            {
+                if (string.IsNullOrEmpty(request.Password))
+                {
+                    return Result.Failure<JoinRoomResponse>(MatchRoomErrors.PasswordRequiredForPrivateRoom);
+                }
+
+                if (room.RoomPassword != request.Password)
+                {
+                    return Result.Failure<JoinRoomResponse>(MatchRoomErrors.IncorrectRoomPassword);
+                }
             }
 
             // RULE #4: Check if room is full (with concurrency safety)

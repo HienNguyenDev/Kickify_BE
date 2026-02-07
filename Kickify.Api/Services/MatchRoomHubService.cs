@@ -189,4 +189,21 @@ public class MatchRoomHubService : IMatchRoomHubService
                 ConfirmedAt = DateTime.UtcNow
             }, cancellationToken);
     }
+
+    public async Task NotifyRoomPrivacyUpdatedAsync(
+        Guid roomId,
+        string visibility,
+        bool isPrivate,
+        CancellationToken cancellationToken = default)
+    {
+        await _hubContext.Clients
+            .Group($"room_{roomId}")
+            .SendAsync("RoomPrivacyUpdated", new
+            {
+                RoomId = roomId,
+                Visibility = visibility,
+                IsPrivate = isPrivate,
+                UpdatedAt = DateTime.UtcNow
+            }, cancellationToken);
+    }
 }

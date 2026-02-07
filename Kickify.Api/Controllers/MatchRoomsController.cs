@@ -6,6 +6,7 @@ using Kickify.Application.Features.MatchRooms.Commands.JoinRoom;
 using Kickify.Application.Features.MatchRooms.Commands.KickPlayer;
 using Kickify.Application.Features.MatchRooms.Commands.LeaveRoom;
 using Kickify.Application.Features.MatchRooms.Commands.UpdateParticipant;
+using Kickify.Application.Features.MatchRooms.Commands.UpdateRoomPrivacy;
 using Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById;
 using Kickify.Application.Features.MatchRooms.Queries.GetMatchRooms;
 using Kickify.Application.Features.MatchRooms.Queries.GetMyMatchRooms;
@@ -41,7 +42,9 @@ namespace Kickify.Api.Controllers
                 request.MatchFormat,
                 request.RoomName,
                 request.Description,
-                request.Rules
+                request.Rules,
+                request.Visibility,
+                request.Password
             );
 
             var result = await _sender.Send(command, cancellationToken);
@@ -106,9 +109,9 @@ namespace Kickify.Api.Controllers
         /// Join a room
         /// </summary>
         [HttpPost("{id}/join")]
-        public async Task<IResult> JoinRoom(Guid id, CancellationToken cancellationToken)
+        public async Task<IResult> JoinRoom(Guid id, [FromBody] JoinRoomRequest? request, CancellationToken cancellationToken)
         {
-            var command = new JoinRoomCommand(id);
+            var command = new JoinRoomCommand(id, request?.Password);
 
             var result = await _sender.Send(command, cancellationToken);
 
@@ -162,6 +165,28 @@ namespace Kickify.Api.Controllers
             var command = new KickPlayerCommand(
                 roomId,
                 targetUserId
+            );
+
+            var result = await _sender.Send(command, cancellationToken);
+
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Update room privacy settings (host only)
+        /// </summary>
+        /// <param name="id">Room ID</param>
+        /// <param name="request">Privacy settings</param>
+        [HttpPatch("{id}/privacy")]
+        public async Task<IResult> UpdateRoomPrivacy(
+            Guid id,
+            [FromBody] UpdateRoomPrivacyRequest request,
+            CancellationToken cancellationToken)
+        {
+            var command = new UpdateRoomPrivacyCommand(
+                id,
+                request.Visibility,
+                request.Password
             );
 
             var result = await _sender.Send(command, cancellationToken);
