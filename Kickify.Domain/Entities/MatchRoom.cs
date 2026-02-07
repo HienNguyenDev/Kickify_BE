@@ -13,6 +13,7 @@ public class MatchRoom : BaseEntity
     public MatchFormat MatchFormat { get; set; }
     public Enums.MatchType MatchType { get; set; }
     public Visibility Visibility { get; set; } = Visibility.Public;
+    public string? RoomPassword { get; set; }
     public DateTime MatchDate { get; set; }
     public TimeSpan StartTime { get; set; }
     public int DurationMinutes { get; set; }

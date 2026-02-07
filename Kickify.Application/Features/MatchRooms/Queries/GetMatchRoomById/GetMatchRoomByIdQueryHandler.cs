@@ -99,6 +99,8 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById
                 room.DepositPerPerson,
                 room.TotalDepositCollected,
                 //calculatedTotalDeposit, // Use calculated value instead of room.TotalDepositCollected
+                room.Visibility.ToString(),
+                room.Visibility == Visibility.Private,
                 room.Status.ToString(),
                 participantsDto,
                 room.CreatedAt

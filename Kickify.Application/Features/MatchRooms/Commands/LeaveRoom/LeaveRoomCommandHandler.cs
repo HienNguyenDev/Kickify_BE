@@ -4,6 +4,7 @@ using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Application.Abstractions.Services;
 using Kickify.Domain.Common;
+using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
 using Kickify.Domain.Errors;
 using Microsoft.Extensions.Logging;
@@ -15,6 +16,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.LeaveRoom
         private readonly IMatchRoomRepository _matchRoomRepository;
         private readonly IUserRepository _userRepository;
         private readonly IRoomParticipantRepository _roomParticipantRepository;
+        private readonly IChatMessageRepository _chatMessageRepository;
         private readonly IMatchRoomHubService _matchRoomHubService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IUserContext _userContext;
@@ -24,6 +26,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.LeaveRoom
             IMatchRoomRepository matchRoomRepository,
             IUserRepository userRepository,
             IRoomParticipantRepository roomParticipantRepository,
+            IChatMessageRepository chatMessageRepository,
             IMatchRoomHubService matchRoomHubService,
             IUnitOfWork unitOfWork,
             IUserContext userContext,
@@ -32,6 +35,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.LeaveRoom
             _matchRoomRepository = matchRoomRepository;
             _userRepository = userRepository;
             _roomParticipantRepository = roomParticipantRepository;
+            _chatMessageRepository = chatMessageRepository;
             _matchRoomHubService = matchRoomHubService;
             _unitOfWork = unitOfWork;
             _userContext = userContext;
@@ -105,6 +109,37 @@ namespace Kickify.Application.Features.MatchRooms.Commands.LeaveRoom
                         newHostId = newHost.UserId;
                         _logger.LogInformation("Room {RoomId} host reassigned from {OldHostId} to {NewHostId}",
                             request.RoomId, userId, newHost.UserId);
+                    }
+
+                    // RULE: When host leaves a Private room, reset to Public and clear password
+                    if (room.Visibility == Visibility.Private)
+                    {
+                        room.Visibility = Visibility.Public;
+                        room.RoomPassword = null;
+
+                        _logger.LogInformation("Room {RoomId} privacy reset to Public after host {HostId} left",
+                            request.RoomId, userId);
+
+                        // Create system chat message about privacy reset
+                        var systemMessage = new ChatMessage
+                        {
+                            MessageId = Guid.NewGuid(),
+                            RoomId = room.RoomId,
+                            SenderId = room.HostId, // Use new host as sender for system message
+                            ConversationType = ConversationType.Room,
+                            RoomChatChannel = RoomChatChannel.General,
+                            MessageText = "Room privacy has been reset to Public because the previous host left.",
+                            MessageType = MessageType.System,
+                            SentAt = DateTime.UtcNow // ChatMessage uses 'timestamp with time zone' - requires UTC
+                        };
+                        await _chatMessageRepository.AddAsync(systemMessage);
+
+                        // Notify about privacy change
+                        await _matchRoomHubService.NotifyRoomPrivacyUpdatedAsync(
+                            room.RoomId,
+                            Visibility.Public.ToString(),
+                            false,
+                            cancellationToken);
                     }
 
                     // RULE: Subtract participant's deposit from TotalDepositCollected
