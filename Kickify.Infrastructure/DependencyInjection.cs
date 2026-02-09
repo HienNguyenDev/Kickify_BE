@@ -126,6 +126,8 @@ namespace Kickify.Infrastructure
             services.AddScoped<ICommentRepository, CommentRepository>();
             services.AddScoped<ICommentLikeRepository, CommentLikeRepository>();
             services.AddScoped<IFriendshipRepository, FriendshipRepository>();
+            services.AddScoped<IMatchFormationRepository, MatchFormationRepository>();
+            services.AddScoped<IFormationAssignmentRepository, FormationAssignmentRepository>();
             return services;
         }
         private static IServiceCollection AddFirebase(this IServiceCollection services)

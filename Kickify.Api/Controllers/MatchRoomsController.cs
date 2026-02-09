@@ -5,6 +5,7 @@ using Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom;
 using Kickify.Application.Features.MatchRooms.Commands.JoinRoom;
 using Kickify.Application.Features.MatchRooms.Commands.KickPlayer;
 using Kickify.Application.Features.MatchRooms.Commands.LeaveRoom;
+using Kickify.Application.Features.MatchRooms.Commands.UpdateFormation;
 using Kickify.Application.Features.MatchRooms.Commands.UpdateParticipant;
 using Kickify.Application.Features.MatchRooms.Commands.UpdateRoomPrivacy;
 using Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById;
@@ -187,6 +188,38 @@ namespace Kickify.Api.Controllers
                 id,
                 request.Visibility,
                 request.Password
+            );
+
+            var result = await _sender.Send(command, cancellationToken);
+
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Update team formation (Captain only)
+        /// </summary>
+        /// <param name="id">Room ID</param>
+        /// <param name="request">Formation settings with player slot assignments</param>
+        /// <remarks>
+        /// Only the captain of the specified team can update the formation.
+        /// Valid formations depend on the match format:
+        /// - 5vs5: "3-1", "2-2", "2-1-1", "1-2-1", "1-3"
+        /// - 7vs7: "3-3", "4-2", "3-2-1", "3-1-2", "2-3-1", "4-1-1"
+        /// - 11vs11: "4-4-2", "4-3-3", "3-5-2", "4-2-3-1", "5-3-2", "3-4-3", "4-5-1", "5-4-1"
+        /// 
+        /// Slot IDs format: GK-0 (Goalkeeper), DF-x (Defender), MF-x (Midfielder), FW-x (Forward)
+        /// </remarks>
+        [HttpPut("{id}/formation")]
+        public async Task<IResult> UpdateFormation(
+            Guid id,
+            [FromBody] UpdateFormationRequest request,
+            CancellationToken cancellationToken)
+        {
+            var command = new UpdateFormationCommand(
+                id,
+                request.Team,
+                request.FormationName,
+                request.Assignments.Select(a => new FormationSlotAssignment(a.PlayerId, a.SlotId)).ToList()
             );
 
             var result = await _sender.Send(command, cancellationToken);
