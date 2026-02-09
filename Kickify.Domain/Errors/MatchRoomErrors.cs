@@ -97,5 +97,38 @@ namespace Kickify.Domain.Errors
         public static readonly Error OnlyHostCanUpdatePrivacy = Error.Failure(
             "MatchRoom.OnlyHostCanUpdatePrivacy",
             "Only the host can update room privacy settings");
+
+        // Formation Errors
+        public static readonly Error NotCaptain = Error.Failure(
+            "MatchRoom.NotCaptain",
+            "Only the team captain can assign formations");
+
+        public static Error InvalidFormation(string formationName, string matchFormat) => Error.Problem(
+            "MatchRoom.InvalidFormation",
+            $"Formation '{formationName}' is not valid for {matchFormat}");
+
+        public static Error InvalidSlotId(string slotId) => Error.Problem(
+            "MatchRoom.InvalidSlotId",
+            $"Slot ID '{slotId}' is not valid for the selected formation");
+
+        public static Error PlayerNotOnTeam(Guid playerId) => Error.Problem(
+            "MatchRoom.PlayerNotOnTeam",
+            $"Player with ID {playerId} is not on your team");
+
+        public static Error DuplicateSlotAssignment(string slotId) => Error.Problem(
+            "MatchRoom.DuplicateSlotAssignment",
+            $"Slot '{slotId}' has already been assigned to another player");
+
+        public static Error DuplicatePlayerAssignment(Guid playerId) => Error.Problem(
+            "MatchRoom.DuplicatePlayerAssignment",
+            $"Player with ID {playerId} has already been assigned to another slot");
+
+        public static readonly Error FormationUpdateFailed = Error.Problem(
+            "MatchRoom.FormationUpdateFailed",
+            "Failed to update formation");
+
+        public static readonly Error InvalidTeamForFormation = Error.Problem(
+            "MatchRoom.InvalidTeamForFormation",
+            "Team must be either A or B to set formation");
     }
 }

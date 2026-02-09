@@ -38,4 +38,5 @@ public class MatchRoom : BaseEntity
     public ICollection<MatchFeedback> MatchFeedbacks { get; set; } = new List<MatchFeedback>();
     public ICollection<EloHistory> EloHistories { get; set; } = new List<EloHistory>();
     public ICollection<PlayerReport> PlayerReports { get; set; } = new List<PlayerReport>();
+    public ICollection<MatchFormation> Formations { get; set; } = new List<MatchFormation>();
 }
