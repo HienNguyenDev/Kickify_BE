@@ -78,6 +78,9 @@ public class MatchRoomConfiguration : IEntityTypeConfiguration<MatchRoom>
             .HasDefaultValue(0)
             .HasComment("count of confirmations");
 
+        builder.Property(mr => mr.AutoCloseJobId)
+            .HasMaxLength(100);
+
         // Indexes
         builder.HasIndex(mr => mr.HostId);
         builder.HasIndex(mr => mr.FieldId);
