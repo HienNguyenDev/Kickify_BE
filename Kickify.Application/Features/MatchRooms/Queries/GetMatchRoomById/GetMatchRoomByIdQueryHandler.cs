@@ -85,44 +85,48 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById
                 Unassigned: allParticipants.Where(p => p.TeamAssignment == TeamAssignment.Unassigned.ToString()).ToList()
             );
 
-            // Map Formations
+            // Map Formations (always include team names even if no formation set)
             var formations = await _matchFormationRepository.GetFormationsByRoomAsync(request.RoomId, cancellationToken);
-            RoomFormationsDto? formationsDto = null;
+            
+            var teamAFormation = formations.FirstOrDefault(f => f.TeamAssignment == TeamAssignment.A);
+            var teamBFormation = formations.FirstOrDefault(f => f.TeamAssignment == TeamAssignment.B);
 
-            if (formations.Any())
+            // Build Team A DTO - include team name even if no formation
+            RoomTeamFormationDto? teamADto = null;
+            if (room.TeamAName != null || teamAFormation != null)
             {
-                var teamAFormation = formations.FirstOrDefault(f => f.TeamAssignment == TeamAssignment.A);
-                var teamBFormation = formations.FirstOrDefault(f => f.TeamAssignment == TeamAssignment.B);
+                teamADto = new RoomTeamFormationDto(
+                    room.TeamAName,
+                    teamAFormation?.FormationName,
+                    teamAFormation?.Assignments.Select(a => new FormationAssignmentDto(
+                        a.PlayerId,
+                        a.Player?.FullName ?? "Unknown",
+                        a.SlotId,
+                        FormationRuleService.GetPositionFromSlotId(a.SlotId)
+                    )).ToList() ?? new List<FormationAssignmentDto>()
+                );
+            }
 
-                RoomTeamFormationDto? teamADto = null;
-                RoomTeamFormationDto? teamBDto = null;
+            // Build Team B DTO - include team name even if no formation
+            RoomTeamFormationDto? teamBDto = null;
+            if (room.TeamBName != null || teamBFormation != null)
+            {
+                teamBDto = new RoomTeamFormationDto(
+                    room.TeamBName,
+                    teamBFormation?.FormationName,
+                    teamBFormation?.Assignments.Select(a => new FormationAssignmentDto(
+                        a.PlayerId,
+                        a.Player?.FullName ?? "Unknown",
+                        a.SlotId,
+                        FormationRuleService.GetPositionFromSlotId(a.SlotId)
+                    )).ToList() ?? new List<FormationAssignmentDto>()
+                );
+            }
 
-                if (teamAFormation != null)
-                {
-                    teamADto = new RoomTeamFormationDto(
-                        teamAFormation.FormationName,
-                        teamAFormation.Assignments.Select(a => new FormationAssignmentDto(
-                            a.PlayerId,
-                            a.Player?.FullName ?? "Unknown",
-                            a.SlotId,
-                            FormationRuleService.GetPositionFromSlotId(a.SlotId)
-                        )).ToList()
-                    );
-                }
-
-                if (teamBFormation != null)
-                {
-                    teamBDto = new RoomTeamFormationDto(
-                        teamBFormation.FormationName,
-                        teamBFormation.Assignments.Select(a => new FormationAssignmentDto(
-                            a.PlayerId,
-                            a.Player?.FullName ?? "Unknown",
-                            a.SlotId,
-                            FormationRuleService.GetPositionFromSlotId(a.SlotId)
-                        )).ToList()
-                    );
-                }
-
+            // Only create formationsDto if at least one team has data
+            RoomFormationsDto? formationsDto = null;
+            if (teamADto != null || teamBDto != null)
+            {
                 formationsDto = new RoomFormationsDto(teamADto, teamBDto);
             }
 

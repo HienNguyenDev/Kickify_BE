@@ -73,7 +73,8 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById
     );
 
     public record RoomTeamFormationDto(
-        string FormationName,
+        string? TeamName,
+        string? FormationName,
         List<FormationAssignmentDto> Assignments
     );
 
