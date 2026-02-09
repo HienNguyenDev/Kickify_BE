@@ -27,6 +27,8 @@ public class MatchRoom : BaseEntity
     public int? TeamAScore { get; set; }
     public int? TeamBScore { get; set; }
     public int ResultConfirmedBy { get; set; } = 0; // count of confirmations
+    public string? TeamAName { get; set; }
+    public string? TeamBName { get; set; }
 
     // Navigation properties
     public User Host { get; set; } = null!;
