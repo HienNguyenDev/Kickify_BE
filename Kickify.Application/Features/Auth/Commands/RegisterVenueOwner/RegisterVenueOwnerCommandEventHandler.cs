@@ -1,30 +1,21 @@
-﻿using Kickify.Application.Abstractions.OTP;
-using Kickify.Application.Abstractions.Services;
+﻿using Kickify.Application.Abstractions.Jobs;
 using Kickify.Domain.Event;
 using MediatR;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Kickify.Application.Features.Auth.Commands.RegisterVenueOwner
+namespace Kickify.Application.Features.Auth.Commands.RegisterVenueOwner;
+
+public class RegisterVenueOwnerCommandEventHandler : INotificationHandler<RegisterVenueOwnerDomainEvent>
 {
-    public class RegisterVenueOwnerCommandEventHandler : INotificationHandler<RegisterVenueOwnerDomainEvent>
+    private readonly IEmailJobService _emailJobService;
+
+    public RegisterVenueOwnerCommandEventHandler(IEmailJobService emailJobService)
     {
-        private readonly IMailService _mailService;
-        private readonly IRedisOtpStore _otpStore;
-        public RegisterVenueOwnerCommandEventHandler(IMailService mailService, IRedisOtpStore otpStore)
-        {
-            _mailService = mailService;
-            _otpStore = otpStore;
-        }
+        _emailJobService = emailJobService;
+    }
 
-        public async Task Handle(RegisterVenueOwnerDomainEvent notification, CancellationToken cancellationToken)
-        {
-            await _otpStore.StoreAsync(notification.UserId, notification.OtpCode, TimeSpan.FromMinutes(5), cancellationToken);
-
-            await _mailService.SendOtpAsync(notification.Email, notification.OtpCode);
-        }
+    public Task Handle(RegisterVenueOwnerDomainEvent notification, CancellationToken cancellationToken)
+    {
+        _emailJobService.EnqueueSendOtpEmail(notification.Email, notification.OtpCode);
+        return Task.CompletedTask;
     }
 }
