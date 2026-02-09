@@ -28,7 +28,6 @@ public class MatchRoom : Entity
     public int? TeamBScore { get; set; }
     public int ResultConfirmedBy { get; set; } = 0;
     public string? AutoCloseJobId { get; set; }
-    public int ResultConfirmedBy { get; set; } = 0; // count of confirmations
     public string? TeamAName { get; set; }
     public string? TeamBName { get; set; }
 

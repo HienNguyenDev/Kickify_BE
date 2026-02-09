@@ -102,6 +102,7 @@ namespace Kickify.Infrastructure
             services.AddScoped<IOtpGenerator, OtpGenerator>();
             services.AddScoped<IRedisOtpStore, RedisOtpStore>();
             services.AddTransient<IResetPasswordGenerator, ResetPasswordGenerator>();
+            services.AddScoped<IPushNotificationService, PushNotificationService>();
             return services;
         }
         private static IServiceCollection AddRepository(this IServiceCollection services)

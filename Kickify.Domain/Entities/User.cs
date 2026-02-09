@@ -21,6 +21,7 @@ public class User : Entity
     public string? IdentityId { get; set; }
     public bool IsEmailVerified { get; set; } = false;
     public bool IsActive { get; set; } = true;
+    public string? FcmToken { get; set; }
 
     // Navigation properties
     public PlayerProfile? PlayerProfile { get; set; }
