@@ -3,6 +3,7 @@ using System;
 using Kickify.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Kickify.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260209134415_AddAutoCloseRoom")]
+    partial class AddAutoCloseRoom
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -789,14 +792,8 @@ namespace Kickify.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasDefaultValue("Open");
 
-                    b.Property<string>("TeamAName")
-                        .HasColumnType("text");
-
                     b.Property<int?>("TeamAScore")
                         .HasColumnType("integer");
-
-                    b.Property<string>("TeamBName")
-                        .HasColumnType("text");
 
                     b.Property<int?>("TeamBScore")
                         .HasColumnType("integer");
