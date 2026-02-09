@@ -1,25 +1,21 @@
-﻿using Kickify.Application.Abstractions.Services;
+﻿using Kickify.Application.Abstractions.Jobs;
 using Kickify.Domain.Event;
 using MediatR;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Kickify.Application.Features.Auth.Commands.ForgotPassword
+namespace Kickify.Application.Features.Auth.Commands.ForgotPassword;
+
+public class ForgotPasswordCommandEventHandler : INotificationHandler<ForgotPasswordDomainEvent>
 {
-    public class ForgotPasswordCommandEventHandler : INotificationHandler<ForgotPasswordDomainEvent>
-    {
-        private readonly IMailService _mailService;
-        public ForgotPasswordCommandEventHandler(IMailService mailService)
-        {
-            _mailService = mailService;
-        }
+    private readonly IEmailJobService _emailJobService;
 
-        public async Task Handle(ForgotPasswordDomainEvent notification, CancellationToken cancellationToken)
-        {
-            await _mailService.SendResetPasswordAsync(notification.Email, notification.PasswordReset);
-        }
+    public ForgotPasswordCommandEventHandler(IEmailJobService emailJobService)
+    {
+        _emailJobService = emailJobService;
+    }
+
+    public Task Handle(ForgotPasswordDomainEvent notification, CancellationToken cancellationToken)
+    {
+        _emailJobService.EnqueueSendResetPasswordEmail(notification.Email, notification.PasswordReset);
+        return Task.CompletedTask;
     }
 }
