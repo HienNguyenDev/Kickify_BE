@@ -111,4 +111,13 @@ public interface IMatchRoomHubService
         string formationName,
         object assignments,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Notify all participants that a team's name has been updated
+    /// </summary>
+    Task NotifyTeamNameUpdatedAsync(
+        Guid roomId,
+        string team,
+        string? teamName,
+        CancellationToken cancellationToken = default);
 }

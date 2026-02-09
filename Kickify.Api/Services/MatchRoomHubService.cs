@@ -225,4 +225,21 @@ public class MatchRoomHubService : IMatchRoomHubService
                 UpdatedAt = DateTime.UtcNow
             }, cancellationToken);
     }
+
+    public async Task NotifyTeamNameUpdatedAsync(
+        Guid roomId,
+        string team,
+        string? teamName,
+        CancellationToken cancellationToken = default)
+    {
+        await _hubContext.Clients
+            .Group($"room_{roomId}")
+            .SendAsync("TeamNameUpdated", new
+            {
+                RoomId = roomId,
+                Team = team,
+                TeamName = teamName,
+                UpdatedAt = DateTime.UtcNow
+            }, cancellationToken);
+    }
 }

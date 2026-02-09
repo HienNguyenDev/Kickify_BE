@@ -5,6 +5,7 @@ using Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom;
 using Kickify.Application.Features.MatchRooms.Commands.JoinRoom;
 using Kickify.Application.Features.MatchRooms.Commands.KickPlayer;
 using Kickify.Application.Features.MatchRooms.Commands.LeaveRoom;
+using Kickify.Application.Features.MatchRooms.Commands.RenameTeam;
 using Kickify.Application.Features.MatchRooms.Commands.UpdateFormation;
 using Kickify.Application.Features.MatchRooms.Commands.UpdateParticipant;
 using Kickify.Application.Features.MatchRooms.Commands.UpdateRoomPrivacy;
@@ -220,6 +221,33 @@ namespace Kickify.Api.Controllers
                 request.Team,
                 request.FormationName,
                 request.Assignments.Select(a => new FormationSlotAssignment(a.PlayerId, a.SlotId)).ToList()
+            );
+
+            var result = await _sender.Send(command, cancellationToken);
+
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Update team name (Captain only)
+        /// </summary>
+        /// <param name="id">Room ID</param>
+        /// <param name="request">Team name settings</param>
+        /// <remarks>
+        /// Only the captain of the specified team can update the team name.
+        /// Team name is optional and can be set to null to clear it.
+        /// Maximum length: 50 characters.
+        /// </remarks>
+        [HttpPatch("{id}/team-name")]
+        public async Task<IResult> RenameTeam(
+            Guid id,
+            [FromBody] RenameTeamRequest request,
+            CancellationToken cancellationToken)
+        {
+            var command = new RenameTeamCommand(
+                id,
+                request.Team,
+                request.Name
             );
 
             var result = await _sender.Send(command, cancellationToken);
