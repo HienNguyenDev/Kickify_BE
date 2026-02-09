@@ -22,6 +22,7 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById
         bool IsPrivate,
         string Status,
         RoomParticipantsDto Participants,
+        RoomFormationsDto? Formations,
         DateTime CreatedAt
     );
 
@@ -64,5 +65,22 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById
         DateTime? CheckInTime,
         bool IsCaptain,
         DateTime JoinDate
+    );
+
+    public record RoomFormationsDto(
+        RoomTeamFormationDto? TeamA,
+        RoomTeamFormationDto? TeamB
+    );
+
+    public record RoomTeamFormationDto(
+        string FormationName,
+        List<FormationAssignmentDto> Assignments
+    );
+
+    public record FormationAssignmentDto(
+        Guid PlayerId,
+        string PlayerName,
+        string SlotId,
+        string Position
     );
 }

@@ -1,5 +1,6 @@
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Repositories;
+using Kickify.Application.Features.MatchRooms.Services;
 using Kickify.Domain.Common;
 using Kickify.Domain.Enums;
 using Kickify.Domain.Errors;
@@ -9,10 +10,14 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById
     public class GetMatchRoomByIdQueryHandler : IQueryHandler<GetMatchRoomByIdQuery, GetMatchRoomByIdResponse>
     {
         private readonly IMatchRoomRepository _matchRoomRepository;
+        private readonly IMatchFormationRepository _matchFormationRepository;
 
-        public GetMatchRoomByIdQueryHandler(IMatchRoomRepository matchRoomRepository)
+        public GetMatchRoomByIdQueryHandler(
+            IMatchRoomRepository matchRoomRepository,
+            IMatchFormationRepository matchFormationRepository)
         {
             _matchRoomRepository = matchRoomRepository;
+            _matchFormationRepository = matchFormationRepository;
         }
 
         public async Task<Result<GetMatchRoomByIdResponse>> Handle(GetMatchRoomByIdQuery request, CancellationToken cancellationToken)
@@ -80,6 +85,47 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById
                 Unassigned: allParticipants.Where(p => p.TeamAssignment == TeamAssignment.Unassigned.ToString()).ToList()
             );
 
+            // Map Formations
+            var formations = await _matchFormationRepository.GetFormationsByRoomAsync(request.RoomId, cancellationToken);
+            RoomFormationsDto? formationsDto = null;
+
+            if (formations.Any())
+            {
+                var teamAFormation = formations.FirstOrDefault(f => f.TeamAssignment == TeamAssignment.A);
+                var teamBFormation = formations.FirstOrDefault(f => f.TeamAssignment == TeamAssignment.B);
+
+                RoomTeamFormationDto? teamADto = null;
+                RoomTeamFormationDto? teamBDto = null;
+
+                if (teamAFormation != null)
+                {
+                    teamADto = new RoomTeamFormationDto(
+                        teamAFormation.FormationName,
+                        teamAFormation.Assignments.Select(a => new FormationAssignmentDto(
+                            a.PlayerId,
+                            a.Player?.FullName ?? "Unknown",
+                            a.SlotId,
+                            FormationRuleService.GetPositionFromSlotId(a.SlotId)
+                        )).ToList()
+                    );
+                }
+
+                if (teamBFormation != null)
+                {
+                    teamBDto = new RoomTeamFormationDto(
+                        teamBFormation.FormationName,
+                        teamBFormation.Assignments.Select(a => new FormationAssignmentDto(
+                            a.PlayerId,
+                            a.Player?.FullName ?? "Unknown",
+                            a.SlotId,
+                            FormationRuleService.GetPositionFromSlotId(a.SlotId)
+                        )).ToList()
+                    );
+                }
+
+                formationsDto = new RoomFormationsDto(teamADto, teamBDto);
+            }
+
             var response = new GetMatchRoomByIdResponse(
                 room.RoomId,
                 room.HostId,
@@ -103,6 +149,7 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById
                 room.Visibility == Visibility.Private,
                 room.Status.ToString(),
                 participantsDto,
+                formationsDto,
                 room.CreatedAt
             );
 
