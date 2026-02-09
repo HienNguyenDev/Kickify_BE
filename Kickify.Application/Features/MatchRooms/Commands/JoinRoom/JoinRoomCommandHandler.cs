@@ -7,6 +7,7 @@ using Kickify.Domain.Common;
 using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
 using Kickify.Domain.Errors;
+using Kickify.Domain.Event;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -128,8 +129,9 @@ namespace Kickify.Application.Features.MatchRooms.Commands.JoinRoom
                 // Add participant via repository
                 await _roomParticipantRepository.AddAsync(participant);
 
-                // RULE #4: Increment FilledSlots
+            var oldJobId = room.AutoCloseJobId;
                 room.FilledSlots++;
+            room.Raise(new ParticipantJoinedRoomDomainEvent(room.RoomId, oldJobId));
                 _matchRoomRepository.Update(room);
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);

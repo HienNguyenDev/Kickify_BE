@@ -3,7 +3,7 @@ using Kickify.Domain.Enums;
 
 namespace Kickify.Domain.Entities;
 
-public class MatchRoom : BaseEntity
+public class MatchRoom : Entity
 {
     public Guid RoomId { get; set; }
     public Guid HostId { get; set; }
@@ -26,7 +26,8 @@ public class MatchRoom : BaseEntity
     public RoomStatus Status { get; set; } = RoomStatus.Open;
     public int? TeamAScore { get; set; }
     public int? TeamBScore { get; set; }
-    public int ResultConfirmedBy { get; set; } = 0; // count of confirmations
+    public int ResultConfirmedBy { get; set; } = 0;
+    public string? AutoCloseJobId { get; set; }
 
     // Navigation properties
     public User Host { get; set; } = null!;

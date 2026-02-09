@@ -222,6 +222,7 @@ namespace Kickify.Infrastructure
         private static IServiceCollection AddBackgroundJobs(this IServiceCollection services)
         {
             services.AddScoped<IEmailJobService, EmailJobService>();
+            services.AddScoped<IRoomAutoCloseService, RoomAutoCloseService>();
 
             return services;
         }
