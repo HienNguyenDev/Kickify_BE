@@ -130,5 +130,18 @@ namespace Kickify.Domain.Errors
         public static readonly Error InvalidTeamForFormation = Error.Problem(
             "MatchRoom.InvalidTeamForFormation",
             "Team must be either A or B to set formation");
+
+        // Team Name Errors
+        public static readonly Error TeamNameTooLong = Error.Problem(
+            "MatchRoom.TeamNameTooLong",
+            "Team name must not exceed 50 characters");
+
+        public static readonly Error TeamNameUpdateFailed = Error.Problem(
+            "MatchRoom.TeamNameUpdateFailed",
+            "Failed to update team name");
+
+        public static readonly Error CannotUpdateOtherTeamName = Error.Failure(
+            "MatchRoom.CannotUpdateOtherTeamName",
+            "You can only update the name of your own team");
     }
 }
