@@ -2,12 +2,14 @@
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
 using Kickify.Application.Abstractions.Authentication;
+using Kickify.Application.Abstractions.Jobs;
 using Kickify.Application.Abstractions.OTP;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Application.Abstractions.Services;
 using Kickify.Infrastructure.Authentication;
 using Kickify.Infrastructure.Database;
+using Kickify.Infrastructure.Jobs;
 using Kickify.Infrastructure.Mail;
 using Kickify.Infrastructure.Payment;
 using Kickify.Infrastructure.Persistence;
@@ -43,7 +45,8 @@ namespace Kickify.Infrastructure
             .AddMinioStorage(configuration)
             .AddSignalRServices()
             .AddVNPay(configuration)
-            .AddHangfireServices(configuration);
+            .AddHangfireServices(configuration)
+            .AddBackgroundJobs();
 
         private static IServiceCollection AddAuthenticationInternal(this IServiceCollection services, IConfiguration configuration)
         {
@@ -212,6 +215,13 @@ namespace Kickify.Infrastructure
                     }));
 
             services.AddHangfireServer();
+
+            return services;
+        }
+
+        private static IServiceCollection AddBackgroundJobs(this IServiceCollection services)
+        {
+            services.AddScoped<IEmailJobService, EmailJobService>();
 
             return services;
         }
