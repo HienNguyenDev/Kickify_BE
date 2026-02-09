@@ -3,6 +3,7 @@ using Kickify.Api.Requests;
 using Kickify.Application.Abstractions.Services;
 using Kickify.Application.Features.Users.Commands.CreateUser;
 using Kickify.Application.Features.Users.Commands.DeleteUser;
+using Kickify.Application.Features.Users.Commands.UpdateFcmToken;
 using Kickify.Application.Features.Users.Commands.UpdateUser;
 using Kickify.Application.Features.Users.Commands.UploadUserAvatar;
 using Kickify.Application.Features.Users.Queries.GetAllUsers;
@@ -141,6 +142,19 @@ public class UsersController : ControllerBase
         var fileUploadRequest = new FileUploadRequest(file.OpenReadStream(), file.FileName, file.ContentType, file.Length);
         var command = new UploadUserAvatarCommand { File = fileUploadRequest };
         Result<UploadUserAvatarCommandResponse> result = await _mediator.Send(command, cancellationToken);
+        return result.MatchOk();
+    }
+
+    /// <summary>
+    /// C?p nh?t FCM token cho push notification
+    /// </summary>
+    [HttpPut("fcm-token")]
+    [Authorize]
+    public async Task<IResult> UpdateFcmToken(
+        [FromBody] UpdateFcmTokenCommand command,
+        CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(command, cancellationToken);
         return result.MatchOk();
     }
 }

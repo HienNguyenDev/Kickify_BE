@@ -81,6 +81,12 @@ public class MatchRoomConfiguration : IEntityTypeConfiguration<MatchRoom>
         builder.Property(mr => mr.AutoCloseJobId)
             .HasMaxLength(100);
 
+        builder.Property(mr => mr.TeamAName)
+            .HasMaxLength(50);
+
+        builder.Property(mr => mr.TeamBName)
+            .HasMaxLength(50);
+
         // Indexes
         builder.HasIndex(mr => mr.HostId);
         builder.HasIndex(mr => mr.FieldId);
