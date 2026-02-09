@@ -31,6 +31,8 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<RoomInvitation> RoomInvitations { get; set; }
     public DbSet<Booking> Bookings { get; set; }
     public DbSet<ChatMessage> ChatMessages { get; set; }
+    public DbSet<MatchFormation> MatchFormations { get; set; }
+    public DbSet<FormationAssignment> FormationAssignments { get; set; }
 
     // Social Schema
     public DbSet<Post> Posts { get; set; }

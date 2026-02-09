@@ -101,4 +101,14 @@ public interface IMatchRoomHubService
         string visibility,
         bool isPrivate,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Notify all participants that a team's formation has been updated
+    /// </summary>
+    Task NotifyFormationUpdatedAsync(
+        Guid roomId,
+        string team,
+        string formationName,
+        object assignments,
+        CancellationToken cancellationToken = default);
 }
