@@ -46,7 +46,10 @@ public class GetMyWithdrawalsQueryHandler : IQueryHandler<GetMyWithdrawalsQuery,
             Status = w.Status.ToString(),
             RequestDate = w.RequestDate,
             ProcessedDate = w.ProcessedDate,
-            AdminNotes = w.AdminNotes
+            AdminNotes = w.AdminNotes,
+            BankAccountNumber = w.Wallet.BankAccountNumber,
+            BankName = w.Wallet.BankName,
+            AccountHolderName = w.Wallet.AccountHolderName
         }).ToList();
 
         return Result.Success(new GetMyWithdrawalsQueryResponse

@@ -10,7 +10,7 @@ namespace Kickify.Infrastructure.Repositories;
 public class WalletWithdrawalRepository : GenericRepository<WalletWithdrawal>, IWalletWithdrawalRepository
 {
     public WalletWithdrawalRepository(ApplicationDbContext context) : base(context) { }
-
+        
     public async Task<(IEnumerable<WalletWithdrawal> Withdrawals, int Total)> GetByWalletIdAsync(
         Guid walletId,
         WithdrawalStatus? status = null,
@@ -18,7 +18,7 @@ public class WalletWithdrawalRepository : GenericRepository<WalletWithdrawal>, I
         int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var query = _dbSet.Where(w => w.WalletId == walletId);
+        var query = _dbSet.Include(w => w.Wallet).Where(w => w.WalletId == walletId);
 
         if (status.HasValue)
         {
