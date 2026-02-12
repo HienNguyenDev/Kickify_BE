@@ -17,4 +17,7 @@ public class WithdrawalDto
     public DateTime RequestDate { get; set; }
     public DateTime? ProcessedDate { get; set; }
     public string? AdminNotes { get; set; }
+    public string? BankAccountNumber { get; set; }
+    public string? BankName { get; set; }
+    public string? AccountHolderName { get; set; }
 }
