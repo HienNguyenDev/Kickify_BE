@@ -6,6 +6,7 @@ using Kickify.Domain.Common;
 using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
 using Kickify.Domain.Errors;
+using Kickify.Domain.Event;
 
 namespace Kickify.Application.Features.Friendships.Commands.SendFriendRequest;
 
@@ -16,7 +17,11 @@ public class SendFriendRequestCommandHandler : ICommandHandler<SendFriendRequest
     private readonly IUnitOfWork _unitOfWork;
     private readonly IUserContext _userContext;
 
-    public SendFriendRequestCommandHandler(IFriendshipRepository friendshipRepository, IUserRepository userRepository, IUnitOfWork unitOfWork, IUserContext userContext)
+    public SendFriendRequestCommandHandler(
+        IFriendshipRepository friendshipRepository, 
+        IUserRepository userRepository, 
+        IUnitOfWork unitOfWork, 
+        IUserContext userContext)
     {
         _friendshipRepository = friendshipRepository;
         _userRepository = userRepository;
@@ -30,6 +35,9 @@ public class SendFriendRequestCommandHandler : ICommandHandler<SendFriendRequest
 
         var addressee = await _userRepository.GetByIdAsync(request.AddresseeId);
         if (addressee is null) return Result.Failure<SendFriendRequestCommandResponse>(FriendshipErrors.UserNotFound);
+
+        var requester = await _userRepository.GetByIdAsync(_userContext.UserId);
+        if (requester is null) return Result.Failure<SendFriendRequestCommandResponse>(FriendshipErrors.UserNotFound);
 
         var existingFriendship = await _friendshipRepository.GetFriendshipIncludeDeletedAsync(_userContext.UserId, request.AddresseeId, cancellationToken);
         
@@ -65,6 +73,12 @@ public class SendFriendRequestCommandHandler : ICommandHandler<SendFriendRequest
             };
             await _friendshipRepository.AddAsync(friendship);
         }
+
+        requester.Raise(new FriendRequestSentDomainEvent(
+            friendship.FriendshipId,
+            _userContext.UserId,
+            request.AddresseeId,
+            requester.FullName ?? requester.Email));
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
