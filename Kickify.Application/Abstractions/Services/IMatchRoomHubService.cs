@@ -104,12 +104,10 @@ public interface IMatchRoomHubService
 
     /// <summary>
     /// Notify all participants that a team's formation has been updated
+    /// Sends the same response structure as the UpdateFormation API
     /// </summary>
     Task NotifyFormationUpdatedAsync(
-        Guid roomId,
-        string team,
-        string formationName,
-        object assignments,
+        object formationResponse,
         CancellationToken cancellationToken = default);
 
     /// <summary>
