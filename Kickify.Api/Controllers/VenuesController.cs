@@ -77,7 +77,9 @@ namespace Kickify.Api.Controllers
         }
 
         /// <summary>
-        /// Search venues with filters
+        /// Search venues with filters.
+        /// When fieldType is specified (e.g., SevenVsSeven), only venues with matching fields are returned,
+        /// and only the matching fields are included in the response.
         /// </summary>
         [HttpGet]
         public async Task<IResult> GetAllVenues(
@@ -85,7 +87,8 @@ namespace Kickify.Api.Controllers
             [FromQuery] decimal? longitude,
             [FromQuery] double? radiusKm,
             [FromQuery] DateTime? date,
-            [FromQuery] string? sportType,
+            [FromQuery] string? fieldType,
+            [FromQuery] string? searchName,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10,
             CancellationToken cancellationToken = default)
@@ -95,7 +98,8 @@ namespace Kickify.Api.Controllers
                 longitude,
                 radiusKm,
                 date,
-                sportType,
+                fieldType,
+                searchName,
                 page,
                 pageSize
             );

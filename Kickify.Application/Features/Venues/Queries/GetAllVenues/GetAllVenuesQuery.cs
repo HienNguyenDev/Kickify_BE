@@ -7,7 +7,8 @@ namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
         decimal? Longitude = null,
         double? RadiusKm = null,
         DateTime? Date = null,
-        string? SportType = null,
+        string? FieldType = null,
+        string? SearchName = null,
         int Page = 1,
         int PageSize = 10
     ) : IQuery<GetAllVenuesResponse>;

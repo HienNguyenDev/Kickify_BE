@@ -34,16 +34,24 @@ namespace Kickify.Infrastructure.Repositories
             decimal? longitude = null,
             double? radiusKm = null,
             DateTime? date = null,
-            FieldType? sportType = null,
+            FieldType? fieldType = null,
+            string? searchName = null,
             int page = 1,
             int pageSize = 10,
             CancellationToken cancellationToken = default)
         {
             var query = _dbSet
                 .AsNoTracking()
-                .Include(v => v.Fields)
+                .Include(v => v.Fields.Where(f => f.IsActive))
                 .Include(v => v.VenuePhotos.OrderBy(p => p.DisplayOrder).Take(1))
                 .AsQueryable();
+
+            // Filter by venue name (case-insensitive search)
+            if (!string.IsNullOrWhiteSpace(searchName))
+            {
+                var searchLower = searchName.ToLower();
+                query = query.Where(v => v.VenueName.ToLower().Contains(searchLower));
+            }
 
             // Filter by location (simplified - in production use PostGIS)
             if (latitude.HasValue && longitude.HasValue && radiusKm.HasValue)
@@ -60,10 +68,10 @@ namespace Kickify.Infrastructure.Repositories
                 );
             }
 
-            // Filter by sport type (only active fields)
-            if (sportType.HasValue)
+            // Filter by field type (only venues with active fields of this type)
+            if (fieldType.HasValue)
             {
-                query = query.Where(v => v.Fields.Any(f => f.FieldType == sportType.Value && f.IsActive));
+                query = query.Where(v => v.Fields.Any(f => f.FieldType == fieldType.Value && f.IsActive));
             }
 
             // Filter by availability on specific date (if provided)
@@ -80,6 +88,20 @@ namespace Kickify.Infrastructure.Repositories
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync(cancellationToken);
+
+            // If fieldType filter is applied, filter fields in-memory to only include matching fields
+            if (fieldType.HasValue)
+            {
+                foreach (var venue in venues)
+                {
+                    var filteredFields = venue.Fields.Where(f => f.FieldType == fieldType.Value).ToList();
+                    venue.Fields.Clear();
+                    foreach (var field in filteredFields)
+                    {
+                        venue.Fields.Add(field);
+                    }
+                }
+            }
 
             return (venues, total);
         }
