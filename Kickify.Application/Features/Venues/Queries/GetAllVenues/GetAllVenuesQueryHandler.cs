@@ -16,12 +16,12 @@ namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
 
         public async Task<Result<GetAllVenuesResponse>> Handle(GetAllVenuesQuery request, CancellationToken cancellationToken)
         {
-            FieldType? sportType = null;
-            if (!string.IsNullOrEmpty(request.SportType))
+            FieldType? fieldType = null;
+            if (!string.IsNullOrEmpty(request.FieldType))
             {
-                if (Enum.TryParse<FieldType>(request.SportType, true, out var parsed))
+                if (Enum.TryParse<FieldType>(request.FieldType, true, out var parsed))
                 {
-                    sportType = parsed;
+                    fieldType = parsed;
                 }
             }
 
@@ -30,7 +30,8 @@ namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
                 request.Longitude,
                 request.RadiusKm,
                 request.Date,
-                sportType,
+                fieldType,
+                request.SearchName,
                 request.Page,
                 request.PageSize,
                 cancellationToken

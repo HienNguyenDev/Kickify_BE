@@ -1,6 +1,7 @@
 using HealthChecks.UI.Client;
 using Kickify.Api;
 using Kickify.Api.Extensions;
+using Kickify.Api.Hangfire;
 using Kickify.Api.Hubs;
 using Kickify.Application;
 using Kickify.Infrastructure;
@@ -50,7 +51,12 @@ app.UseAuthentication();
 
 app.UseAuthorization();
 
-app.UseHangfireDashboard("/hangfire");
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = new[] { new HangfireAuthorizationFilter(builder.Configuration["Hangfire:Username"], builder.Configuration["Hangfire:Password"]) },
+    DashboardTitle = "Kickify - Hangfire Dashboard",
+    DisplayStorageConnectionString = false
+});
 
 app.MapControllers();
 

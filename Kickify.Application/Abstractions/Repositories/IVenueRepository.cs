@@ -13,7 +13,8 @@ namespace Kickify.Application.Abstractions.Repositories
             decimal? longitude = null,
             double? radiusKm = null,
             DateTime? date = null,
-            FieldType? sportType = null,
+            FieldType? fieldType = null,
+            string? searchName = null,
             int page = 1,
             int pageSize = 10,
             CancellationToken cancellationToken = default);
