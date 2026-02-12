@@ -122,10 +122,10 @@ public static class FormationRuleService
         var prefix = slotId.Split('-')[0].ToUpperInvariant();
         return prefix switch
         {
-            "GK" => "Goalkeeper",
-            "DF" => "Defender",
-            "MF" => "Midfielder",
-            "FW" => "Forward",
+            "GK" => "GK", //old will be Goalkeeper
+            "DF" => "DF", //old will be Defender
+            "MF" => "MF", //old will be Midfielder
+            "FW" => "FW", //old will be Forward
             _ => "Unknown"
         };
     }
