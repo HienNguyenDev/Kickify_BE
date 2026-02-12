@@ -193,21 +193,18 @@ namespace Kickify.Application.Features.MatchRooms.Commands.UpdateFormation
                 "Formation updated for Room {RoomId}, Team {Team} to {FormationName} by captain {UserId}",
                 request.RoomId, request.Team, request.FormationName, userId);
 
-            // Send real-time notification
-            await _matchRoomHubService.NotifyFormationUpdatedAsync(
-                request.RoomId,
-                request.Team,
-                request.FormationName,
-                assignmentResponses.Select(a => new { a.PlayerId, a.SlotId, a.Position }).ToList(),
-                cancellationToken);
-
-            return Result.Success(new UpdateFormationResponse(
+            var response = new UpdateFormationResponse(
                 request.RoomId,
                 request.Team,
                 request.FormationName,
                 assignmentResponses,
                 updatedAt
-            ));
+            );
+
+            // Send real-time notification with exact same structure as API response
+            await _matchRoomHubService.NotifyFormationUpdatedAsync(response, cancellationToken);
+
+            return Result.Success(response);
         }
     }
 }

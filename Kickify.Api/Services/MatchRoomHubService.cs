@@ -208,22 +208,15 @@ public class MatchRoomHubService : IMatchRoomHubService
     }
 
     public async Task NotifyFormationUpdatedAsync(
-        Guid roomId,
-        string team,
-        string formationName,
-        object assignments,
+        object formationResponse,
         CancellationToken cancellationToken = default)
     {
+        // formationResponse is UpdateFormationResponse - send it directly
+        // to ensure SignalR payload matches API response exactly
+        dynamic response = formationResponse;
         await _hubContext.Clients
-            .Group($"room_{roomId}")
-            .SendAsync("FormationUpdated", new
-            {
-                RoomId = roomId,
-                Team = team,
-                FormationName = formationName,
-                Assignments = assignments,
-                UpdatedAt = DateTime.UtcNow
-            }, cancellationToken);
+            .Group($"room_{response.RoomId}")
+            .SendAsync("FormationUpdated", formationResponse, cancellationToken);
     }
 
     public async Task NotifyTeamNameUpdatedAsync(
