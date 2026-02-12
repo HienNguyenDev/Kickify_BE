@@ -60,10 +60,10 @@ namespace Kickify.Infrastructure.Repositories
                 );
             }
 
-            // Filter by sport type
+            // Filter by sport type (only active fields)
             if (sportType.HasValue)
             {
-                query = query.Where(v => v.Fields.Any(f => f.FieldType == sportType.Value));
+                query = query.Where(v => v.Fields.Any(f => f.FieldType == sportType.Value && f.IsActive));
             }
 
             // Filter by availability on specific date (if provided)
