@@ -7,6 +7,7 @@ using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
 using Kickify.Domain.Errors;
 using Kickify.Domain.Event;
+using MediatR;
 
 namespace Kickify.Application.Features.Friendships.Commands.SendFriendRequest;
 
@@ -16,17 +17,20 @@ public class SendFriendRequestCommandHandler : ICommandHandler<SendFriendRequest
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IUserContext _userContext;
+    private readonly IPublisher _publisher;
 
     public SendFriendRequestCommandHandler(
         IFriendshipRepository friendshipRepository, 
         IUserRepository userRepository, 
         IUnitOfWork unitOfWork, 
-        IUserContext userContext)
+        IUserContext userContext,
+        IPublisher publisher)
     {
         _friendshipRepository = friendshipRepository;
         _userRepository = userRepository;
         _unitOfWork = unitOfWork;
         _userContext = userContext;
+        _publisher = publisher;
     }
 
     public async Task<Result<SendFriendRequestCommandResponse>> Handle(SendFriendRequestCommand request, CancellationToken cancellationToken)
@@ -74,13 +78,14 @@ public class SendFriendRequestCommandHandler : ICommandHandler<SendFriendRequest
             await _friendshipRepository.AddAsync(friendship);
         }
 
-        requester.Raise(new FriendRequestSentDomainEvent(
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Publish domain event tr?c ti?p sau khi l?u
+        await _publisher.Publish(new FriendRequestSentDomainEvent(
             friendship.FriendshipId,
             _userContext.UserId,
             request.AddresseeId,
-            requester.FullName ?? requester.Email));
-
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+            requester.FullName ?? requester.Email), cancellationToken);
 
         var response = new SendFriendRequestCommandResponse
         {

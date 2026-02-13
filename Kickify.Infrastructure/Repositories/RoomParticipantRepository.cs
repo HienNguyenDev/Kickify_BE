@@ -54,5 +54,18 @@ namespace Kickify.Infrastructure.Repositories
             newCaptain.IsCaptain = true;
             return newCaptain.UserId;
         }
+
+        public async Task<int> GetCheckedInCountAsync(Guid roomId, CancellationToken cancellationToken = default)
+        {
+            return await _dbSet
+                .CountAsync(p => p.RoomId == roomId && p.CheckedIn, cancellationToken);
+        }
+
+        public async Task<List<RoomParticipant>> GetParticipantsByRoomAsync(Guid roomId, CancellationToken cancellationToken = default)
+        {
+            return await _dbSet
+                .Where(p => p.RoomId == roomId)
+                .ToListAsync(cancellationToken);
+        }
     }
 }

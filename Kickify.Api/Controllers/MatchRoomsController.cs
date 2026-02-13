@@ -1,6 +1,7 @@
 using Kickify.Api.Extensions;
 using Kickify.Api.Infrastructure;
 using Kickify.Api.Requests;
+using Kickify.Application.Features.MatchRooms.Commands.CheckIn;
 using Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom;
 using Kickify.Application.Features.MatchRooms.Commands.JoinRoom;
 using Kickify.Application.Features.MatchRooms.Commands.KickPlayer;
@@ -9,9 +10,11 @@ using Kickify.Application.Features.MatchRooms.Commands.RenameTeam;
 using Kickify.Application.Features.MatchRooms.Commands.UpdateFormation;
 using Kickify.Application.Features.MatchRooms.Commands.UpdateParticipant;
 using Kickify.Application.Features.MatchRooms.Commands.UpdateRoomPrivacy;
+using Kickify.Application.Features.MatchRooms.Commands.VoteMatchResult;
 using Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById;
 using Kickify.Application.Features.MatchRooms.Queries.GetMatchRooms;
 using Kickify.Application.Features.MatchRooms.Queries.GetMyMatchRooms;
+using Kickify.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -249,6 +252,44 @@ namespace Kickify.Api.Controllers
                 request.Team,
                 request.Name
             );
+
+            var result = await _sender.Send(command, cancellationToken);
+
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Check-in to a match room
+        /// </summary>
+        /// <remarks>
+        /// Check-in is only allowed within 30 minutes before match start time.
+        /// When all participants have checked in, the room will be locked and match will start at the scheduled time.
+        /// </remarks>
+        [HttpPost("{id}/check-in")]
+        public async Task<IResult> CheckIn(Guid id, CancellationToken cancellationToken)
+        {
+            var command = new CheckInCommand(id);
+
+            var result = await _sender.Send(command, cancellationToken);
+
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Vote for match result
+        /// </summary>
+        /// <remarks>
+        /// Voting is only allowed during the Reviewing phase (after match ends).
+        /// When 60% of participants have voted, the result will be finalized immediately.
+        /// Otherwise, the result will be finalized after 12 hours based on majority vote.
+        /// </remarks>
+        [HttpPost("{id}/vote-result")]
+        public async Task<IResult> VoteMatchResult(
+            Guid id,
+            [FromBody] VoteMatchResultRequest request,
+            CancellationToken cancellationToken)
+        {
+            var command = new VoteMatchResultCommand(id, request.Vote);
 
             var result = await _sender.Send(command, cancellationToken);
 
