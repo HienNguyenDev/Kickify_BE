@@ -1,4 +1,4 @@
-using Kickify.Application.Abstractions.Services;
+﻿using Kickify.Application.Abstractions.Services;
 using Kickify.Domain.Event;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -27,8 +27,8 @@ public class FriendRequestSentEventHandler : INotificationHandler<FriendRequestS
             notification.AddresseeId,
             notification.RequesterName);
 
-        var title = "L?i m?i k?t b?n m?i";
-        var body = $"{notification.RequesterName} ?� g?i cho b?n m?t l?i m?i k?t b?n";
+        var title = "Lời mời kết bạn mới";
+        var body = $"{notification.RequesterName} đã gửi cho bạn một lời mời kết bạn mới";
 
         var data = new Dictionary<string, string>
         {

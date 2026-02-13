@@ -1,23 +1,31 @@
 using FirebaseAdmin.Messaging;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Application.Abstractions.Services;
+using Microsoft.Extensions.Logging;
 
 namespace Kickify.Infrastructure.Services;
 
 public class PushNotificationService : IPushNotificationService
 {
     private readonly IUserRepository _userRepository;
+    private readonly ILogger<PushNotificationService> _logger;
 
-    public PushNotificationService(IUserRepository userRepository)
+    public PushNotificationService(IUserRepository userRepository, ILogger<PushNotificationService> logger)
     {
         _userRepository = userRepository;
+        _logger = logger;
     }
 
     public async Task SendToUserAsync(Guid userId, string title, string body, Dictionary<string, string>? data = null, CancellationToken cancellationToken = default)
     {
         var user = await _userRepository.GetByIdAsync(userId);
-        if (user?.FcmToken == null) return;
+        if (user?.FcmToken == null)
+        {
+            _logger.LogWarning("Cannot send push notification to user {UserId}: FcmToken is null", userId);
+            return;
+        }
 
+        _logger.LogInformation("Sending push notification to user {UserId} with token {FcmToken}", userId, user.FcmToken[..20] + "...");
         await SendToTokenAsync(user.FcmToken, title, body, data, cancellationToken);
     }
 
@@ -29,7 +37,11 @@ public class PushNotificationService : IPushNotificationService
             .Select(u => u.FcmToken!)
             .ToList();
 
-        if (tokens.Count == 0) return;
+        if (tokens.Count == 0)
+        {
+            _logger.LogWarning("No valid FCM tokens found for users");
+            return;
+        }
 
         await SendToTokensAsync(tokens, title, body, data, cancellationToken);
     }
@@ -66,10 +78,17 @@ public class PushNotificationService : IPushNotificationService
                 }
             };
 
-            await FirebaseMessaging.DefaultInstance.SendAsync(message, cancellationToken);
+            var response = await FirebaseMessaging.DefaultInstance.SendAsync(message, cancellationToken);
+            _logger.LogInformation("Push notification sent successfully. Message ID: {MessageId}", response);
         }
-        catch (FirebaseMessagingException)
+        catch (FirebaseMessagingException ex)
         {
+            _logger.LogError(ex, "Firebase push notification failed. ErrorCode: {ErrorCode}, MessagingErrorCode: {MessagingErrorCode}", 
+                ex.ErrorCode, ex.MessagingErrorCode);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error sending push notification");
         }
     }
 
@@ -108,10 +127,13 @@ public class PushNotificationService : IPushNotificationService
                 }
             };
 
-            await FirebaseMessaging.DefaultInstance.SendEachForMulticastAsync(message, cancellationToken);
+            var response = await FirebaseMessaging.DefaultInstance.SendEachForMulticastAsync(message, cancellationToken);
+            _logger.LogInformation("Multicast push notification sent. Success: {SuccessCount}, Failure: {FailureCount}", 
+                response.SuccessCount, response.FailureCount);
         }
-        catch (FirebaseMessagingException)
+        catch (FirebaseMessagingException ex)
         {
+            _logger.LogError(ex, "Firebase multicast push notification failed. ErrorCode: {ErrorCode}", ex.ErrorCode);
         }
     }
 
@@ -147,10 +169,12 @@ public class PushNotificationService : IPushNotificationService
                 }
             };
 
-            await FirebaseMessaging.DefaultInstance.SendAsync(message, cancellationToken);
+            var response = await FirebaseMessaging.DefaultInstance.SendAsync(message, cancellationToken);
+            _logger.LogInformation("Topic push notification sent successfully. Topic: {Topic}, MessageId: {MessageId}", topic, response);
         }
-        catch (FirebaseMessagingException)
+        catch (FirebaseMessagingException ex)
         {
+            _logger.LogError(ex, "Firebase topic push notification failed. Topic: {Topic}, ErrorCode: {ErrorCode}", topic, ex.ErrorCode);
         }
     }
 }
