@@ -30,6 +30,14 @@ public class MatchRoom : Entity
     public string? AutoCloseJobId { get; set; }
     public string? TeamAName { get; set; }
     public string? TeamBName { get; set; }
+    
+    // Match lifecycle job IDs
+    public string? StartMatchJobId { get; set; }
+    public string? EndMatchJobId { get; set; }
+    public string? FinalizeResultJobId { get; set; }
+    
+    // Final match result
+    public MatchResult? FinalResult { get; set; }
 
     // Navigation properties
     public User Host { get; set; } = null!;
@@ -42,4 +50,5 @@ public class MatchRoom : Entity
     public ICollection<EloHistory> EloHistories { get; set; } = new List<EloHistory>();
     public ICollection<PlayerReport> PlayerReports { get; set; } = new List<PlayerReport>();
     public ICollection<MatchFormation> Formations { get; set; } = new List<MatchFormation>();
+    public ICollection<MatchResultVote> ResultVotes { get; set; } = new List<MatchResultVote>();
 }

@@ -59,6 +59,9 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<WalletTransaction> WalletTransactions { get; set; }
     public DbSet<WalletWithdrawal> WalletWithdrawals { get; set; }
 
+    // Match Result Votes
+    public DbSet<MatchResultVote> MatchResultVotes { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema(Schemas.Default);

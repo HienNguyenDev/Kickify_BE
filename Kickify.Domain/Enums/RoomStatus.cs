@@ -5,6 +5,7 @@ public enum RoomStatus
     Open,
     Locked,
     InProgress,
+    Reviewing,
     Completed,
     Cancelled
 }

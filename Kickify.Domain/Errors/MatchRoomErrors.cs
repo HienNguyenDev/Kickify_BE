@@ -143,5 +143,31 @@ namespace Kickify.Domain.Errors
         public static readonly Error CannotUpdateOtherTeamName = Error.Failure(
             "MatchRoom.CannotUpdateOtherTeamName",
             "You can only update the name of your own team");
+
+        // Check-in Errors
+        public static readonly Error AlreadyCheckedIn = Error.Conflict(
+            "MatchRoom.AlreadyCheckedIn",
+            "You have already checked in");
+
+        public static readonly Error CheckInNotAllowed = Error.Problem(
+            "MatchRoom.CheckInNotAllowed",
+            "Check-in is only allowed for Open or Locked rooms");
+
+        public static readonly Error CheckInTooEarly = Error.Problem(
+            "MatchRoom.CheckInTooEarly",
+            "Check-in is only allowed within 30 minutes before match start time");
+
+        // Vote Errors
+        public static readonly Error AlreadyVoted = Error.Conflict(
+            "MatchRoom.AlreadyVoted",
+            "You have already voted for this match result");
+
+        public static readonly Error VoteNotAllowed = Error.Problem(
+            "MatchRoom.VoteNotAllowed",
+            "Voting is only allowed during the reviewing phase");
+
+        public static readonly Error NotInReviewingPhase = Error.Problem(
+            "MatchRoom.NotInReviewingPhase",
+            "Match is not in reviewing phase");
     }
 }

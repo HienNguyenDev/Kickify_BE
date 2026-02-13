@@ -118,4 +118,47 @@ public interface IMatchRoomHubService
         string team,
         string? teamName,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Notify all participants that a player has checked in
+    /// </summary>
+    Task NotifyPlayerCheckedInAsync(
+        Guid roomId,
+        Guid userId,
+        int checkedInCount,
+        int totalParticipants,
+        bool allCheckedIn,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Notify all participants that the match has started
+    /// </summary>
+    Task NotifyMatchStartedAsync(
+        Guid roomId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Notify all participants that the match has ended and reviewing phase started
+    /// </summary>
+    Task NotifyMatchEndedAsync(
+        Guid roomId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Notify all participants about vote progress
+    /// </summary>
+    Task NotifyVoteProgressAsync(
+        Guid roomId,
+        int voteCount,
+        int totalParticipants,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Notify all participants that the match result has been finalized
+    /// </summary>
+    Task NotifyMatchResultFinalizedAsync(
+        Guid roomId,
+        string finalResult,
+        int voteCount,
+        CancellationToken cancellationToken = default);
 }

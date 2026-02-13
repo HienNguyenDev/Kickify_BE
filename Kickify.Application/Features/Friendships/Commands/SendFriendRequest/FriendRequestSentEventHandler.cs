@@ -1,22 +1,34 @@
-using Kickify.Application.Abstractions.Services;
+﻿using Kickify.Application.Abstractions.Services;
 using Kickify.Domain.Event;
 using MediatR;
+using Microsoft.Extensions.Logging;
 
 namespace Kickify.Application.Features.Friendships.Commands.SendFriendRequest;
 
 public class FriendRequestSentEventHandler : INotificationHandler<FriendRequestSentDomainEvent>
 {
     private readonly IPushNotificationService _pushNotificationService;
+    private readonly ILogger<FriendRequestSentEventHandler> _logger;
 
-    public FriendRequestSentEventHandler(IPushNotificationService pushNotificationService)
+    public FriendRequestSentEventHandler(
+        IPushNotificationService pushNotificationService,
+        ILogger<FriendRequestSentEventHandler> logger)
     {
         _pushNotificationService = pushNotificationService;
+        _logger = logger;
     }
 
     public async Task Handle(FriendRequestSentDomainEvent notification, CancellationToken cancellationToken)
     {
-        var title = "L?i m?i k?t b?n m?i";
-        var body = $"{notification.RequesterName} ?� g?i cho b?n m?t l?i m?i k?t b?n";
+        _logger.LogInformation(
+            "FriendRequestSentEventHandler triggered. FriendshipId: {FriendshipId}, RequesterId: {RequesterId}, AddresseeId: {AddresseeId}, RequesterName: {RequesterName}",
+            notification.FriendshipId,
+            notification.RequesterId,
+            notification.AddresseeId,
+            notification.RequesterName);
+
+        var title = "Lời mời kết bạn mới";
+        var body = $"{notification.RequesterName} đã gửi cho bạn một lời mời kết bạn mới";
 
         var data = new Dictionary<string, string>
         {
@@ -25,11 +37,20 @@ public class FriendRequestSentEventHandler : INotificationHandler<FriendRequestS
             { "requesterId", notification.RequesterId.ToString() }
         };
 
-        await _pushNotificationService.SendToUserAsync(
-            notification.AddresseeId,
-            title,
-            body,
-            data,
-            cancellationToken);
+        try
+        {
+            await _pushNotificationService.SendToUserAsync(
+                notification.AddresseeId,
+                title,
+                body,
+                data,
+                cancellationToken);
+
+            _logger.LogInformation("Push notification sent successfully to user {AddresseeId}", notification.AddresseeId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send push notification to user {AddresseeId}", notification.AddresseeId);
+        }
     }
 }
