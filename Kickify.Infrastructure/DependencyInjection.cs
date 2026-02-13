@@ -132,6 +132,7 @@ namespace Kickify.Infrastructure
             services.AddScoped<IFriendshipRepository, FriendshipRepository>();
             services.AddScoped<IMatchFormationRepository, MatchFormationRepository>();
             services.AddScoped<IFormationAssignmentRepository, FormationAssignmentRepository>();
+            services.AddScoped<IMatchResultVoteRepository, MatchResultVoteRepository>();
             return services;
         }
         private static IServiceCollection AddFirebase(this IServiceCollection services)
@@ -224,6 +225,7 @@ namespace Kickify.Infrastructure
         {
             services.AddScoped<IEmailJobService, EmailJobService>();
             services.AddScoped<IRoomAutoCloseService, RoomAutoCloseService>();
+            services.AddScoped<IMatchLifecycleService, MatchLifecycleService>();
 
             return services;
         }

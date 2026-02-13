@@ -235,4 +235,87 @@ public class MatchRoomHubService : IMatchRoomHubService
                 UpdatedAt = DateTime.UtcNow
             }, cancellationToken);
     }
+
+    public async Task NotifyPlayerCheckedInAsync(
+        Guid roomId,
+        Guid userId,
+        int checkedInCount,
+        int totalParticipants,
+        bool allCheckedIn,
+        CancellationToken cancellationToken = default)
+    {
+        await _hubContext.Clients
+            .Group($"room_{roomId}")
+            .SendAsync("PlayerCheckedIn", new
+            {
+                RoomId = roomId,
+                UserId = userId,
+                CheckedInCount = checkedInCount,
+                TotalParticipants = totalParticipants,
+                AllCheckedIn = allCheckedIn,
+                CheckedInAt = DateTime.UtcNow
+            }, cancellationToken);
+    }
+
+    public async Task NotifyMatchStartedAsync(
+        Guid roomId,
+        CancellationToken cancellationToken = default)
+    {
+        await _hubContext.Clients
+            .Group($"room_{roomId}")
+            .SendAsync("MatchStarted", new
+            {
+                RoomId = roomId,
+                StartedAt = DateTime.UtcNow
+            }, cancellationToken);
+    }
+
+    public async Task NotifyMatchEndedAsync(
+        Guid roomId,
+        CancellationToken cancellationToken = default)
+    {
+        await _hubContext.Clients
+            .Group($"room_{roomId}")
+            .SendAsync("MatchEnded", new
+            {
+                RoomId = roomId,
+                EndedAt = DateTime.UtcNow,
+                Message = "Tr?n ??u k?t thúc. Vui lòng vote k?t qu? tr?n ??u trong vòng 12 gi?."
+            }, cancellationToken);
+    }
+
+    public async Task NotifyVoteProgressAsync(
+        Guid roomId,
+        int voteCount,
+        int totalParticipants,
+        CancellationToken cancellationToken = default)
+    {
+        await _hubContext.Clients
+            .Group($"room_{roomId}")
+            .SendAsync("VoteProgress", new
+            {
+                RoomId = roomId,
+                VoteCount = voteCount,
+                TotalParticipants = totalParticipants,
+                Percentage = (double)voteCount / totalParticipants,
+                UpdatedAt = DateTime.UtcNow
+            }, cancellationToken);
+    }
+
+    public async Task NotifyMatchResultFinalizedAsync(
+        Guid roomId,
+        string finalResult,
+        int voteCount,
+        CancellationToken cancellationToken = default)
+    {
+        await _hubContext.Clients
+            .Group($"room_{roomId}")
+            .SendAsync("MatchResultFinalized", new
+            {
+                RoomId = roomId,
+                FinalResult = finalResult,
+                VoteCount = voteCount,
+                FinalizedAt = DateTime.UtcNow
+            }, cancellationToken);
+    }
 }
