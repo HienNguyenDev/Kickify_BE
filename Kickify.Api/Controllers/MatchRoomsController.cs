@@ -1,7 +1,6 @@
 using Kickify.Api.Extensions;
 using Kickify.Api.Infrastructure;
 using Kickify.Api.Requests;
-using Kickify.Application.Features.MatchRooms.Commands.CheckIn;
 using Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom;
 using Kickify.Application.Features.MatchRooms.Commands.JoinRoom;
 using Kickify.Application.Features.MatchRooms.Commands.KickPlayer;
@@ -252,23 +251,6 @@ namespace Kickify.Api.Controllers
                 request.Team,
                 request.Name
             );
-
-            var result = await _sender.Send(command, cancellationToken);
-
-            return result.MatchOk();
-        }
-
-        /// <summary>
-        /// Check-in to a match room
-        /// </summary>
-        /// <remarks>
-        /// Check-in is only allowed within 30 minutes before match start time.
-        /// When all participants have checked in, the room will be locked and match will start at the scheduled time.
-        /// </remarks>
-        [HttpPost("{id}/check-in")]
-        public async Task<IResult> CheckIn(Guid id, CancellationToken cancellationToken)
-        {
-            var command = new CheckInCommand(id);
 
             var result = await _sender.Send(command, cancellationToken);
 

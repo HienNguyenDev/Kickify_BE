@@ -34,7 +34,8 @@ public class FriendRequestSentEventHandler : INotificationHandler<FriendRequestS
         {
             { "type", "friend_request" },
             { "friendshipId", notification.FriendshipId.ToString() },
-            { "requesterId", notification.RequesterId.ToString() }
+            { "requesterId", notification.RequesterId.ToString() },
+            { "deepLink", "kickify://friends/requests" }
         };
 
         try
