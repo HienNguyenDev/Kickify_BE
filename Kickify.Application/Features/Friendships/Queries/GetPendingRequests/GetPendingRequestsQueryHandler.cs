@@ -32,7 +32,7 @@ public class GetPendingRequestsQueryHandler : IQueryHandler<GetPendingRequestsQu
             RequesterFullName = r.Requester?.FullName ?? string.Empty,
             RequesterAvatarUrl = r.Requester?.AvatarUrl,
             CurrentElo = r.Requester?.PlayerProfile?.CurrentElo,
-            PreferredPositions = r.Requester?.PlayerProfile?.PreferredPositions,
+            PreferredPositions = r.Requester?.PreferredPositions,
             SentAt = r.CreatedAt
         }).ToList();
 

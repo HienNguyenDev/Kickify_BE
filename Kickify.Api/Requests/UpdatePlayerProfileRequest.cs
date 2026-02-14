@@ -3,7 +3,7 @@ namespace Kickify.Api.Requests
     public class UpdatePlayerProfileRequest
     {
         public int? CurrentElo { get; set; }
-        public decimal? TrustScore { get; set; }
+        public int? TrustScore { get; set; }
         public int? TotalMatches { get; set; }
         public int? Wins { get; set; }
         public int? Losses { get; set; }
