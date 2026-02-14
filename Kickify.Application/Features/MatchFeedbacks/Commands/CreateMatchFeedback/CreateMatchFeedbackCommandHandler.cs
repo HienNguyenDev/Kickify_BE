@@ -48,10 +48,10 @@ public class CreateMatchFeedbackCommandHandler : ICommandHandler<CreateMatchFeed
             return Result.Failure<CreateMatchFeedbackCommandResponse>(MatchRoomErrors.NotFound(request.MatchId));
         }
 
-        // Check if match is completed
-        if (matchRoom.Status != RoomStatus.Completed)
+        // Check if match is not reviewing
+        if (matchRoom.Status != RoomStatus.Reviewing)
         {
-            return Result.Failure<CreateMatchFeedbackCommandResponse>(MatchFeedbackErrors.MatchNotCompleted);
+            return Result.Failure<CreateMatchFeedbackCommandResponse>(MatchFeedbackErrors.MatchNotReviewing);
         }
 
         // Check if reviewer was a participant

@@ -43,7 +43,6 @@ namespace Kickify.Application.Features.PlayerProfiles.Queries.GetAllPlayerProfil
                 MvpCount = p.MvpCount,
                 WinStreak = p.WinStreak,
                 MaxWinStreak = p.MaxWinStreak,
-                PreferredPositions = p.PreferredPositions,
                 CreatedAt = p.CreatedAt
             }).ToList();
 

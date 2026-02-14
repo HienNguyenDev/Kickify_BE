@@ -1,4 +1,4 @@
-using Kickify.Application.Abstractions.Authentication;
+Ôªøusing Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Jobs;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
@@ -55,7 +55,7 @@ public class VoteMatchResultCommandHandler : ICommandHandler<VoteMatchResultComm
         // Check room status - only allow voting in Reviewing phase
         if (room.Status != RoomStatus.Reviewing)
         {
-            return Result.Failure<VoteMatchResultResponse>(MatchRoomErrors.VoteNotAllowed);
+            return Result.Failure<VoteMatchResultResponse>(MatchRoomErrors.VotingPeriodClosed);
         }
 
         // Check if user is a participant
@@ -85,25 +85,14 @@ public class VoteMatchResultCommandHandler : ICommandHandler<VoteMatchResultComm
         await _matchResultVoteRepository.AddAsync(vote);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        // Get vote count and check threshold
+        // Get current vote count
         var voteCount = await _matchResultVoteRepository.GetVoteCountByRoomAsync(request.RoomId, cancellationToken);
         var totalParticipants = room.FilledSlots;
-        var votePercentage = (double)voteCount / totalParticipants;
-        var thresholdReached = votePercentage >= VoteThresholdPercentage;
 
-        _logger.LogInformation("User {UserId} voted {Vote} for room {RoomId}. Votes: {VoteCount}/{Total} ({Percentage:P0})",
-            userId, request.Vote, request.RoomId, voteCount, totalParticipants, votePercentage);
+        _logger.LogInformation("User {UserId} voted {Vote} for room {RoomId}. Votes: {VoteCount}/{Total}",
+            userId, request.Vote, request.RoomId, voteCount, totalParticipants);
 
-        // If threshold reached, finalize early
-        if (thresholdReached)
-        {
-            _logger.LogInformation("Vote threshold reached for room {RoomId}. Triggering early finalization.", request.RoomId);
-            await _matchLifecycleService.CheckAndFinalizeIfThresholdMetAsync(request.RoomId);
-        }
-
-        var message = thresholdReached
-            ? "Vote ghi nh?n th‡nh cÙng. ?„ ?? 60% ng??i ch?i vote, k?t qu? s? ???c ch?t ngay."
-            : $"Vote ghi nh?n th‡nh cÙng. Hi?n t?i {voteCount}/{totalParticipants} ng??i ?„ vote.";
+        var message = $"Vote ghi nh·∫≠n th√†nh c√¥ng. Hi·ªán t·∫°i {voteCount}/{totalParticipants} ng∆∞·ªùi ƒë√£ vote.";
 
         return Result.Success(new VoteMatchResultResponse(
             request.RoomId,
@@ -112,8 +101,6 @@ public class VoteMatchResultCommandHandler : ICommandHandler<VoteMatchResultComm
             vote.VotedAt,
             voteCount,
             totalParticipants,
-            votePercentage,
-            thresholdReached,
             message
         ));
     }

@@ -7,8 +7,7 @@ public record VoteMatchResultResponse(
     Guid UserId,
     MatchResult Vote,
     DateTime VotedAt,
-    int VoteCount,
+    int CurrentVoteCount,
     int TotalParticipants,
-    double VotePercentage,
-    bool ThresholdReached,
-    string Message);
+    string Message
+);

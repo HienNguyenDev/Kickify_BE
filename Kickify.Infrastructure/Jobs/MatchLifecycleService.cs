@@ -1,4 +1,4 @@
-using Hangfire;
+﻿using Hangfire;
 using Kickify.Application.Abstractions.Jobs;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
@@ -14,8 +14,8 @@ public class MatchLifecycleService : IMatchLifecycleService
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly ILogger<MatchLifecycleService> _logger;
 
-    private const double VoteThresholdPercentage = 0.6; // 60%
-    private static readonly TimeSpan ReviewingPeriod = TimeSpan.FromHours(12);
+    // Thời gian cho phép vote và feedback sau trận đấu
+    private static readonly TimeSpan ReviewingPeriod = TimeSpan.FromHours(22);
 
     public MatchLifecycleService(
         IBackgroundJobClient backgroundJobClient,
@@ -40,7 +40,7 @@ public class MatchLifecycleService : IMatchLifecycleService
             delay);
 
         UpdateRoomJobId(roomId, r => r.StartMatchJobId = jobId);
-        _logger.LogInformation("Scheduled match start for room {RoomId} at {StartTime}, JobId: {JobId}", 
+        _logger.LogInformation("Scheduled match start for room {RoomId} at {StartTime}, JobId: {JobId}",
             roomId, matchStartTime, jobId);
     }
 
@@ -57,25 +57,25 @@ public class MatchLifecycleService : IMatchLifecycleService
             delay);
 
         UpdateRoomJobId(roomId, r => r.EndMatchJobId = jobId);
-        _logger.LogInformation("Scheduled match end for room {RoomId} at {EndTime}, JobId: {JobId}", 
+        _logger.LogInformation("Scheduled match end for room {RoomId} at {EndTime}, JobId: {JobId}",
             roomId, matchEndTime, jobId);
     }
 
-    public void ScheduleResultFinalization(Guid roomId, DateTime finalizeTime)
+    public void ScheduleReviewingPeriodEnd(Guid roomId, DateTime closeTime)
     {
-        var delay = finalizeTime - DateTime.UtcNow;
+        var delay = closeTime - DateTime.UtcNow;
         if (delay < TimeSpan.Zero)
         {
             delay = TimeSpan.Zero;
         }
 
         var jobId = _backgroundJobClient.Schedule(
-            () => FinalizeMatchResultAsync(roomId),
+            () => CloseReviewingPeriodAsync(roomId),
             delay);
 
         UpdateRoomJobId(roomId, r => r.FinalizeResultJobId = jobId);
-        _logger.LogInformation("Scheduled result finalization for room {RoomId} at {FinalizeTime}, JobId: {JobId}", 
-            roomId, finalizeTime, jobId);
+        _logger.LogInformation("Scheduled reviewing period end for room {RoomId} at {CloseTime}, JobId: {JobId}",
+            roomId, closeTime, jobId);
     }
 
     public void CancelAllJobs(string? startJobId, string? endJobId, string? finalizeJobId)
@@ -103,7 +103,7 @@ public class MatchLifecycleService : IMatchLifecycleService
 
         if (room.Status != RoomStatus.Locked)
         {
-            _logger.LogWarning("Room {RoomId} is not in Locked status, cannot start match. Current status: {Status}", 
+            _logger.LogWarning("Room {RoomId} is not in Locked status, cannot start match. Current status: {Status}",
                 roomId, room.Status);
             return;
         }
@@ -135,7 +135,7 @@ public class MatchLifecycleService : IMatchLifecycleService
 
         if (room.Status != RoomStatus.InProgress)
         {
-            _logger.LogWarning("Room {RoomId} is not in InProgress status, cannot end match. Current status: {Status}", 
+            _logger.LogWarning("Room {RoomId} is not in InProgress status, cannot end match. Current status: {Status}",
                 roomId, room.Status);
             return;
         }
@@ -145,100 +145,68 @@ public class MatchLifecycleService : IMatchLifecycleService
         matchRoomRepository.Update(room);
         await unitOfWork.SaveChangesAsync(CancellationToken.None);
 
-        _logger.LogInformation("Match ended for room {RoomId}, entering reviewing phase", roomId);
+        _logger.LogInformation("Match ended for room {RoomId}, entering 22-hour reviewing phase for voting and feedback", roomId);
 
-        // Schedule result finalization after 12 hours
-        var finalizeTime = DateTime.UtcNow.Add(ReviewingPeriod);
-        ScheduleResultFinalization(roomId, finalizeTime);
+        // Schedule đóng reviewing period sau 22 tiếng
+        var closeTime = DateTime.UtcNow.Add(ReviewingPeriod);
+        ScheduleReviewingPeriodEnd(roomId, closeTime);
     }
 
-    public async Task FinalizeMatchResultAsync(Guid roomId)
+    /// <summary>
+    /// Đóng giai đoạn reviewing sau 22 tiếng, không cho vote và feedback nữa
+    /// </summary>
+    public async Task CloseReviewingPeriodAsync(Guid roomId)
     {
         using var scope = _serviceScopeFactory.CreateScope();
         var matchRoomRepository = scope.ServiceProvider.GetRequiredService<IMatchRoomRepository>();
         var matchResultVoteRepository = scope.ServiceProvider.GetRequiredService<IMatchResultVoteRepository>();
-        var roomParticipantRepository = scope.ServiceProvider.GetRequiredService<IRoomParticipantRepository>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
         var room = await matchRoomRepository.GetByIdAsync(roomId);
         if (room == null)
         {
-            _logger.LogWarning("Room {RoomId} not found for result finalization", roomId);
+            _logger.LogWarning("Room {RoomId} not found for closing reviewing period", roomId);
             return;
         }
 
         if (room.Status != RoomStatus.Reviewing)
         {
-            _logger.LogWarning("Room {RoomId} is not in Reviewing status, cannot finalize. Current status: {Status}", 
+            _logger.LogWarning("Room {RoomId} is not in Reviewing status, cannot close. Current status: {Status}",
                 roomId, room.Status);
             return;
         }
 
+        // Lấy tất cả votes và tính kết quả cuối cùng
         var votes = await matchResultVoteRepository.GetVotesByRoomAsync(roomId);
-        var totalParticipants = room.FilledSlots;
 
-        if (votes.Count == 0)
+        if (votes.Count > 0)
         {
-            // No votes at all - cancel the room
-            room.Status = RoomStatus.Cancelled;
-            room.FinalizeResultJobId = null;
-            matchRoomRepository.Update(room);
-            await unitOfWork.SaveChangesAsync(CancellationToken.None);
+            // Tìm kết quả có nhiều vote nhất
+            var winningResult = votes
+                .GroupBy(v => v.Vote)
+                .OrderByDescending(g => g.Count())
+                .First()
+                .Key;
 
-            _logger.LogInformation("Room {RoomId} cancelled due to no votes", roomId);
-            return;
+            room.FinalResult = winningResult;
+            room.ResultConfirmedBy = votes.Count;
+
+            _logger.LogInformation("Room {RoomId} final result determined: {Result} with {VoteCount} votes",
+                roomId, winningResult, votes.Count);
+        }
+        else
+        {
+            _logger.LogInformation("Room {RoomId} completed with no votes submitted", roomId);
         }
 
-        // Group votes by result and find the winner
-        var voteGroups = votes
-            .GroupBy(v => v.Vote)
-            .Select(g => new { Result = g.Key, Count = g.Count() })
-            .OrderByDescending(g => g.Count)
-            .ToList();
-
-        var winningResult = voteGroups.First().Result;
-        room.FinalResult = winningResult;
+        // Chuyển sang Completed - không cho vote và feedback nữa
         room.Status = RoomStatus.Completed;
-        room.ResultConfirmedBy = votes.Count;
         room.FinalizeResultJobId = null;
+
         matchRoomRepository.Update(room);
         await unitOfWork.SaveChangesAsync(CancellationToken.None);
 
-        _logger.LogInformation("Room {RoomId} finalized with result {Result}. Votes: {VoteCount}/{TotalParticipants}", 
-            roomId, winningResult, votes.Count, totalParticipants);
-    }
-
-    public async Task CheckAndFinalizeIfThresholdMetAsync(Guid roomId)
-    {
-        using var scope = _serviceScopeFactory.CreateScope();
-        var matchRoomRepository = scope.ServiceProvider.GetRequiredService<IMatchRoomRepository>();
-        var matchResultVoteRepository = scope.ServiceProvider.GetRequiredService<IMatchResultVoteRepository>();
-        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-
-        var room = await matchRoomRepository.GetByIdAsync(roomId);
-        if (room == null || room.Status != RoomStatus.Reviewing)
-        {
-            return;
-        }
-
-        var totalParticipants = room.FilledSlots;
-        var voteCount = await matchResultVoteRepository.GetVoteCountByRoomAsync(roomId);
-        var votePercentage = (double)voteCount / totalParticipants;
-
-        if (votePercentage >= VoteThresholdPercentage)
-        {
-            _logger.LogInformation("Room {RoomId} reached {Percentage:P0} vote threshold. Finalizing early.", 
-                roomId, votePercentage);
-
-            // Cancel the scheduled finalization job
-            if (!string.IsNullOrEmpty(room.FinalizeResultJobId))
-            {
-                _backgroundJobClient.Delete(room.FinalizeResultJobId);
-            }
-
-            // Finalize now
-            await FinalizeMatchResultAsync(roomId);
-        }
+        _logger.LogInformation("Room {RoomId} reviewing period closed after 22 hours. Status changed to Completed.", roomId);
     }
 
     private void UpdateRoomJobId(Guid roomId, Action<Domain.Entities.MatchRoom> updateAction)

@@ -15,6 +15,7 @@ public class RegisterPlayerCommandHandler : ICommandHandler<RegisterPlayerComman
 {
     private readonly IUserRepository _userRepository;
     private readonly IWalletRepository _walletRepository;
+    private readonly IPlayerProfileRepository _playerProfileRepository;
     private readonly IAuthenticationServices _authenticationServices;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IUnitOfWork _unitOfWork;
@@ -24,6 +25,7 @@ public class RegisterPlayerCommandHandler : ICommandHandler<RegisterPlayerComman
     public RegisterPlayerCommandHandler(
         IUserRepository userRepository,
         IWalletRepository walletRepository,
+        IPlayerProfileRepository playerProfileRepository,
         IAuthenticationServices authenticationServices,
         IPasswordHasher passwordHasher,
         IUnitOfWork unitOfWork,
@@ -32,6 +34,7 @@ public class RegisterPlayerCommandHandler : ICommandHandler<RegisterPlayerComman
     {
         _userRepository = userRepository;
         _walletRepository = walletRepository;
+        _playerProfileRepository = playerProfileRepository;
         _authenticationServices = authenticationServices;
         _passwordHasher = passwordHasher;
         _unitOfWork = unitOfWork;
@@ -70,6 +73,23 @@ public class RegisterPlayerCommandHandler : ICommandHandler<RegisterPlayerComman
             Balance = 0,
         };
         await _walletRepository.AddAsync(wallet);
+
+        var playerProfile = new PlayerProfile
+        {
+            ProfileId = Guid.NewGuid(),
+            UserId = user.UserId,
+            CurrentElo = 1000,
+            TrustScore = 100,
+            TotalMatches = 0,
+            Wins = 0,
+            Losses = 0,
+            Draws = 0,
+            MvpCount = 0,
+            WinStreak = 0,
+            MaxWinStreak = 0,
+            ReportCount = 0,
+        };
+        await _playerProfileRepository.AddAsync(playerProfile);
 
         var otp = _otpGenerator.Generate6Digits();
         await _otpStore.StoreAsync(user.UserId, otp, TimeSpan.FromMinutes(5), cancellationToken);
