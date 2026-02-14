@@ -62,7 +62,6 @@ namespace Kickify.Application.Features.Users.Queries.GetUserById
                     MvpCount = user.PlayerProfile.MvpCount,
                     WinStreak = user.PlayerProfile.WinStreak,
                     MaxWinStreak = user.PlayerProfile.MaxWinStreak,
-                    AfkCount = user.PlayerProfile.AfkCount,
                     ReportCount = user.PlayerProfile.ReportCount,
                 } : null
             };

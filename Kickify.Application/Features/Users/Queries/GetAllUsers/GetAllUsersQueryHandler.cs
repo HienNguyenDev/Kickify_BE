@@ -50,9 +50,7 @@ namespace Kickify.Application.Features.Users.Queries.GetAllUsers
                     MvpCount = u.PlayerProfile.MvpCount,
                     WinStreak = u.PlayerProfile.WinStreak,
                     MaxWinStreak = u.PlayerProfile.MaxWinStreak,
-                    AfkCount = u.PlayerProfile.AfkCount,
-                    ReportCount = u.PlayerProfile.ReportCount,
-                    PreferredPositions = u.PlayerProfile.PreferredPositions
+                    ReportCount = u.PlayerProfile.ReportCount
                 } : null
             }).ToList();
 

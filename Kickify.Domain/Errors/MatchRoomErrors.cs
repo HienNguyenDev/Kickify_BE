@@ -169,5 +169,8 @@ namespace Kickify.Domain.Errors
         public static readonly Error NotInReviewingPhase = Error.Problem(
             "MatchRoom.NotInReviewingPhase",
             "Match is not in reviewing phase");
+        public static Error VotingPeriodClosed => Error.Conflict(
+            "MatchRoom.VotingPeriodClosed",
+            "Vote time has ended");
     }
 }

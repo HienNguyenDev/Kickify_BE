@@ -77,19 +77,9 @@ namespace Kickify.Application.Features.PlayerProfiles.Commands.UpdatePlayerProfi
                 profile.MaxWinStreak = request.MaxWinStreak.Value;
             }
 
-            if (request.AfkCount.HasValue)
-            {
-                profile.AfkCount = request.AfkCount.Value;
-            }
-
             if (request.ReportCount.HasValue)
             {
                 profile.ReportCount = request.ReportCount.Value;
-            }
-
-            if (request.PreferredPositions != null)
-            {
-                profile.PreferredPositions = request.PreferredPositions;
             }
 
             _playerProfileRepository.Update(profile);
@@ -108,9 +98,7 @@ namespace Kickify.Application.Features.PlayerProfiles.Commands.UpdatePlayerProfi
                 MvpCount = profile.MvpCount,
                 WinStreak = profile.WinStreak,
                 MaxWinStreak = profile.MaxWinStreak,
-                AfkCount = profile.AfkCount,
                 ReportCount = profile.ReportCount,
-                PreferredPositions = profile.PreferredPositions,
                 UpdatedAt = profile.UpdatedAt
             };
 

@@ -64,7 +64,7 @@ namespace Kickify.Application.Features.Users.Commands.CreateUser
                 ProfileId = Guid.NewGuid(),
                 UserId = user.UserId,
                 CurrentElo = 1000,
-                TrustScore = 100.00m,
+                TrustScore = 100,
                 TotalMatches = 0,
                 Wins = 0,
                 Losses = 0,
@@ -72,7 +72,6 @@ namespace Kickify.Application.Features.Users.Commands.CreateUser
                 MvpCount = 0,
                 WinStreak = 0,
                 MaxWinStreak = 0,
-                AfkCount = 0,
                 ReportCount = 0
             };
 
