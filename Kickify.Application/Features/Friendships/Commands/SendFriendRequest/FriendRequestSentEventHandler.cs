@@ -1,4 +1,8 @@
-﻿using Kickify.Application.Abstractions.Services;
+﻿using Kickify.Application.Abstractions.Persistence;
+using Kickify.Application.Abstractions.Repositories;
+using Kickify.Application.Abstractions.Services;
+using Kickify.Domain.Entities;
+using Kickify.Domain.Enums;
 using Kickify.Domain.Event;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -8,13 +12,22 @@ namespace Kickify.Application.Features.Friendships.Commands.SendFriendRequest;
 public class FriendRequestSentEventHandler : INotificationHandler<FriendRequestSentDomainEvent>
 {
     private readonly IPushNotificationService _pushNotificationService;
+    private readonly INotificationRepository _notificationRepository;
+    private readonly INotificationPreferenceRepository _notificationPreferenceRepository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<FriendRequestSentEventHandler> _logger;
 
     public FriendRequestSentEventHandler(
         IPushNotificationService pushNotificationService,
+        INotificationRepository notificationRepository,
+        INotificationPreferenceRepository notificationPreferenceRepository,
+        IUnitOfWork unitOfWork,
         ILogger<FriendRequestSentEventHandler> logger)
     {
         _pushNotificationService = pushNotificationService;
+        _notificationRepository = notificationRepository;
+        _notificationPreferenceRepository = notificationPreferenceRepository;
+        _unitOfWork = unitOfWork;
         _logger = logger;
     }
 
@@ -29,13 +42,50 @@ public class FriendRequestSentEventHandler : INotificationHandler<FriendRequestS
 
         var title = "Lời mời kết bạn mới";
         var body = $"{notification.RequesterName} đã gửi cho bạn một lời mời kết bạn mới";
+        var deepLink = "kickify://friends/requests";
 
+        // Always create notification entity for history tracking
+        var notificationEntity = new Notification
+        {
+            NotificationId = Guid.NewGuid(),
+            UserId = notification.AddresseeId,
+            SenderId = notification.RequesterId,
+            NotificationType = NotificationType.Friendship,
+            Title = title,
+            Message = body,
+            DeepLink = deepLink,
+            IsRead = false,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await _notificationRepository.AddAsync(notificationEntity);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation(
+            "Notification entity created. NotificationId: {NotificationId}, UserId: {UserId}",
+            notificationEntity.NotificationId,
+            notificationEntity.UserId);
+
+        // Check notification preference before sending push notification
+        var preferences = await _notificationPreferenceRepository
+            .FindAsync(p => p.UserId == notification.AddresseeId);
+        var preference = preferences.FirstOrDefault();
+
+        if (preference is { Friendship: false })
+        {
+            _logger.LogInformation(
+                "User {AddresseeId} has disabled Friendship notifications. Skipping push notification.",
+                notification.AddresseeId);
+            return;
+        }
+
+        // Send push notification
         var data = new Dictionary<string, string>
         {
             { "type", "friend_request" },
             { "friendshipId", notification.FriendshipId.ToString() },
             { "requesterId", notification.RequesterId.ToString() },
-            { "deepLink", "kickify://friends/requests" }
+            { "deepLink", deepLink }
         };
 
         try
@@ -55,3 +105,4 @@ public class FriendRequestSentEventHandler : INotificationHandler<FriendRequestS
         }
     }
 }
+
