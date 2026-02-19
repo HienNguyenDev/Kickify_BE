@@ -42,7 +42,7 @@ namespace Kickify.Infrastructure.Repositories
         {
             var query = _dbSet
                 .AsNoTracking()
-                .Include(v => v.Fields.Where(f => f.IsActive))
+                //.Include(v => v.Fields.Where(f => f.IsActive))
                 .Include(v => v.VenuePhotos.OrderBy(p => p.DisplayOrder).Take(1))
                 .AsQueryable();
 
@@ -72,6 +72,12 @@ namespace Kickify.Infrastructure.Repositories
             if (fieldType.HasValue)
             {
                 query = query.Where(v => v.Fields.Any(f => f.FieldType == fieldType.Value && f.IsActive));
+
+                query = query.Include(v => v.Fields.Where(f => f.FieldType == fieldType.Value && f.IsActive));
+            }
+            else
+            {
+                query = query.Include(v => v.Fields.Where(f => f.IsActive));
             }
 
             // Filter by availability on specific date (if provided)
@@ -90,18 +96,18 @@ namespace Kickify.Infrastructure.Repositories
                 .ToListAsync(cancellationToken);
 
             // If fieldType filter is applied, filter fields in-memory to only include matching fields
-            if (fieldType.HasValue)
-            {
-                foreach (var venue in venues)
-                {
-                    var filteredFields = venue.Fields.Where(f => f.FieldType == fieldType.Value).ToList();
-                    venue.Fields.Clear();
-                    foreach (var field in filteredFields)
-                    {
-                        venue.Fields.Add(field);
-                    }
-                }
-            }
+            //if (fieldType.HasValue)
+            //{
+            //    foreach (var venue in venues)
+            //    {
+            //        var filteredFields = venue.Fields.Where(f => f.FieldType == fieldType.Value).ToList();
+            //        venue.Fields.Clear();
+            //        foreach (var field in filteredFields)
+            //        {
+            //            venue.Fields.Add(field);
+            //        }
+            //    }
+            //}
 
             return (venues, total);
         }
