@@ -16,6 +16,7 @@ public class RegisterPlayerCommandHandler : ICommandHandler<RegisterPlayerComman
     private readonly IUserRepository _userRepository;
     private readonly IWalletRepository _walletRepository;
     private readonly IPlayerProfileRepository _playerProfileRepository;
+    private readonly INotificationPreferenceRepository _notificationPreferenceRepository;
     private readonly IAuthenticationServices _authenticationServices;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IUnitOfWork _unitOfWork;
@@ -26,6 +27,7 @@ public class RegisterPlayerCommandHandler : ICommandHandler<RegisterPlayerComman
         IUserRepository userRepository,
         IWalletRepository walletRepository,
         IPlayerProfileRepository playerProfileRepository,
+        INotificationPreferenceRepository notificationPreferenceRepository,
         IAuthenticationServices authenticationServices,
         IPasswordHasher passwordHasher,
         IUnitOfWork unitOfWork,
@@ -35,6 +37,7 @@ public class RegisterPlayerCommandHandler : ICommandHandler<RegisterPlayerComman
         _userRepository = userRepository;
         _walletRepository = walletRepository;
         _playerProfileRepository = playerProfileRepository;
+        _notificationPreferenceRepository = notificationPreferenceRepository;
         _authenticationServices = authenticationServices;
         _passwordHasher = passwordHasher;
         _unitOfWork = unitOfWork;
@@ -90,6 +93,16 @@ public class RegisterPlayerCommandHandler : ICommandHandler<RegisterPlayerComman
             ReportCount = 0,
         };
         await _playerProfileRepository.AddAsync(playerProfile);
+
+        var notificationPreference = new NotificationPreference
+        {
+            PreferenceId = Guid.NewGuid(),
+            UserId = user.UserId,
+            MatchRoom = true,
+            Friendship = true,
+            Post = true
+        };
+        await _notificationPreferenceRepository.AddAsync(notificationPreference);
 
         var otp = _otpGenerator.Generate6Digits();
         await _otpStore.StoreAsync(user.UserId, otp, TimeSpan.FromMinutes(5), cancellationToken);
