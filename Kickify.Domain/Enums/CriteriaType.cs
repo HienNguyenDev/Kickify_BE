@@ -2,7 +2,7 @@ namespace Kickify.Domain.Enums;
 
 public enum CriteriaType
 {
-    MVP,
+    Feedback,
     WinStreak,
     Fairplay,
     Matches,
