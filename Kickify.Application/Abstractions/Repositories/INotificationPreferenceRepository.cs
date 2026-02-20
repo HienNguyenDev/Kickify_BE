@@ -5,4 +5,5 @@ namespace Kickify.Application.Abstractions.Repositories;
 
 public interface INotificationPreferenceRepository : IGenericRepository<NotificationPreference>
 {
+    Task<NotificationPreference?> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
 }

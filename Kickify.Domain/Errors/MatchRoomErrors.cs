@@ -157,6 +157,19 @@ namespace Kickify.Domain.Errors
             "MatchRoom.CheckInTooEarly",
             "Check-in is only allowed within 30 minutes before match start time");
 
+        // Room Invitation Errors
+        public static readonly Error CannotInviteSelf = Error.Problem(
+            "MatchRoom.CannotInviteSelf",
+            "You cannot invite yourself to the room");
+
+        public static readonly Error NotFriend = Error.Problem(
+            "MatchRoom.NotFriend",
+            "You can only invite friends to the room");
+
+        public static readonly Error InvitationAlreadySent = Error.Conflict(
+            "MatchRoom.InvitationAlreadySent",
+            "An invitation has already been sent to this user for this room");
+
         // Vote Errors
         public static readonly Error AlreadyVoted = Error.Conflict(
             "MatchRoom.AlreadyVoted",
