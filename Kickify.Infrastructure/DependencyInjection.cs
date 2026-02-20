@@ -103,6 +103,17 @@ namespace Kickify.Infrastructure
             services.AddScoped<IRedisOtpStore, RedisOtpStore>();
             services.AddTransient<IResetPasswordGenerator, ResetPasswordGenerator>();
             services.AddScoped<IPushNotificationService, PushNotificationService>();
+            services.AddSingleton<IQrCodeService, QrCodeService>();
+
+            // AI Sentiment Analysis Service
+            services.AddHttpClient<ISentimentAnalysisService, SentimentAnalysisService>((sp, client) =>
+            {
+                var config = sp.GetRequiredService<IConfiguration>();
+                var baseUrl = config["SentimentAnalysis:BaseUrl"] ?? "http://localhost:8000";
+                client.BaseAddress = new Uri(baseUrl);
+                client.Timeout = TimeSpan.FromSeconds(30);
+            });
+
             return services;
         }
         private static IServiceCollection AddRepository(this IServiceCollection services)
@@ -135,6 +146,7 @@ namespace Kickify.Infrastructure
             services.AddScoped<IMatchResultVoteRepository, MatchResultVoteRepository>();
             services.AddScoped<INotificationRepository, NotificationRepository>();
             services.AddScoped<INotificationPreferenceRepository, NotificationPreferenceRepository>();
+            services.AddScoped<IRoomInvitationRepository, RoomInvitationRepository>();
             return services;
         }
         private static IServiceCollection AddFirebase(this IServiceCollection services)

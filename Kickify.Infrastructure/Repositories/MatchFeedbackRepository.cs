@@ -19,4 +19,9 @@ public class MatchFeedbackRepository : GenericRepository<MatchFeedback>, IMatchF
     {
         return await _dbSet.AnyAsync(f => f.MatchId == matchId && f.ReviewerId == reviewerId && f.RevieweeId == revieweeId, cancellationToken);
     }
+
+    public async Task<List<MatchFeedback>> GetFeedbacksByMatchAsync(Guid matchId, CancellationToken cancellationToken = default)
+    {
+        return await _dbSet.Where(f => f.MatchId == matchId).ToListAsync(cancellationToken);
+    }
 }
