@@ -1,4 +1,4 @@
-﻿using Kickify.Application.Abstractions.Persistence;
+using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Application.Abstractions.Services;
 using Kickify.Domain.Entities;
@@ -7,22 +7,22 @@ using Kickify.Domain.Event;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
-namespace Kickify.Application.Features.Friendships.Commands.SendFriendRequest;
+namespace Kickify.Application.Features.MatchRooms.Events;
 
-public class FriendRequestSentEventHandler : INotificationHandler<FriendRequestSentDomainEvent>
+public class RoomInvitationSentEventHandler : INotificationHandler<RoomInvitationSentDomainEvent>
 {
     private readonly IPushNotificationService _pushNotificationService;
     private readonly INotificationRepository _notificationRepository;
     private readonly INotificationPreferenceRepository _notificationPreferenceRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<FriendRequestSentEventHandler> _logger;
+    private readonly ILogger<RoomInvitationSentEventHandler> _logger;
 
-    public FriendRequestSentEventHandler(
+    public RoomInvitationSentEventHandler(
         IPushNotificationService pushNotificationService,
         INotificationRepository notificationRepository,
         INotificationPreferenceRepository notificationPreferenceRepository,
         IUnitOfWork unitOfWork,
-        ILogger<FriendRequestSentEventHandler> logger)
+        ILogger<RoomInvitationSentEventHandler> logger)
     {
         _pushNotificationService = pushNotificationService;
         _notificationRepository = notificationRepository;
@@ -31,26 +31,26 @@ public class FriendRequestSentEventHandler : INotificationHandler<FriendRequestS
         _logger = logger;
     }
 
-    public async Task Handle(FriendRequestSentDomainEvent notification, CancellationToken cancellationToken)
+    public async Task Handle(RoomInvitationSentDomainEvent notification, CancellationToken cancellationToken)
     {
         _logger.LogInformation(
-            "FriendRequestSentEventHandler triggered. FriendshipId: {FriendshipId}, RequesterId: {RequesterId}, AddresseeId: {AddresseeId}, RequesterName: {RequesterName}",
-            notification.FriendshipId,
-            notification.RequesterId,
-            notification.AddresseeId,
-            notification.RequesterName);
+            "RoomInvitationSentEventHandler triggered. InvitationId: {InvitationId}, RoomId: {RoomId}, InviterId: {InviterId}, InviteeId: {InviteeId}",
+            notification.InvitationId,
+            notification.RoomId,
+            notification.InviterId,
+            notification.InviteeId);
 
-        var title = "Lời mời kết bạn mới";
-        var body = $"{notification.RequesterName} đã gửi cho bạn một lời mời kết bạn mới";
-        var deepLink = "kickify://friends/requests";
+        var deepLink = $"kickify://room/{notification.RoomId}";
+        var title = "Lời mời vào phòng";
+        var body = $"{notification.InviterName} đã mời bạn tham gia phòng \"{notification.RoomName ?? "trận đấu"}\"";
 
         // Always create notification entity for history tracking
         var notificationEntity = new Notification
         {
             NotificationId = Guid.NewGuid(),
-            UserId = notification.AddresseeId,
-            SenderId = notification.RequesterId,
-            NotificationType = NotificationType.Friendship,
+            UserId = notification.InviteeId,
+            SenderId = notification.InviterId,
+            NotificationType = NotificationType.MatchRoom,
             Title = title,
             Message = body,
             DeepLink = deepLink,
@@ -67,41 +67,40 @@ public class FriendRequestSentEventHandler : INotificationHandler<FriendRequestS
             notificationEntity.UserId);
 
         // Check notification preference before sending push notification
-        var preference = await _notificationPreferenceRepository
-            .GetByUserIdAsync(notification.AddresseeId, cancellationToken);
+        var preference = await _notificationPreferenceRepository.GetByUserIdAsync(notification.InviteeId, cancellationToken);
 
-        if (preference is { Friendship: false })
+        if (preference is { MatchRoom: false })
         {
             _logger.LogInformation(
-                "User {AddresseeId} has disabled Friendship notifications. Skipping push notification.",
-                notification.AddresseeId);
+                "User {InviteeId} has disabled MatchRoom notifications. Skipping push notification.",
+                notification.InviteeId);
             return;
         }
 
         // Send push notification
         var data = new Dictionary<string, string>
         {
-            { "type", "friend_request" },
-            { "friendshipId", notification.FriendshipId.ToString() },
-            { "requesterId", notification.RequesterId.ToString() },
+            { "type", "room_invitation" },
+            { "roomId", notification.RoomId.ToString() },
+            { "invitationId", notification.InvitationId.ToString() },
+            { "inviterId", notification.InviterId.ToString() },
             { "deepLink", deepLink }
         };
 
         try
         {
             await _pushNotificationService.SendToUserAsync(
-                notification.AddresseeId,
+                notification.InviteeId,
                 title,
                 body,
                 data,
                 cancellationToken);
 
-            _logger.LogInformation("Push notification sent successfully to user {AddresseeId}", notification.AddresseeId);
+            _logger.LogInformation("Push notification sent successfully to user {InviteeId}", notification.InviteeId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send push notification to user {AddresseeId}", notification.AddresseeId);
+            _logger.LogError(ex, "Failed to send push notification to user {InviteeId}", notification.InviteeId);
         }
     }
 }
-

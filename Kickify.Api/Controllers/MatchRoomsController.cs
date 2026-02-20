@@ -2,6 +2,8 @@ using Kickify.Api.Extensions;
 using Kickify.Api.Infrastructure;
 using Kickify.Api.Requests;
 using Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom;
+using Kickify.Application.Features.MatchRooms.Commands.GenerateRoomInviteLink;
+using Kickify.Application.Features.MatchRooms.Commands.InviteFriendToRoom;
 using Kickify.Application.Features.MatchRooms.Commands.JoinRoom;
 using Kickify.Application.Features.MatchRooms.Commands.KickPlayer;
 using Kickify.Application.Features.MatchRooms.Commands.LeaveRoom;
@@ -272,6 +274,50 @@ namespace Kickify.Api.Controllers
             CancellationToken cancellationToken)
         {
             var command = new VoteMatchResultCommand(id, request.Vote);
+
+            var result = await _sender.Send(command, cancellationToken);
+
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Generate QR code and deep link for room invitation
+        /// </summary>
+        /// <param name="id">Room ID</param>
+        /// <remarks>
+        /// Generates a deep link (kickify://room/{roomId}) and web link (https://kickify.app/room/{roomId})
+        /// that can be encoded into a QR code for others to scan and join the room.
+        /// Only participants of an Open room can generate invite links.
+        /// </remarks>
+        [HttpPost("{id}/invite-link")]
+        public async Task<IResult> GenerateInviteLink(
+            Guid id,
+            CancellationToken cancellationToken)
+        {
+            var command = new GenerateRoomInviteLinkCommand(id);
+
+            var result = await _sender.Send(command, cancellationToken);
+
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Invite a friend to join the room
+        /// </summary>
+        /// <param name="id">Room ID</param>
+        /// <param name="request">Friend invitation request</param>
+        /// <remarks>
+        /// Invites a friend (must be already added as friend) to join the room.
+        /// The invited friend will receive a push notification with a deep link to the room.
+        /// A notification history record is also created.
+        /// </remarks>
+        [HttpPost("{id}/invite-friend")]
+        public async Task<IResult> InviteFriend(
+            Guid id,
+            [FromBody] InviteFriendToRoomRequest request,
+            CancellationToken cancellationToken)
+        {
+            var command = new InviteFriendToRoomCommand(id, request.FriendUserId);
 
             var result = await _sender.Send(command, cancellationToken);
 

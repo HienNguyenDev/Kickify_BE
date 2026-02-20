@@ -8,6 +8,7 @@ using Kickify.Infrastructure;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Serilog;
 using Hangfire;
+using Prometheus;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -53,6 +54,8 @@ app.UseAuthentication();
 
 app.UseAuthorization();
 
+app.UseHttpMetrics();
+
 app.UseHangfireDashboard("/hangfire", new DashboardOptions
 {
     Authorization = new[] { new HangfireAuthorizationFilter(builder.Configuration["Hangfire:Username"], builder.Configuration["Hangfire:Password"]) },
@@ -64,5 +67,7 @@ app.MapControllers();
 
 app.MapHub<ChatHub>("/hubs/chat");
 app.MapHub<MatchRoomHub>("/hubs/matchroom");
+
+app.MapMetrics();
 
 app.Run();

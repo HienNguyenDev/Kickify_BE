@@ -2,6 +2,8 @@
 using Kickify.Application.Abstractions.Jobs;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
+using Kickify.Application.Abstractions.Services;
+using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -16,6 +18,8 @@ public class MatchLifecycleService : IMatchLifecycleService
 
     // Thời gian cho phép vote và feedback sau trận đấu
     private static readonly TimeSpan ReviewingPeriod = TimeSpan.FromHours(22);
+    // Thời gian sau reviewing period để xử lý post-match (gửi AI + update profile)
+    private static readonly TimeSpan PostMatchDelay = TimeSpan.FromHours(1);
 
     public MatchLifecycleService(
         IBackgroundJobClient backgroundJobClient,
@@ -76,6 +80,23 @@ public class MatchLifecycleService : IMatchLifecycleService
         UpdateRoomJobId(roomId, r => r.FinalizeResultJobId = jobId);
         _logger.LogInformation("Scheduled reviewing period end for room {RoomId} at {CloseTime}, JobId: {JobId}",
             roomId, closeTime, jobId);
+    }
+
+    public void SchedulePostMatchProcessing(Guid roomId, DateTime processTime)
+    {
+        var delay = processTime - DateTime.UtcNow;
+        if (delay < TimeSpan.Zero)
+        {
+            delay = TimeSpan.Zero;
+        }
+
+        var jobId = _backgroundJobClient.Schedule(
+            () => ProcessPostMatchAsync(roomId),
+            delay);
+
+        _logger.LogInformation(
+            "Scheduled post-match processing for room {RoomId} at {ProcessTime}, JobId: {JobId}",
+            roomId, processTime, jobId);
     }
 
     public void CancelAllJobs(string? startJobId, string? endJobId, string? finalizeJobId)
@@ -207,9 +228,195 @@ public class MatchLifecycleService : IMatchLifecycleService
         await unitOfWork.SaveChangesAsync(CancellationToken.None);
 
         _logger.LogInformation("Room {RoomId} reviewing period closed after 22 hours. Status changed to Completed.", roomId);
+
+        // Schedule post-match processing sau 1 tiếng (tổng cộng 23 tiếng sau match end)
+        // Gửi feedbacks cho AI sentiment analysis + update player profiles
+        var postMatchTime = DateTime.UtcNow.Add(PostMatchDelay);
+        SchedulePostMatchProcessing(roomId, postMatchTime);
     }
 
-    private void UpdateRoomJobId(Guid roomId, Action<Domain.Entities.MatchRoom> updateAction)
+    /// <summary>
+    /// Xử lý sau trận đấu (23 tiếng sau match end):
+    /// 1. Gửi tất cả feedback của từng player sang AI để sentiment analysis
+    /// 2. Update player profiles dựa trên kết quả trận đấu (win/loss/draw)
+    /// </summary>
+    public async Task ProcessPostMatchAsync(Guid roomId)
+    {
+        using var scope = _serviceScopeFactory.CreateScope();
+        var matchRoomRepository = scope.ServiceProvider.GetRequiredService<IMatchRoomRepository>();
+        var matchFeedbackRepository = scope.ServiceProvider.GetRequiredService<IMatchFeedbackRepository>();
+        var playerProfileRepository = scope.ServiceProvider.GetRequiredService<IPlayerProfileRepository>();
+        var roomParticipantRepository = scope.ServiceProvider.GetRequiredService<IRoomParticipantRepository>();
+        var sentimentAnalysisService = scope.ServiceProvider.GetRequiredService<ISentimentAnalysisService>();
+        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+
+        var room = await matchRoomRepository.GetByIdAsync(roomId);
+        if (room == null)
+        {
+            _logger.LogWarning("Room {RoomId} not found for post-match processing", roomId);
+            return;
+        }
+
+        if (room.Status != RoomStatus.Completed)
+        {
+            _logger.LogWarning("Room {RoomId} is not in Completed status, cannot process post-match. Current status: {Status}",
+                roomId, room.Status);
+            return;
+        }
+
+        _logger.LogInformation("Starting post-match processing for room {RoomId}", roomId);
+
+        await SendFeedbacksToAiAsync(roomId, matchFeedbackRepository, sentimentAnalysisService);
+
+        await UpdatePlayerProfilesAsync(room, roomParticipantRepository, playerProfileRepository, unitOfWork);
+
+        _logger.LogInformation("Post-match processing completed for room {RoomId}", roomId);
+    }
+
+    /// <summary>
+    /// Gửi feedbacks của từng player sang AI sentiment analysis.
+    /// Group feedbacks theo reviewee (target player), mỗi lần gửi 1 batch cho 1 player.
+    /// </summary>
+    private async Task SendFeedbacksToAiAsync(
+        Guid roomId,
+        IMatchFeedbackRepository matchFeedbackRepository,
+        ISentimentAnalysisService sentimentAnalysisService)
+    {
+        try
+        {
+            var allFeedbacks = await matchFeedbackRepository.GetFeedbacksByMatchAsync(roomId);
+
+            if (allFeedbacks.Count == 0)
+            {
+                _logger.LogInformation("No feedbacks found for room {RoomId}, skipping AI analysis", roomId);
+                return;
+            }
+
+            // Group feedbacks theo reviewee (target player)
+            var feedbacksByPlayer = allFeedbacks.GroupBy(f => f.RevieweeId);
+
+            foreach (var group in feedbacksByPlayer)
+            {
+                var targetPlayerId = group.Key;
+                var playerFeedbacks = group.ToList();
+
+                var request = new SentimentBatchRequest(
+                    MatchId: roomId.ToString(),
+                    TargetPlayerId: targetPlayerId.ToString(),
+                    Feedbacks: playerFeedbacks.Select(f => new SentimentFeedbackItem(
+                        FeedbackId: f.FeedbackId.ToString(),
+                        ReviewerId: f.ReviewerId.ToString(),
+                        Comment: f.Comment,
+                        StarRating: f.Rating
+                    )).ToList()
+                );
+
+                await sentimentAnalysisService.SendFeedbacksForAnalysisAsync(request);
+
+                _logger.LogInformation(
+                    "Sent {Count} feedbacks for player {PlayerId} in match {MatchId} to AI",
+                    playerFeedbacks.Count, targetPlayerId, roomId);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error sending feedbacks to AI for room {RoomId}", roomId);
+        }
+    }
+
+    /// <summary>
+    /// Update player profiles dựa trên kết quả trận đấu.
+    /// TeamA thắng → TeamA +1 win, TeamB +1 loss
+    /// TeamB thắng → TeamB +1 win, TeamA +1 loss
+    /// Draw → tất cả +1 draw
+    /// Tất cả players +1 total matches
+    /// </summary>
+    private async Task UpdatePlayerProfilesAsync(
+        MatchRoom room,
+        IRoomParticipantRepository roomParticipantRepository,
+        IPlayerProfileRepository playerProfileRepository,
+        IUnitOfWork unitOfWork)
+    {
+        try
+        {
+            var participants = await roomParticipantRepository.GetParticipantsByRoomAsync(room.RoomId);
+
+            if (participants == null || !participants.Any())
+            {
+                _logger.LogWarning("No participants found for room {RoomId}", room.RoomId);
+                return;
+            }
+
+            foreach (var participant in participants)
+            {
+                var profile = await playerProfileRepository.GetByUserIdAsync(participant.UserId);
+                if (profile == null)
+                {
+                    _logger.LogWarning("Player profile not found for user {UserId} in room {RoomId}",
+                        participant.UserId, room.RoomId);
+                    continue;
+                }
+
+                // +1 total matches cho tất cả
+                profile.TotalMatches += 1;
+
+                if (room.FinalResult != null)
+                {
+                    switch (room.FinalResult)
+                    {
+                        case MatchResult.TeamAWin:
+                            if (participant.TeamAssignment == TeamAssignment.A)
+                            {
+                                profile.Wins += 1;
+                                profile.WinStreak += 1;
+                                if (profile.WinStreak > profile.MaxWinStreak)
+                                    profile.MaxWinStreak = profile.WinStreak;
+                            }
+                            else if (participant.TeamAssignment == TeamAssignment.B)
+                            {
+                                profile.Losses += 1;
+                                profile.WinStreak = 0;
+                            }
+                            break;
+
+                        case MatchResult.TeamBWin:
+                            if (participant.TeamAssignment == TeamAssignment.B)
+                            {
+                                profile.Wins += 1;
+                                profile.WinStreak += 1;
+                                if (profile.WinStreak > profile.MaxWinStreak)
+                                    profile.MaxWinStreak = profile.WinStreak;
+                            }
+                            else if (participant.TeamAssignment == TeamAssignment.A)
+                            {
+                                profile.Losses += 1;
+                                profile.WinStreak = 0;
+                            }
+                            break;
+
+                        case MatchResult.Draw:
+                            profile.Draws += 1;
+                            profile.WinStreak = 0;
+                            break;
+                    }
+                }
+
+                playerProfileRepository.Update(profile);
+            }
+
+            await unitOfWork.SaveChangesAsync(CancellationToken.None);
+
+            _logger.LogInformation(
+                "Updated player profiles for room {RoomId}. Result: {Result}, Participants: {Count}",
+                room.RoomId, room.FinalResult, participants.Count());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating player profiles for room {RoomId}", room.RoomId);
+        }
+    }
+
+    private void UpdateRoomJobId(Guid roomId, Action<MatchRoom> updateAction)
     {
         using var scope = _serviceScopeFactory.CreateScope();
         var matchRoomRepository = scope.ServiceProvider.GetRequiredService<IMatchRoomRepository>();
