@@ -12,6 +12,7 @@ using Kickify.Application.Features.Venues.Queries.GetFieldsByVenue;
 using Kickify.Application.Features.Venues.Queries.GetOperatingHours;
 using Kickify.Application.Features.Venues.Queries.GetVenueById;
 using Kickify.Application.Features.Venues.Queries.GetVenuesByOwner;
+using Kickify.Application.Features.VenueReviews.Commands.CreateVenueReview;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -291,6 +292,27 @@ namespace Kickify.Api.Controllers
                 venueId,
                 request.Status,
                 request.AdminNotes
+            );
+
+            var result = await _sender.Send(command, cancellationToken);
+
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Create a venue review. Only requires BookingId — VenueId is derived from Booking → Field → Venue.
+        /// Validates: participation in match room, match has ended, booking/room completed, no duplicate review.
+        /// </summary>
+        [Authorize]
+        [HttpPost("reviews")]
+        public async Task<IResult> CreateVenueReview(
+            [FromBody] CreateVenueReviewRequest request,
+            CancellationToken cancellationToken)
+        {
+            var command = new CreateVenueReviewCommand(
+                request.BookingId,
+                request.Rating,
+                request.Comment
             );
 
             var result = await _sender.Send(command, cancellationToken);

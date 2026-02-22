@@ -33,6 +33,13 @@ namespace Kickify.Application.Abstractions.Repositories
             CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Get booking with field, venue, match room, and room participants for review validation
+        /// </summary>
+        Task<Booking?> GetBookingForReviewValidationAsync(
+            Guid bookingId,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// Get paged bookings with optional filters
         /// </summary>
         Task<(IEnumerable<Booking> Bookings, int Total)> GetBookingsPagedAsync(

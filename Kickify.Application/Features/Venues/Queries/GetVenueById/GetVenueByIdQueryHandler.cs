@@ -29,6 +29,9 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenueById
 
             var wallet = await _walletRepository.GetByUserIdAsync(venue.OwnerId, cancellationToken);
 
+            var bookingCounts = await _venueRepository.GetBookingCountsByVenueIdsAsync(
+                new[] { venue.VenueId }, cancellationToken);
+
             var response = new GetVenueByIdResponse(
                 venue.VenueId,
                 venue.VenueName,
@@ -42,7 +45,22 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenueById
                 venue.Status.ToString(),
                 venue.AdminNotes,
                 venue.AverageRating,
-                venue.TotalReviews,
+                venue.VenueReviews.Count,
+                bookingCounts.GetValueOrDefault(venue.VenueId, 0),
+                new VenueOwnerDto(
+                    venue.Owner.UserId,
+                    venue.Owner.FullName,
+                    venue.Owner.Phone,
+                    venue.Owner.AvatarUrl,
+                    venue.Owner.Bio,
+                    venue.Owner.DateOfBirth,
+                    venue.Owner.Gender?.ToString(),
+                    venue.Owner.Role.ToString(),
+                    venue.Owner.PreferredPositions,
+                    venue.Owner.ShirtNumber,
+                    venue.Owner.PreferredFoot,
+                    venue.Owner.IsActive
+                ),
                 venue.Fields.Select(f => new VenueFieldDto(
                     f.FieldId,
                     f.FieldName,
@@ -63,6 +81,17 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenueById
                     p.PhotoId,
                     p.PhotoUrl,
                     p.DisplayOrder == 0
+                )).ToList(),
+                venue.VenueReviews.Select(r => new VenueReviewDto(
+                    r.ReviewId,
+                    r.UserId,
+                    r.User.FullName,
+                    r.User.AvatarUrl,
+                    r.Rating,
+                    r.Comment,
+                    r.OwnerResponse,
+                    r.ResponseDate,
+                    r.CreatedAt
                 )).ToList(),
                 wallet?.Balance ?? 0,
                 venue.CreatedAt,
