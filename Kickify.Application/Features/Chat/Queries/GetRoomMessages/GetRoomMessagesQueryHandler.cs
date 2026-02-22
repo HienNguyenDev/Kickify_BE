@@ -28,7 +28,7 @@ public class GetRoomMessagesQueryHandler : IQueryHandler<GetRoomMessagesQuery, G
 
     public async Task<Result<GetRoomMessagesQueryResponse>> Handle(GetRoomMessagesQuery request, CancellationToken cancellationToken)
     {
-        var userId = _userContext.UserId;
+        var userId = request.CurrentUserId ?? _userContext.UserId;
 
         // Check room exists
         var room = await _matchRoomRepository.GetByIdAsync(request.RoomId);
