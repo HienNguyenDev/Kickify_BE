@@ -34,6 +34,15 @@ public class ChatHub : Hub
     private string CurrentUserName =>
         Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
 
+    private void SetSignalRUserContext()
+    {
+        var httpContext = Context.GetHttpContext();
+        if (httpContext != null)
+        {
+            httpContext.Items["SignalR_UserId"] = CurrentUserId;
+        }
+    }
+
     #region Connection Management
 
     public override async Task OnConnectedAsync()
@@ -79,6 +88,8 @@ public class ChatHub : Hub
     {
         try
         {
+            SetSignalRUserContext();
+
             var command = new SendPrivateMessageCommand
             {
                 ReceiverId = receiverId,
@@ -128,6 +139,8 @@ public class ChatHub : Hub
     {
         try
         {
+            SetSignalRUserContext();
+
             var command = new MarkMessagesAsReadCommand { FromUserId = fromUserId };
             var result = await _mediator.Send(command);
 
@@ -146,6 +159,8 @@ public class ChatHub : Hub
     {
         try
         {
+            SetSignalRUserContext();
+
             var query = new GetPrivateConversationQuery
             {
                 OtherUserId = otherUserId,
