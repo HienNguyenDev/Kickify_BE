@@ -18,6 +18,7 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenuesByOwner
         string? Description,
         string? Amenities,
         string Status,
+        string? AdminNotes,
         decimal AverageRating,
         int TotalReviews,
         List<OwnerVenueFieldDto> Fields,

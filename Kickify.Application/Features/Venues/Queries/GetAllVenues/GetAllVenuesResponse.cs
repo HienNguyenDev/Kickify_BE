@@ -18,6 +18,10 @@ namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
         string? ContactEmail,
         string? Description,
         string? Amenities,
+        string Status,
+        string? AdminNotes,
+        decimal AverageRating,
+        int TotalReviews,
         List<FieldSummaryDto> Fields,
         string? PrimaryPhotoUrl,
         DateTime CreatedAt
@@ -29,6 +33,9 @@ namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
         string FieldType,
         string? SurfaceType,
         decimal HourlyRate,
-        decimal? PeakHourSurcharge
+        decimal? PeakHourSurcharge,
+        bool IsActive,
+        DateTime CreatedAt,
+        DateTime UpdatedAt
     );
 }
