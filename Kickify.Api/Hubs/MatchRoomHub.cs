@@ -31,6 +31,20 @@ public class MatchRoomHub : Hub
     private string CurrentUserName =>
         Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
 
+    /// <summary>
+    /// Sets the current user ID into HttpContext.Items so that IUserContext
+    /// can resolve the user in SignalR context (where HttpContext.User may not be available).
+    /// Must be called before any _mediator.Send() invocation.
+    /// </summary>
+    private void SetSignalRUserContext()
+    {
+        var httpContext = Context.GetHttpContext();
+        if (httpContext != null)
+        {
+            httpContext.Items["SignalR_UserId"] = CurrentUserId;
+        }
+    }
+
     public override async Task OnConnectedAsync()
     {
         var userId = CurrentUserId;
@@ -124,6 +138,8 @@ public class MatchRoomHub : Hub
     {
         try
         {
+            SetSignalRUserContext();
+
             var roomChannel = (RoomChatChannel)channel;
 
             var command = new SendRoomMessageCommand
@@ -155,6 +171,8 @@ public class MatchRoomHub : Hub
     {
         try
         {
+            SetSignalRUserContext();
+
             var query = new GetRoomMessagesQuery
             {
                 RoomId = roomId,
