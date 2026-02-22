@@ -46,6 +46,7 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenuesByOwner
                 v.Description,
                 v.Amenities,
                 v.Status.ToString(),
+                v.AdminNotes,
                 v.AverageRating,
                 v.TotalReviews,
                 v.Fields?.Select(f => new OwnerVenueFieldDto(

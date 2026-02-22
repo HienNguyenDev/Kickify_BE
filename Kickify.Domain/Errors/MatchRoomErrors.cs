@@ -90,7 +90,7 @@ namespace Kickify.Domain.Errors
             "MatchRoom.PasswordRequired",
             "Password is required for private rooms");
 
-        public static readonly Error IncorrectRoomPassword = Error.Problem(
+        public static readonly Error IncorrectRoomPassword = Error.Conflict(
             "MatchRoom.IncorrectPassword",
             "Incorrect password for private room");
 

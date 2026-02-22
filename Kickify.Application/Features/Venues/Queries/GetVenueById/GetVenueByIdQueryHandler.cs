@@ -39,13 +39,20 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenueById
                 venue.ContactEmail,
                 venue.Description,
                 venue.Amenities,
+                venue.Status.ToString(),
+                venue.AdminNotes,
+                venue.AverageRating,
+                venue.TotalReviews,
                 venue.Fields.Select(f => new VenueFieldDto(
                     f.FieldId,
                     f.FieldName,
                     f.FieldType.ToString(),
                     f.SurfaceType,
                     f.HourlyRate,
-                    f.PeakHourSurcharge
+                    f.PeakHourSurcharge,
+                    f.IsActive,
+                    f.CreatedAt,
+                    f.UpdatedAt
                 )).ToList(),
                 venue.VenueOperatingHours.Select(oh => new OperatingHoursDto(
                     (DayOfWeek)oh.DayOfWeek,
@@ -58,7 +65,8 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenueById
                     p.DisplayOrder == 0
                 )).ToList(),
                 wallet?.Balance ?? 0,
-                venue.CreatedAt
+                venue.CreatedAt,
+                venue.UpdatedAt
             );
 
             return Result.Success(response);

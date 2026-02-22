@@ -10,11 +10,16 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenueById
         string? ContactEmail,
         string? Description,
         string? Amenities,
+        string Status,
+        string? AdminNotes,
+        decimal AverageRating,
+        int TotalReviews,
         List<VenueFieldDto> Fields,
         List<OperatingHoursDto> OperatingHours,
         List<VenuePhotoDto> Photos,
         decimal WalletBalance,
-        DateTime CreatedAt
+        DateTime CreatedAt,
+        DateTime UpdatedAt
     );
 
     public record VenueFieldDto(
@@ -23,7 +28,10 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenueById
         string FieldType,
         string? SurfaceType,
         decimal HourlyRate,
-        decimal PeakHourSurcharge
+        decimal? PeakHourSurcharge,
+        bool IsActive,
+        DateTime CreatedAt,
+        DateTime UpdatedAt
     );
 
     public record OperatingHoursDto(

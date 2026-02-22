@@ -47,13 +47,20 @@ namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
                 v.ContactEmail,
                 v.Description,
                 v.Amenities,
+                v.Status.ToString(),
+                v.AdminNotes,
+                v.AverageRating,
+                v.TotalReviews,
                 v.Fields.Select(f => new FieldSummaryDto(
                     f.FieldId,
                     f.FieldName,
                     f.FieldType.ToString(),
                     f.SurfaceType,
                     f.HourlyRate,
-                    f.PeakHourSurcharge
+                    f.PeakHourSurcharge,
+                    f.IsActive,
+                    f.CreatedAt,
+                    f.UpdatedAt
                 )).ToList(),
                 v.VenuePhotos.FirstOrDefault(p => p.DisplayOrder == 0)?.PhotoUrl,
                 v.CreatedAt

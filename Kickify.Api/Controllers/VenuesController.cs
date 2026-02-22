@@ -6,6 +6,7 @@ using Kickify.Application.Features.Venues.Commands.CreateVenue;
 using Kickify.Application.Features.Venues.Commands.DeleteVenue;
 using Kickify.Application.Features.Venues.Commands.UpdateOperatingHours;
 using Kickify.Application.Features.Venues.Commands.UpdateVenue;
+using Kickify.Application.Features.Venues.Commands.UpdateVenueStatus;
 using Kickify.Application.Features.Venues.Queries.GetAllVenues;
 using Kickify.Application.Features.Venues.Queries.GetFieldsByVenue;
 using Kickify.Application.Features.Venues.Queries.GetOperatingHours;
@@ -269,6 +270,27 @@ namespace Kickify.Api.Controllers
                 request.EndTime,
                 request.Reason,
                 request.Amount
+            );
+
+            var result = await _sender.Send(command, cancellationToken);
+
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Update venue status (Admin only). Used to approve, reject, or suspend a venue.
+        /// </summary>
+        [Authorize(Roles = "Admin")]
+        [HttpPatch("{venueId:guid}/status")]
+        public async Task<IResult> UpdateVenueStatus(
+            Guid venueId,
+            [FromBody] UpdateVenueStatusRequest request,
+            CancellationToken cancellationToken)
+        {
+            var command = new UpdateVenueStatusCommand(
+                venueId,
+                request.Status,
+                request.AdminNotes
             );
 
             var result = await _sender.Send(command, cancellationToken);
