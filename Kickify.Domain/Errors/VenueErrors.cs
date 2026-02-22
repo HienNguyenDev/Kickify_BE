@@ -43,5 +43,9 @@ namespace Kickify.Domain.Errors
         public static readonly Error NoPhotosProvided = Error.Problem(
             "Venues.NoPhotosProvided",
             "At least one photo must be provided");
+
+        public static Error InvalidStatus(string status) => Error.Problem(
+            "Venues.InvalidStatus",
+            $"Invalid venue status: '{status}'. Allowed values: Pending, Active, Approved, Rejected, Suspended");
     }
 }
