@@ -36,7 +36,7 @@ public class SendRoomMessageCommandHandler : ICommandHandler<SendRoomMessageComm
 
     public async Task<Result<SendRoomMessageCommandResponse>> Handle(SendRoomMessageCommand request, CancellationToken cancellationToken)
     {
-        var senderId = _userContext.UserId;
+        var senderId = request.SenderId ?? _userContext.UserId;
 
         // Get sender info
         var sender = await _userRepository.GetByIdAsync(senderId);
