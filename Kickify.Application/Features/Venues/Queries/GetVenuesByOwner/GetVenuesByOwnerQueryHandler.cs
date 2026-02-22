@@ -35,6 +35,9 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenuesByOwner
                 cancellationToken
             );
 
+            var venueIds = venues.Select(v => v.VenueId).ToList();
+            var bookingCounts = await _venueRepository.GetBookingCountsByVenueIdsAsync(venueIds, cancellationToken);
+
             var venueItems = venues.Select(v => new OwnerVenueItemDto(
                 v.VenueId,
                 v.VenueName,
@@ -48,7 +51,8 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenuesByOwner
                 v.Status.ToString(),
                 v.AdminNotes,
                 v.AverageRating,
-                v.TotalReviews,
+                v.VenueReviews.Count,
+                bookingCounts.GetValueOrDefault(v.VenueId, 0),
                 v.Fields?.Select(f => new OwnerVenueFieldDto(
                     f.FieldId,
                     f.FieldName,

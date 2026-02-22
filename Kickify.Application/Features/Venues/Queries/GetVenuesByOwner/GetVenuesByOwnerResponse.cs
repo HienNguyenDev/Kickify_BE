@@ -21,6 +21,7 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenuesByOwner
         string? AdminNotes,
         decimal AverageRating,
         int TotalReviews,
+        int TotalBookings,
         List<OwnerVenueFieldDto> Fields,
         List<OwnerVenueOperatingHoursDto> OperatingHours,
         List<OwnerVenuePhotoDto> Photos,

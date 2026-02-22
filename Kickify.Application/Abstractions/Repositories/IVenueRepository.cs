@@ -48,5 +48,12 @@ namespace Kickify.Application.Abstractions.Repositories
         Task AddVenuePhotosAsync(
             IEnumerable<VenuePhoto> photos,
             CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Get total booking counts for multiple venues (via Fields → Bookings)
+        /// </summary>
+        Task<Dictionary<Guid, int>> GetBookingCountsByVenueIdsAsync(
+            IEnumerable<Guid> venueIds,
+            CancellationToken cancellationToken = default);
     }
 }
