@@ -25,6 +25,15 @@ namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
                 }
             }
 
+            VenueStatus? venueStatus = null;
+            if (!string.IsNullOrEmpty(request.Status))
+            {
+                if (Enum.TryParse<VenueStatus>(request.Status, true, out var parsedStatus))
+                {
+                    venueStatus = parsedStatus;
+                }
+            }
+
             var (venues, total) = await _venueRepository.SearchVenuesAsync(
                 request.Latitude,
                 request.Longitude,
@@ -32,6 +41,7 @@ namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
                 request.Date,
                 fieldType,
                 request.SearchName,
+                venueStatus,
                 request.Page,
                 request.PageSize,
                 cancellationToken

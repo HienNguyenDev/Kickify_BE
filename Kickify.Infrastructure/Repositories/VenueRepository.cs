@@ -39,6 +39,7 @@ namespace Kickify.Infrastructure.Repositories
             DateTime? date = null,
             FieldType? fieldType = null,
             string? searchName = null,
+            VenueStatus? status = null,
             int page = 1,
             int pageSize = 10,
             CancellationToken cancellationToken = default)
@@ -55,6 +56,12 @@ namespace Kickify.Infrastructure.Repositories
             {
                 var searchLower = searchName.ToLower();
                 query = query.Where(v => v.VenueName.ToLower().Contains(searchLower));
+            }
+
+            // Filter by venue status
+            if (status.HasValue)
+            {
+                query = query.Where(v => v.Status == status.Value);
             }
 
             // Filter by location (simplified - in production use PostGIS)
@@ -126,6 +133,8 @@ namespace Kickify.Infrastructure.Repositories
 
         public async Task<(IEnumerable<Venue> Venues, int Total)> GetVenuesByOwnerPagedAsync(
             Guid ownerId,
+            string? searchName = null,
+            VenueStatus? status = null,
             int page = 1,
             int pageSize = 10,
             CancellationToken cancellationToken = default)
@@ -136,6 +145,19 @@ namespace Kickify.Infrastructure.Repositories
                 .Include(v => v.VenueOperatingHours)
                 .Include(v => v.VenuePhotos)
                 .Where(v => v.OwnerId == ownerId);
+
+            // Filter by venue name (case-insensitive search)
+            if (!string.IsNullOrWhiteSpace(searchName))
+            {
+                var searchLower = searchName.ToLower();
+                query = query.Where(v => v.VenueName.ToLower().Contains(searchLower));
+            }
+
+            // Filter by venue status
+            if (status.HasValue)
+            {
+                query = query.Where(v => v.Status == status.Value);
+            }
 
             var total = await query.CountAsync(cancellationToken);
 

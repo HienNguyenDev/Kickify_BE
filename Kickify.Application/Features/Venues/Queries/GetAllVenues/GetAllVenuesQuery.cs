@@ -9,6 +9,7 @@ namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
         DateTime? Date = null,
         string? FieldType = null,
         string? SearchName = null,
+        string? Status = null,
         int Page = 1,
         int PageSize = 10
     ) : IQuery<GetAllVenuesResponse>;
