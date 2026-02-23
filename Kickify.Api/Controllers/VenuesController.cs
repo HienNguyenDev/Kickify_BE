@@ -91,6 +91,7 @@ namespace Kickify.Api.Controllers
             [FromQuery] DateTime? date,
             [FromQuery] string? fieldType,
             [FromQuery] string? searchName,
+            [FromQuery] string? status,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10,
             CancellationToken cancellationToken = default)
@@ -102,6 +103,7 @@ namespace Kickify.Api.Controllers
                 date,
                 fieldType,
                 searchName,
+                status,
                 page,
                 pageSize
             );
@@ -140,11 +142,13 @@ namespace Kickify.Api.Controllers
         [Authorize]
         [HttpGet("mine")]
         public async Task<IResult> GetMyVenues(
+            [FromQuery] string? searchName,
+            [FromQuery] string? status,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10,
             CancellationToken cancellationToken = default)
         {
-            var query = new GetVenuesByOwnerQuery(page, pageSize);
+            var query = new GetVenuesByOwnerQuery(searchName, status, page, pageSize);
             var result = await _sender.Send(query, cancellationToken);
 
             return result.MatchOk();

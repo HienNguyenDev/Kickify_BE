@@ -15,6 +15,7 @@ namespace Kickify.Application.Abstractions.Repositories
             DateTime? date = null,
             FieldType? fieldType = null,
             string? searchName = null,
+            VenueStatus? status = null,
             int page = 1,
             int pageSize = 10,
             CancellationToken cancellationToken = default);
@@ -31,6 +32,8 @@ namespace Kickify.Application.Abstractions.Repositories
         /// </summary>
         Task<(IEnumerable<Venue> Venues, int Total)> GetVenuesByOwnerPagedAsync(
             Guid ownerId,
+            string? searchName = null,
+            VenueStatus? status = null,
             int page = 1,
             int pageSize = 10,
             CancellationToken cancellationToken = default);

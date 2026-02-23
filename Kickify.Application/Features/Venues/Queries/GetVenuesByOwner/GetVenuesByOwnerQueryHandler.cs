@@ -2,6 +2,7 @@ using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
+using Kickify.Domain.Enums;
 
 namespace Kickify.Application.Features.Venues.Queries.GetVenuesByOwner
 {
@@ -28,8 +29,19 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenuesByOwner
             var wallet = await _walletRepository.GetByUserIdAsync(ownerId, cancellationToken);
             var walletBalance = wallet?.Balance ?? 0;
 
+            VenueStatus? venueStatus = null;
+            if (!string.IsNullOrEmpty(request.Status))
+            {
+                if (Enum.TryParse<VenueStatus>(request.Status, true, out var parsedStatus))
+                {
+                    venueStatus = parsedStatus;
+                }
+            }
+
             var (venues, total) = await _venueRepository.GetVenuesByOwnerPagedAsync(
                 ownerId,
+                request.SearchName,
+                venueStatus,
                 request.Page,
                 request.PageSize,
                 cancellationToken
