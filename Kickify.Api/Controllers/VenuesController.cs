@@ -12,6 +12,7 @@ using Kickify.Application.Features.Venues.Queries.GetFieldsByVenue;
 using Kickify.Application.Features.Venues.Queries.GetOperatingHours;
 using Kickify.Application.Features.Venues.Queries.GetVenueById;
 using Kickify.Application.Features.Venues.Queries.GetVenuesByOwner;
+using Kickify.Application.Features.VenueReviews.Commands.CreateVenueReview;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -90,6 +91,7 @@ namespace Kickify.Api.Controllers
             [FromQuery] DateTime? date,
             [FromQuery] string? fieldType,
             [FromQuery] string? searchName,
+            [FromQuery] string? status,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10,
             CancellationToken cancellationToken = default)
@@ -101,6 +103,7 @@ namespace Kickify.Api.Controllers
                 date,
                 fieldType,
                 searchName,
+                status,
                 page,
                 pageSize
             );
@@ -139,11 +142,13 @@ namespace Kickify.Api.Controllers
         [Authorize]
         [HttpGet("mine")]
         public async Task<IResult> GetMyVenues(
+            [FromQuery] string? searchName,
+            [FromQuery] string? status,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10,
             CancellationToken cancellationToken = default)
         {
-            var query = new GetVenuesByOwnerQuery(page, pageSize);
+            var query = new GetVenuesByOwnerQuery(searchName, status, page, pageSize);
             var result = await _sender.Send(query, cancellationToken);
 
             return result.MatchOk();
@@ -291,6 +296,27 @@ namespace Kickify.Api.Controllers
                 venueId,
                 request.Status,
                 request.AdminNotes
+            );
+
+            var result = await _sender.Send(command, cancellationToken);
+
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Create a venue review. Only requires BookingId — VenueId is derived from Booking → Field → Venue.
+        /// Validates: participation in match room, match has ended, booking/room completed, no duplicate review.
+        /// </summary>
+        [Authorize]
+        [HttpPost("reviews")]
+        public async Task<IResult> CreateVenueReview(
+            [FromBody] CreateVenueReviewRequest request,
+            CancellationToken cancellationToken)
+        {
+            var command = new CreateVenueReviewCommand(
+                request.BookingId,
+                request.Rating,
+                request.Comment
             );
 
             var result = await _sender.Send(command, cancellationToken);

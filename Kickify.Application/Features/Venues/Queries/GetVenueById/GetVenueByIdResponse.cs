@@ -14,12 +14,30 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenueById
         string? AdminNotes,
         decimal AverageRating,
         int TotalReviews,
+        int TotalBookings,
+        VenueOwnerDto Owner,
         List<VenueFieldDto> Fields,
         List<OperatingHoursDto> OperatingHours,
         List<VenuePhotoDto> Photos,
+        List<VenueReviewDto> Reviews,
         decimal WalletBalance,
         DateTime CreatedAt,
         DateTime UpdatedAt
+    );
+
+    public record VenueOwnerDto(
+        Guid UserId,
+        string? FullName,
+        string? Phone,
+        string? AvatarUrl,
+        string? Bio,
+        DateTime? DateOfBirth,
+        string? Gender,
+        string Role,
+        string? PreferredPositions,
+        int? ShirtNumber,
+        string? PreferredFoot,
+        bool IsActive
     );
 
     public record VenueFieldDto(
@@ -44,5 +62,17 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenueById
         Guid PhotoId,
         string PhotoUrl,
         bool IsPrimary
+    );
+
+    public record VenueReviewDto(
+        Guid ReviewId,
+        Guid UserId,
+        string? UserFullName,
+        string? UserAvatarUrl,
+        int Rating,
+        string? Comment,
+        string? OwnerResponse,
+        DateTime? ResponseDate,
+        DateTime CreatedAt
     );
 }

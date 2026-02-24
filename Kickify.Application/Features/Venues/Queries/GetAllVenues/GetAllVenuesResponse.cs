@@ -22,9 +22,26 @@ namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
         string? AdminNotes,
         decimal AverageRating,
         int TotalReviews,
+        int TotalBookings,
+        VenueOwnerDto Owner,
         List<FieldSummaryDto> Fields,
         string? PrimaryPhotoUrl,
         DateTime CreatedAt
+    );
+
+    public record VenueOwnerDto(
+        Guid UserId,
+        string? FullName,
+        string? Phone,
+        string? AvatarUrl,
+        string? Bio,
+        DateTime? DateOfBirth,
+        string? Gender,
+        string Role,
+        string? PreferredPositions,
+        int? ShirtNumber,
+        string? PreferredFoot,
+        bool IsActive
     );
 
     public record FieldSummaryDto(

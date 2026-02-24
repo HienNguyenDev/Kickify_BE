@@ -2,6 +2,7 @@ using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
+using Kickify.Domain.Enums;
 
 namespace Kickify.Application.Features.Venues.Queries.GetVenuesByOwner
 {
@@ -28,12 +29,26 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenuesByOwner
             var wallet = await _walletRepository.GetByUserIdAsync(ownerId, cancellationToken);
             var walletBalance = wallet?.Balance ?? 0;
 
+            VenueStatus? venueStatus = null;
+            if (!string.IsNullOrEmpty(request.Status))
+            {
+                if (Enum.TryParse<VenueStatus>(request.Status, true, out var parsedStatus))
+                {
+                    venueStatus = parsedStatus;
+                }
+            }
+
             var (venues, total) = await _venueRepository.GetVenuesByOwnerPagedAsync(
                 ownerId,
+                request.SearchName,
+                venueStatus,
                 request.Page,
                 request.PageSize,
                 cancellationToken
             );
+
+            var venueIds = venues.Select(v => v.VenueId).ToList();
+            var bookingCounts = await _venueRepository.GetBookingCountsByVenueIdsAsync(venueIds, cancellationToken);
 
             var venueItems = venues.Select(v => new OwnerVenueItemDto(
                 v.VenueId,
@@ -48,7 +63,8 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenuesByOwner
                 v.Status.ToString(),
                 v.AdminNotes,
                 v.AverageRating,
-                v.TotalReviews,
+                v.VenueReviews.Count,
+                bookingCounts.GetValueOrDefault(v.VenueId, 0),
                 v.Fields?.Select(f => new OwnerVenueFieldDto(
                     f.FieldId,
                     f.FieldName,

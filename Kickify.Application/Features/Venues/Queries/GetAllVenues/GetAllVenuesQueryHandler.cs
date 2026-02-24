@@ -25,6 +25,15 @@ namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
                 }
             }
 
+            VenueStatus? venueStatus = null;
+            if (!string.IsNullOrEmpty(request.Status))
+            {
+                if (Enum.TryParse<VenueStatus>(request.Status, true, out var parsedStatus))
+                {
+                    venueStatus = parsedStatus;
+                }
+            }
+
             var (venues, total) = await _venueRepository.SearchVenuesAsync(
                 request.Latitude,
                 request.Longitude,
@@ -32,10 +41,14 @@ namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
                 request.Date,
                 fieldType,
                 request.SearchName,
+                venueStatus,
                 request.Page,
                 request.PageSize,
                 cancellationToken
             );
+
+            var venueIds = venues.Select(v => v.VenueId).ToList();
+            var bookingCounts = await _venueRepository.GetBookingCountsByVenueIdsAsync(venueIds, cancellationToken);
 
             var venueItems = venues.Select(v => new VenueItemDto(
                 v.VenueId,
@@ -50,7 +63,22 @@ namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
                 v.Status.ToString(),
                 v.AdminNotes,
                 v.AverageRating,
-                v.TotalReviews,
+                v.VenueReviews.Count,
+                bookingCounts.GetValueOrDefault(v.VenueId, 0),
+                new VenueOwnerDto(
+                    v.Owner.UserId,
+                    v.Owner.FullName,
+                    v.Owner.Phone,
+                    v.Owner.AvatarUrl,
+                    v.Owner.Bio,
+                    v.Owner.DateOfBirth,
+                    v.Owner.Gender?.ToString(),
+                    v.Owner.Role.ToString(),
+                    v.Owner.PreferredPositions,
+                    v.Owner.ShirtNumber,
+                    v.Owner.PreferredFoot,
+                    v.Owner.IsActive
+                ),
                 v.Fields.Select(f => new FieldSummaryDto(
                     f.FieldId,
                     f.FieldName,

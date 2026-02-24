@@ -17,9 +17,12 @@ namespace Kickify.Infrastructure.Repositories
         {
             return await _dbSet
                 .AsNoTracking()
+                .Include(v => v.Owner)
                 .Include(v => v.Fields)
                 .Include(v => v.VenueOperatingHours)
                 .Include(v => v.VenuePhotos.OrderByDescending(p => p.DisplayOrder).Take(5))
+                .Include(v => v.VenueReviews.OrderByDescending(r => r.CreatedAt))
+                    .ThenInclude(r => r.User)
                 .FirstOrDefaultAsync(v => v.VenueId == venueId, cancellationToken);
         }
 
@@ -36,6 +39,7 @@ namespace Kickify.Infrastructure.Repositories
             DateTime? date = null,
             FieldType? fieldType = null,
             string? searchName = null,
+            VenueStatus? status = null,
             int page = 1,
             int pageSize = 10,
             CancellationToken cancellationToken = default)
@@ -43,6 +47,7 @@ namespace Kickify.Infrastructure.Repositories
             var query = _dbSet
                 .AsNoTracking()
                 //.Include(v => v.Fields.Where(f => f.IsActive))
+                .Include(v => v.Owner)
                 .Include(v => v.VenuePhotos.OrderBy(p => p.DisplayOrder).Take(1))
                 .AsQueryable();
 
@@ -51,6 +56,12 @@ namespace Kickify.Infrastructure.Repositories
             {
                 var searchLower = searchName.ToLower();
                 query = query.Where(v => v.VenueName.ToLower().Contains(searchLower));
+            }
+
+            // Filter by venue status
+            if (status.HasValue)
+            {
+                query = query.Where(v => v.Status == status.Value);
             }
 
             // Filter by location (simplified - in production use PostGIS)
@@ -122,6 +133,8 @@ namespace Kickify.Infrastructure.Repositories
 
         public async Task<(IEnumerable<Venue> Venues, int Total)> GetVenuesByOwnerPagedAsync(
             Guid ownerId,
+            string? searchName = null,
+            VenueStatus? status = null,
             int page = 1,
             int pageSize = 10,
             CancellationToken cancellationToken = default)
@@ -132,6 +145,19 @@ namespace Kickify.Infrastructure.Repositories
                 .Include(v => v.VenueOperatingHours)
                 .Include(v => v.VenuePhotos)
                 .Where(v => v.OwnerId == ownerId);
+
+            // Filter by venue name (case-insensitive search)
+            if (!string.IsNullOrWhiteSpace(searchName))
+            {
+                var searchLower = searchName.ToLower();
+                query = query.Where(v => v.VenueName.ToLower().Contains(searchLower));
+            }
+
+            // Filter by venue status
+            if (status.HasValue)
+            {
+                query = query.Where(v => v.Status == status.Value);
+            }
 
             var total = await query.CountAsync(cancellationToken);
 
@@ -158,6 +184,18 @@ namespace Kickify.Infrastructure.Repositories
             CancellationToken cancellationToken = default)
         {
             await _context.VenuePhotos.AddRangeAsync(photos, cancellationToken);
+        }
+
+        public async Task<Dictionary<Guid, int>> GetBookingCountsByVenueIdsAsync(
+            IEnumerable<Guid> venueIds,
+            CancellationToken cancellationToken = default)
+        {
+            return await _context.Bookings
+                .AsNoTracking()
+                .Where(b => venueIds.Contains(b.Field.VenueId))
+                .GroupBy(b => b.Field.VenueId)
+                .Select(g => new { VenueId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.VenueId, x => x.Count, cancellationToken);
         }
     }
 }

@@ -82,6 +82,19 @@ namespace Kickify.Infrastructure.Repositories
                 .FirstOrDefaultAsync(b => b.BookingId == bookingId, cancellationToken);
         }
 
+        public async Task<Booking?> GetBookingForReviewValidationAsync(
+            Guid bookingId,
+            CancellationToken cancellationToken = default)
+        {
+            return await _dbSet
+                .AsNoTracking()
+                .Include(b => b.Field)
+                    .ThenInclude(f => f.Venue)
+                .Include(b => b.MatchRoom)
+                    .ThenInclude(mr => mr.RoomParticipants)
+                .FirstOrDefaultAsync(b => b.BookingId == bookingId, cancellationToken);
+        }
+
         public async Task<(IEnumerable<Booking> Bookings, int Total)> GetBookingsPagedAsync(
             Guid? fieldId = null,
             DateTime? date = null,

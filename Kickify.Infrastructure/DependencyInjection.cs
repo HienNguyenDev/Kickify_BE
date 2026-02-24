@@ -148,6 +148,7 @@ namespace Kickify.Infrastructure
             services.AddScoped<INotificationPreferenceRepository, NotificationPreferenceRepository>();
             services.AddScoped<IRoomInvitationRepository, RoomInvitationRepository>();
             services.AddScoped<IAchievementRepository, AchievementRepository>();
+            services.AddScoped<IVenueReviewRepository, VenueReviewRepository>();
             return services;
         }
         private static IServiceCollection AddFirebase(this IServiceCollection services)
