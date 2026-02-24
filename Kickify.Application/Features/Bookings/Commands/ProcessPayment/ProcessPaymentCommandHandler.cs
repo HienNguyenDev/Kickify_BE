@@ -244,6 +244,11 @@ public class ProcessPaymentCommandHandler : ICommandHandler<ProcessPaymentComman
                     booking.EndTime,
                     cancellationToken);
 
+                await _matchRoomHubService.NotifyRoomStatusChangedAsync(
+                request.RoomId,
+                room.Status.ToString(), // Sẽ truyền đi chuỗi "Locked"
+                cancellationToken);
+
                 return Result.Success(new ProcessPaymentResponse(
                     true,
                     "Payment processed successfully. Booking created.",
