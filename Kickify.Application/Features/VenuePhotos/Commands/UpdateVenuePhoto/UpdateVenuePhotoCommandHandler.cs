@@ -1,0 +1,66 @@
+using Kickify.Application.Abstractions.Authentication;
+using Kickify.Application.Abstractions.Messaging;
+using Kickify.Application.Abstractions.Persistence;
+using Kickify.Application.Abstractions.Repositories;
+using Kickify.Domain.Common;
+using Kickify.Domain.Errors;
+using Microsoft.Extensions.Logging;
+
+namespace Kickify.Application.Features.VenuePhotos.Commands.UpdateVenuePhoto
+{
+    public class UpdateVenuePhotoCommandHandler : ICommandHandler<UpdateVenuePhotoCommand, UpdateVenuePhotoResponse>
+    {
+        private readonly IVenuePhotoRepository _venuePhotoRepository;
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly ILogger<UpdateVenuePhotoCommandHandler> _logger;
+        private readonly IUserContext _userContext;
+
+        public UpdateVenuePhotoCommandHandler(
+            IVenuePhotoRepository venuePhotoRepository,
+            IUnitOfWork unitOfWork,
+            ILogger<UpdateVenuePhotoCommandHandler> logger,
+            IUserContext userContext)
+        {
+            _venuePhotoRepository = venuePhotoRepository;
+            _unitOfWork = unitOfWork;
+            _logger = logger;
+            _userContext = userContext;
+        }
+
+        public async Task<Result<UpdateVenuePhotoResponse>> Handle(UpdateVenuePhotoCommand request, CancellationToken cancellationToken)
+        {
+            var userId = _userContext.UserId;
+            
+            // Get photo with venue info for ownership check TEST
+            var photo = await _venuePhotoRepository.GetPhotoWithVenueAsync(request.PhotoId, cancellationToken);
+            if (photo == null)
+            {
+                return Result.Failure<UpdateVenuePhotoResponse>(VenuePhotoErrors.NotFound(request.PhotoId));
+            }
+
+            // Check if user is the owner
+            if (photo.Venue.OwnerId != userId)
+            {
+                return Result.Failure<UpdateVenuePhotoResponse>(VenuePhotoErrors.Unauthorized);
+            }
+
+            // Update display order if provided
+            if (request.DisplayOrder.HasValue)
+            {
+                photo.DisplayOrder = request.DisplayOrder.Value;
+            }
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("Updated photo {PhotoId} for venue {VenueId}", 
+                photo.PhotoId, photo.VenueId);
+
+            return Result.Success(new UpdateVenuePhotoResponse(
+                photo.PhotoId,
+                photo.VenueId,
+                photo.PhotoUrl,
+                photo.DisplayOrder
+            ));
+        }
+    }
+}

@@ -14,5 +14,39 @@ namespace Kickify.Application.Abstractions.Repositories
             Guid fieldId,
             DateTime date,
             CancellationToken cancellationToken = default);
+        
+        /// <summary>
+        /// Check if a time slot overlaps with any existing bookings
+        /// </summary>
+        Task<bool> IsTimeSlotAvailableAsync(
+            Guid fieldId,
+            DateTime date,
+            TimeSpan startTime,
+            TimeSpan endTime,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Get booking with full details (field, venue)
+        /// </summary>
+        Task<Booking?> GetBookingWithDetailsAsync(
+            Guid bookingId,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Get booking with field, venue, match room, and room participants for review validation
+        /// </summary>
+        Task<Booking?> GetBookingForReviewValidationAsync(
+            Guid bookingId,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Get paged bookings with optional filters
+        /// </summary>
+        Task<(IEnumerable<Booking> Bookings, int Total)> GetBookingsPagedAsync(
+            Guid? fieldId = null,
+            DateTime? date = null,
+            int page = 1,
+            int pageSize = 10,
+            CancellationToken cancellationToken = default);
     }
 }

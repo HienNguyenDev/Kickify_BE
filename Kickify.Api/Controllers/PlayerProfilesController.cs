@@ -1,6 +1,5 @@
 using Kickify.Api.Extensions;
 using Kickify.Api.Requests;
-using Kickify.Application.Features.PlayerProfiles.Commands.CreatePlayerProfile;
 using Kickify.Application.Features.PlayerProfiles.Commands.DeletePlayerProfile;
 using Kickify.Application.Features.PlayerProfiles.Commands.UpdatePlayerProfile;
 using Kickify.Application.Features.PlayerProfiles.Queries.GetAllPlayerProfiles;
@@ -11,7 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Kickify.Api.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/playerprofiles")]
     [ApiController]
     public class PlayerProfilesController : ControllerBase
     {
@@ -59,26 +58,6 @@ namespace Kickify.Api.Controllers
         {
             var query = new GetPlayerProfileByIdQuery { ProfileId = profileId };
             Result<GetPlayerProfileByIdQueryResponse> result = await _mediator.Send(query, cancellationToken);
-            return result.MatchOk();
-        }
-
-        /// <summary>
-        /// Create new player profile
-        /// </summary>
-        [HttpPost]
-        public async Task<IResult> CreatePlayerProfile(
-            [FromBody] CreatePlayerProfileRequest request,
-            CancellationToken cancellationToken)
-        {
-            var command = new CreatePlayerProfileCommand
-            {
-                UserId = request.UserId,
-                CurrentElo = request.CurrentElo,
-                TrustScore = request.TrustScore,
-                PreferredPositions = request.PreferredPositions
-            };
-
-            Result<CreatePlayerProfileCommandResponse> result = await _mediator.Send(command, cancellationToken);
             return result.MatchOk();
         }
 

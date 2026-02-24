@@ -19,19 +19,13 @@ public class NotificationPreferenceConfiguration : IEntityTypeConfiguration<Noti
         builder.Property(np => np.UserId)
             .IsRequired();
 
-        builder.Property(n => n.MatchInvites)
+        builder.Property(n => n.MatchRoom)
             .HasDefaultValue(true);
 
-        builder.Property(n => n.MatchResults)
+        builder.Property(n => n.Friendship)
             .HasDefaultValue(true);
 
-        builder.Property(n => n.ChatMessages)
-            .HasDefaultValue(true);
-
-        builder.Property(n => n.RoomUpdates)
-            .HasDefaultValue(true);
-
-        builder.Property(n => n.SystemAnnouncements)
+        builder.Property(n => n.Post)
             .HasDefaultValue(true);
     }
 }

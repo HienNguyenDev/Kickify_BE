@@ -78,6 +78,28 @@ public class MatchRoomConfiguration : IEntityTypeConfiguration<MatchRoom>
             .HasDefaultValue(0)
             .HasComment("count of confirmations");
 
+        builder.Property(mr => mr.AutoCloseJobId)
+            .HasMaxLength(100);
+
+        builder.Property(mr => mr.TeamAName)
+            .HasMaxLength(50);
+
+        builder.Property(mr => mr.TeamBName)
+            .HasMaxLength(50);
+
+        // Match lifecycle job IDs
+        builder.Property(mr => mr.StartMatchJobId)
+            .HasMaxLength(100);
+
+        builder.Property(mr => mr.EndMatchJobId)
+            .HasMaxLength(100);
+
+        builder.Property(mr => mr.FinalizeResultJobId)
+            .HasMaxLength(100);
+
+        builder.Property(mr => mr.FinalResult)
+            .HasConversion<string>();
+
         // Indexes
         builder.HasIndex(mr => mr.HostId);
         builder.HasIndex(mr => mr.FieldId);
@@ -119,5 +141,10 @@ public class MatchRoomConfiguration : IEntityTypeConfiguration<MatchRoom>
             .WithOne(pr => pr.Match)
             .HasForeignKey(pr => pr.MatchId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasMany(mr => mr.ResultVotes)
+            .WithOne(v => v.MatchRoom)
+            .HasForeignKey(v => v.RoomId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

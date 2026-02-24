@@ -6,9 +6,6 @@ namespace Kickify.Application.Features.Venues.Commands.CreateVenue
     {
         public CreateVenueCommandValidator()
         {
-            RuleFor(x => x.OwnerId)
-                .NotEmpty().WithMessage("OwnerId is required");
-
             RuleFor(x => x.Name)
                 .NotEmpty().WithMessage("Name is required")
                 .MaximumLength(200).WithMessage("Name must not exceed 200 characters");
@@ -40,11 +37,8 @@ namespace Kickify.Application.Features.Venues.Commands.CreateVenue
                 field.RuleFor(f => f.FieldType)
                     .NotEmpty().WithMessage("Field type is required");
 
-                field.RuleFor(f => f.MaxPlayers)
-                    .GreaterThan(0).WithMessage("MaxPlayers must be greater than 0");
-
-                field.RuleFor(f => f.PricePerHour)
-                    .GreaterThan(0).WithMessage("PricePerHour must be greater than 0");
+                field.RuleFor(f => f.HourlyRate)
+                    .GreaterThan(0).WithMessage("HourlyRate must be greater than 0");
             });
 
             RuleFor(x => x.OperatingHours)

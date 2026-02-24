@@ -1,4 +1,5 @@
 using Kickify.Domain.Entities;
+using Kickify.Domain.Enums;
 using Kickify.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -9,36 +10,21 @@ public class WalletTransactionConfiguration : IEntityTypeConfiguration<WalletTra
 {
     public void Configure(EntityTypeBuilder<WalletTransaction> builder)
     {
-        builder.ToTable("WalletTransactions", Schemas.Venue);
+        builder.ToTable("WalletTransactions", Schemas.Payment);
 
-        builder.HasKey(wt => wt.TransactionId);
+        builder.HasKey(t => t.TransactionId);
 
-        builder.Property(wt => wt.TransactionId)
-            .IsRequired();
+        builder.Property(t => t.TransactionId).IsRequired();
+        builder.Property(t => t.WalletId).IsRequired();
+        builder.Property(t => t.TransactionType).HasConversion<string>().IsRequired();
+        builder.Property(t => t.Amount).HasPrecision(18, 2).IsRequired();
+        builder.Property(t => t.BalanceAfter).HasPrecision(18, 2).IsRequired();
+        builder.Property(t => t.TransactionCode).HasMaxLength(100);
+        builder.Property(t => t.Description).HasMaxLength(500);
+        builder.Property(t => t.CreatedAt).IsRequired();
 
-        builder.Property(wt => wt.WalletId)
-            .IsRequired();
-
-        builder.Property(wt => wt.TransactionType)
-            .HasConversion<string>()
-            .IsRequired();
-
-        builder.Property(wt => wt.Amount)
-            .HasColumnType("decimal(10,2)")
-            .IsRequired();
-
-        builder.Property(wt => wt.BalanceAfter)
-            .HasColumnType("decimal(12,2)")
-            .IsRequired();
-
-        builder.Property(wt => wt.ReferenceId)
-            .HasComment("booking_id or withdrawal_id");
-
-        builder.Property(wt => wt.Description)
-            .HasColumnType("text");
-
-        // Indexes
-        builder.HasIndex(wt => wt.WalletId);
-        builder.HasIndex(wt => wt.CreatedAt);
+        builder.HasIndex(t => t.WalletId);
+        builder.HasIndex(t => t.TransactionCode);
+        builder.HasIndex(t => t.CreatedAt);
     }
 }

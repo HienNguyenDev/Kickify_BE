@@ -1,31 +1,21 @@
-﻿using Kickify.Application.Abstractions.OTP;
-using Kickify.Application.Abstractions.Services;
+﻿using Kickify.Application.Abstractions.Jobs;
 using Kickify.Domain.Event;
 using MediatR;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Kickify.Application.Features.Auth.Commands.ResendOtp
+namespace Kickify.Application.Features.Auth.Commands.ResendOtp;
+
+public class ResendOtpCommandEventHandler : INotificationHandler<ResendOtpDomainEvent>
 {
-    public class ResendOtpCommandEventHandler : INotificationHandler<ResendOtpDomainEvent>
+    private readonly IEmailJobService _emailJobService;
+
+    public ResendOtpCommandEventHandler(IEmailJobService emailJobService)
     {
-        private readonly IMailService _mailService;
-        private readonly IRedisOtpStore _otpStore;
+        _emailJobService = emailJobService;
+    }
 
-        public ResendOtpCommandEventHandler(IMailService mailService, IRedisOtpStore otpStore)
-        {
-            _mailService = mailService;
-            _otpStore = otpStore;
-        }
-
-        public async Task Handle(ResendOtpDomainEvent notification, CancellationToken cancellationToken)
-        {
-            await _otpStore.StoreAsync(notification.UserId, notification.OtpCode, TimeSpan.FromMinutes(5), cancellationToken);
-
-            await _mailService.SendOtpAsync(notification.Email, notification.OtpCode);
-        }
+    public Task Handle(ResendOtpDomainEvent notification, CancellationToken cancellationToken)
+    {
+        _emailJobService.EnqueueSendOtpEmail(notification.Email, notification.OtpCode);
+        return Task.CompletedTask;
     }
 }

@@ -10,10 +10,12 @@ namespace Kickify.Application.Features.Bookings.Queries.CheckAvailability
         string? Message
     );
 
+    /// <summary>
+    /// Represents a 30-minute time slot
+    /// </summary>
     public record TimeSlotDto(
         TimeSpan StartTime,
-        TimeSpan EndTime,
         bool IsAvailable,
-        decimal PricePerHour
+        decimal HourlyRate
     );
 }

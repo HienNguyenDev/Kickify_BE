@@ -1,10 +1,9 @@
-using Kickify.Domain.Common;
-using MediatR;
+using Kickify.Application.Abstractions.Messaging;
 
 namespace Kickify.Application.Features.Bookings.Queries.CheckAvailability
 {
     public record CheckAvailabilityQuery(
         Guid FieldId,
         DateTime Date
-    ) : IRequest<Result<CheckAvailabilityResponse>>;
+    ) : IQuery<CheckAvailabilityResponse>;
 }

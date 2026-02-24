@@ -16,7 +16,7 @@ public static class CustomResults
             detail: GetDetail(result.Error),
             type: GetType(result.Error.Type),
             statusCode: GetStatusCode(result.Error.Type),
-            extensions: GetErrors(result));
+            extensions: GetExtensions(result));
 
         static string GetTitle(Error error) =>
             error.Type switch
@@ -25,6 +25,7 @@ public static class CustomResults
                 ErrorType.Problem => error.Code,
                 ErrorType.NotFound => error.Code,
                 ErrorType.Conflict => error.Code,
+                ErrorType.Failure => error.Code,
                 _ => "Server failure"
             };
 
@@ -35,6 +36,7 @@ public static class CustomResults
                 ErrorType.Problem => error.Description,
                 ErrorType.NotFound => error.Description,
                 ErrorType.Conflict => error.Description,
+                ErrorType.Failure => error.Description,
                 _ => "An unexpected error occurred"
             };
 
@@ -45,6 +47,7 @@ public static class CustomResults
                 ErrorType.Problem => "https://tools.ietf.org/html/rfc7231#section-6.5.1",
                 ErrorType.NotFound => "https://tools.ietf.org/html/rfc7231#section-6.5.4",
                 ErrorType.Conflict => "https://tools.ietf.org/html/rfc7231#section-6.5.8",
+                ErrorType.Failure => "https://tools.ietf.org/html/rfc7231#section-6.5.3",
                 _ => "https://tools.ietf.org/html/rfc7231#section-6.6.1"
             };
 
@@ -54,20 +57,28 @@ public static class CustomResults
                 ErrorType.Validation => StatusCodes.Status400BadRequest,
                 ErrorType.NotFound => StatusCodes.Status404NotFound,
                 ErrorType.Conflict => StatusCodes.Status409Conflict,
+                ErrorType.Failure => StatusCodes.Status403Forbidden,
                 _ => StatusCodes.Status500InternalServerError
             };
 
-        static Dictionary<string, object?>? GetErrors(Result result)
+        static Dictionary<string, object?>? GetExtensions(Result result)
         {
-            if (result.Error is not ValidationError validationError)
+            var extensions = new Dictionary<string, object?>();
+
+            if (result.Error is ValidationError validationError)
             {
-                return null;
+                extensions["errors"] = validationError.Errors;
             }
 
-            return new Dictionary<string, object?>
+            if (result.Error.Metadata.Count > 0)
             {
-                { "errors", validationError.Errors }
-            };
+                foreach (var kvp in result.Error.Metadata)
+                {
+                    extensions[kvp.Key] = kvp.Value;
+                }
+            }
+
+            return extensions.Count > 0 ? extensions : null;
         }
     }
 }

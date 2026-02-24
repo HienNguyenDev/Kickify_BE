@@ -2,12 +2,15 @@ namespace Kickify.Api.Requests
 {
     public record CreateVenueRequest
     {
-        public Guid OwnerId { get; init; }
+        // OwnerId is extracted from JWT token, not from request body
         public string Name { get; init; } = string.Empty;
         public string Address { get; init; } = string.Empty;
         public decimal Latitude { get; init; }
         public decimal Longitude { get; init; }
+        public string? ContactPhone { get; init; }
+        public string? ContactEmail { get; init; }
         public string? Description { get; init; }
+        public string? Amenities { get; init; }
         public List<CreateVenueFieldRequest> Fields { get; init; } = new();
         public List<CreateVenueOperatingHoursRequest> OperatingHours { get; init; } = new();
     }
@@ -16,14 +19,14 @@ namespace Kickify.Api.Requests
     {
         public string Name { get; init; } = string.Empty;
         public string FieldType { get; init; } = string.Empty;
-        public int MaxPlayers { get; init; }
-        public decimal PricePerHour { get; init; }
-        public string? Description { get; init; }
-    }
+        public string? SurfaceType { get; init; }
+        public decimal HourlyRate { get; init; }
+        public decimal PeakHourSurcharge { get; init; }
+     }
 
     public record CreateVenueOperatingHoursRequest
     {
-        public DayOfWeek DayOfWeek { get; init; }
+        public int DayOfWeek { get; init; }
         public TimeSpan OpenTime { get; init; }
         public TimeSpan CloseTime { get; init; }
     }

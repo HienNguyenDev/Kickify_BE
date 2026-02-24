@@ -1,7 +1,6 @@
-using Kickify.Domain.Common;
-using MediatR;
+using Kickify.Application.Abstractions.Messaging;
 
 namespace Kickify.Application.Features.Venues.Queries.GetVenueById
 {
-    public record GetVenueByIdQuery(Guid VenueId) : IRequest<Result<GetVenueByIdResponse>>;
+    public record GetVenueByIdQuery(Guid VenueId) : IQuery<GetVenueByIdResponse>;
 }

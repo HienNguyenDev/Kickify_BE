@@ -1,12 +1,12 @@
+using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
 using Kickify.Domain.Enums;
 using Kickify.Domain.Errors;
-using MediatR;
 
 namespace Kickify.Application.Features.Bookings.Queries.CheckAvailability
 {
-    public class CheckAvailabilityQueryHandler : IRequestHandler<CheckAvailabilityQuery, Result<CheckAvailabilityResponse>>
+    public class CheckAvailabilityQueryHandler : IQueryHandler<CheckAvailabilityQuery, CheckAvailabilityResponse>
     {
         private readonly IFieldRepository _fieldRepository;
         private readonly IBookingRepository _bookingRepository;
@@ -54,27 +54,58 @@ namespace Kickify.Application.Features.Bookings.Queries.CheckAvailability
                 request.Date,
                 cancellationToken);
 
-            // Generate available time slots (1-hour intervals)
+            // Generate available time slots (30-minute intervals)
             var availableSlots = new List<TimeSlotDto>();
-            var currentTime = operatingHour.OpenTime ?? TimeSpan.Zero;
+            var currentSlotTime = operatingHour.OpenTime ?? TimeSpan.Zero;
             var closeTime = operatingHour.CloseTime ?? TimeSpan.Zero;
 
-            while (currentTime.Add(TimeSpan.FromHours(1)) <= closeTime)
-            {
-                var endTime = currentTime.Add(TimeSpan.FromHours(1));
+            var utcNow = DateTime.UtcNow;
 
-                // Check if this slot overlaps with any booked slot
-                bool isBooked = bookedSlots.Any(booked =>
-                    currentTime < booked.Item2 && endTime > booked.Item1);
+            TimeZoneInfo vnTimeZone;
+            try
+            {
+                vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"); // Windows
+            }
+            catch (TimeZoneNotFoundException)
+            {
+                vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Ho_Chi_Minh"); // Linux/Docker
+            }
+
+            var nowInVietnam = TimeZoneInfo.ConvertTimeFromUtc(utcNow, vnTimeZone);
+
+            var todayInVietnam = nowInVietnam.Date;
+            var currentTimeOfDayInVietnam = nowInVietnam.TimeOfDay;
+
+            var isToday = request.Date.Date == todayInVietnam;
+            var isPastDate = request.Date.Date < todayInVietnam;
+
+            // ====================================================================================
+
+            while (currentSlotTime < closeTime)
+            {
+                bool isAvailable = true;
+
+                if (isPastDate)
+                {
+                    isAvailable = false;
+                }
+                else if (isToday && currentSlotTime < currentTimeOfDayInVietnam)
+                {
+                    isAvailable = false;
+                }
+                else
+                {
+                    isAvailable = !bookedSlots.Any(booked =>
+                        currentSlotTime >= booked.Item1 && currentSlotTime < booked.Item2);
+                }
 
                 availableSlots.Add(new TimeSlotDto(
-                    currentTime,
-                    endTime,
-                    !isBooked,
+                    currentSlotTime,
+                    isAvailable,
                     field.HourlyRate
                 ));
 
-                currentTime = endTime;
+                currentSlotTime = currentSlotTime.Add(TimeSpan.FromMinutes(30));
             }
 
             return Result.Success(new CheckAvailabilityResponse(
@@ -87,5 +118,55 @@ namespace Kickify.Application.Features.Bookings.Queries.CheckAvailability
                 null
             ));
         }
+
+        //    // Get current server time for past slot validation
+        //    var now = DateTime.Now;
+        //    var today = now.Date;
+        //    var currentTimeOfDay = now.TimeOfDay;
+        //    var isToday = request.Date.Date == today;
+        //    var isPastDate = request.Date.Date < today;
+
+        //    while (currentSlotTime < closeTime)
+        //    {
+        //        bool isAvailable = true;
+
+        //        // If the entire date is in the past, all slots are unavailable
+        //        if (isPastDate)
+        //        {
+        //            isAvailable = false;
+        //        }
+        //        // If it's today, check if this slot time has already passed
+        //        else if (isToday && currentSlotTime < currentTimeOfDay)
+        //        {
+        //            isAvailable = false;
+        //        }
+        //        else
+        //        {
+        //            // Check if this 30-minute slot overlaps with any booked slot
+        //            // A slot is unavailable if it falls within any booked period
+        //            isAvailable = !bookedSlots.Any(booked =>
+        //                currentSlotTime >= booked.Item1 && currentSlotTime < booked.Item2);
+        //        }
+
+        //        availableSlots.Add(new TimeSlotDto(
+        //            currentSlotTime,
+        //            isAvailable,
+        //            field.HourlyRate
+        //        ));
+
+        //        // Move to next 30-minute slot
+        //        currentSlotTime = currentSlotTime.Add(TimeSpan.FromMinutes(30));
+        //    }
+
+        //    return Result.Success(new CheckAvailabilityResponse(
+        //        field.FieldId,
+        //        field.FieldName,
+        //        request.Date,
+        //        operatingHour.OpenTime,
+        //        operatingHour.CloseTime,
+        //        availableSlots,
+        //        null
+        //    ));
+        //}
     }
 }

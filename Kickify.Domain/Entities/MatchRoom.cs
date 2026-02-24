@@ -3,15 +3,17 @@ using Kickify.Domain.Enums;
 
 namespace Kickify.Domain.Entities;
 
-public class MatchRoom : BaseEntity
+public class MatchRoom : Entity
 {
     public Guid RoomId { get; set; }
     public Guid HostId { get; set; }
     public Guid? FieldId { get; set; }
+    public string? RoomName { get; set; }
     public string? CustomLocation { get; set; }
     public MatchFormat MatchFormat { get; set; }
     public Enums.MatchType MatchType { get; set; }
     public Visibility Visibility { get; set; } = Visibility.Public;
+    public string? RoomPassword { get; set; }
     public DateTime MatchDate { get; set; }
     public TimeSpan StartTime { get; set; }
     public int DurationMinutes { get; set; }
@@ -24,7 +26,18 @@ public class MatchRoom : BaseEntity
     public RoomStatus Status { get; set; } = RoomStatus.Open;
     public int? TeamAScore { get; set; }
     public int? TeamBScore { get; set; }
-    public int ResultConfirmedBy { get; set; } = 0; // count of confirmations
+    public int ResultConfirmedBy { get; set; } = 0;
+    public string? AutoCloseJobId { get; set; }
+    public string? TeamAName { get; set; }
+    public string? TeamBName { get; set; }
+    
+    // Match lifecycle job IDs
+    public string? StartMatchJobId { get; set; }
+    public string? EndMatchJobId { get; set; }
+    public string? FinalizeResultJobId { get; set; }
+    
+    // Final match result
+    public MatchResult? FinalResult { get; set; }
 
     // Navigation properties
     public User Host { get; set; } = null!;
@@ -36,4 +49,6 @@ public class MatchRoom : BaseEntity
     public ICollection<MatchFeedback> MatchFeedbacks { get; set; } = new List<MatchFeedback>();
     public ICollection<EloHistory> EloHistories { get; set; } = new List<EloHistory>();
     public ICollection<PlayerReport> PlayerReports { get; set; } = new List<PlayerReport>();
+    public ICollection<MatchFormation> Formations { get; set; } = new List<MatchFormation>();
+    public ICollection<MatchResultVote> ResultVotes { get; set; } = new List<MatchResultVote>();
 }

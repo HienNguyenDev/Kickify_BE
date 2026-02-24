@@ -2,9 +2,10 @@ namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
 {
     public record GetAllVenuesResponse(
         List<VenueItemDto> Venues,
-        int Total,
+        int TotalCount,
         int Page,
-        int PageSize
+        int PageSize,
+        int TotalPages
     );
 
     public record VenueItemDto(
@@ -13,16 +14,45 @@ namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
         string Address,
         decimal Latitude,
         decimal Longitude,
+        string? ContactPhone,
+        string? ContactEmail,
         string? Description,
+        string? Amenities,
+        string Status,
+        string? AdminNotes,
+        decimal AverageRating,
+        int TotalReviews,
+        int TotalBookings,
+        VenueOwnerDto Owner,
         List<FieldSummaryDto> Fields,
         string? PrimaryPhotoUrl,
         DateTime CreatedAt
     );
 
+    public record VenueOwnerDto(
+        Guid UserId,
+        string? FullName,
+        string? Phone,
+        string? AvatarUrl,
+        string? Bio,
+        DateTime? DateOfBirth,
+        string? Gender,
+        string Role,
+        string? PreferredPositions,
+        int? ShirtNumber,
+        string? PreferredFoot,
+        bool IsActive
+    );
+
     public record FieldSummaryDto(
         Guid FieldId,
-        string Name,
+        string FieldName,
         string FieldType,
-        decimal PricePerHour
+        string? SurfaceType,
+        decimal HourlyRate,
+        decimal? PeakHourSurcharge,
+        bool IsActive,
+        DateTime CreatedAt,
+        DateTime UpdatedAt
     );
 }

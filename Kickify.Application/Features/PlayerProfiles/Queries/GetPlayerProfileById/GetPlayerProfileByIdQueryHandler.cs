@@ -46,9 +46,8 @@ namespace Kickify.Application.Features.PlayerProfiles.Queries.GetPlayerProfileBy
                 MvpCount = profile.MvpCount,
                 WinStreak = profile.WinStreak,
                 MaxWinStreak = profile.MaxWinStreak,
-                AfkCount = profile.AfkCount,
                 ReportCount = profile.ReportCount,
-                PreferredPositions = profile.PreferredPositions,
+                PreferredPositions = profile.User?.PreferredPositions,
                 CreatedAt = profile.CreatedAt,
                 UpdatedAt = profile.UpdatedAt
             };

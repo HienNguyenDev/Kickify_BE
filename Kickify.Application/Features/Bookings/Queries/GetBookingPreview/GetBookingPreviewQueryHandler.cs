@@ -1,11 +1,11 @@
+using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
 using Kickify.Domain.Errors;
-using MediatR;
 
 namespace Kickify.Application.Features.Bookings.Queries.GetBookingPreview
 {
-    public class GetBookingPreviewQueryHandler : IRequestHandler<GetBookingPreviewQuery, Result<GetBookingPreviewResponse>>
+    public class GetBookingPreviewQueryHandler : IQueryHandler<GetBookingPreviewQuery, GetBookingPreviewResponse>
     {
         private readonly IFieldRepository _fieldRepository;
 
@@ -23,21 +23,22 @@ namespace Kickify.Application.Features.Bookings.Queries.GetBookingPreview
                 return Result.Failure<GetBookingPreviewResponse>(FieldErrors.NotFound(request.FieldId));
             }
 
+            // Calculate EndTime from StartTime + DurationMinutes
+            var endTime = request.StartTime.Add(TimeSpan.FromMinutes(request.DurationMinutes));
+
             // Validate time slot
-            if (request.StartTime >= request.EndTime)
+            if (request.StartTime >= endTime)
             {
-                return Result.Failure<GetBookingPreviewResponse>(
-                    new Error("Booking.InvalidTimeSlot", "Start time must be before end time", ErrorType.Validation));
+                return Result.Failure<GetBookingPreviewResponse>(BookingErrors.InvalidTimeSlot);
             }
 
-            // Validate number of players (we don't have MaxPlayers in entity, so skip this check)
-
+ 
             // Check if field is available for this time slot
             var isAvailable = await _fieldRepository.IsFieldAvailableAsync(
                 request.FieldId,
                 request.Date,
                 request.StartTime,
-                request.EndTime,
+                endTime,
                 cancellationToken);
 
             if (!isAvailable)
@@ -46,7 +47,7 @@ namespace Kickify.Application.Features.Bookings.Queries.GetBookingPreview
             }
 
             // Calculate duration in hours
-            var duration = request.EndTime - request.StartTime;
+            var duration = endTime - request.StartTime;
             var durationHours = (decimal)duration.TotalHours;
 
             // Calculate total amount
@@ -61,7 +62,7 @@ namespace Kickify.Application.Features.Bookings.Queries.GetBookingPreview
                 field.Venue.VenueName,
                 request.Date,
                 request.StartTime,
-                request.EndTime,
+                endTime,
                 durationHours,
                 field.HourlyRate,
                 totalAmount,

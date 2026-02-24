@@ -22,11 +22,21 @@ public class CommentLikeConfiguration : IEntityTypeConfiguration<CommentLike>
         builder.Property(cl => cl.UserId)
             .IsRequired();
 
+        builder.Property(cl => cl.CreatedAt)
+            .IsRequired();
+
         // Indexes
         builder.HasIndex(cl => new { cl.CommentId, cl.UserId })
             .IsUnique();
 
         builder.HasIndex(cl => cl.CommentId);
         builder.HasIndex(cl => cl.UserId);
+
+        // Note: Relationship with Comment is configured in CommentConfiguration
+        // Only configure User relationship here
+        builder.HasOne(cl => cl.User)
+            .WithMany()
+            .HasForeignKey(cl => cl.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

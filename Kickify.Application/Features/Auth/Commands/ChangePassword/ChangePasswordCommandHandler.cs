@@ -33,11 +33,12 @@ namespace Kickify.Application.Features.Auth.Commands.ChangePassword
             {
                 return Result.Failure<ChangePasswordCommandResponse>(UserErrors.NotFoundByEmail);
             }
-            if (user.PasswordHash != request.CurrentPassword)
+            if (!_passwordHasher.Verify(request.CurrentPassword, user.PasswordHash))
             {
                 return Result.Failure<ChangePasswordCommandResponse>(UserErrors.WrongPassword);
             }
             user.PasswordHash = _passwordHasher.Hash(request.NewPassword);
+            _userRepository.Update(user);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             var response = new ChangePasswordCommandResponse
             {

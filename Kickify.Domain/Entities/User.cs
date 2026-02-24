@@ -15,15 +15,17 @@ public class User : Entity
     public DateTime? DateOfBirth { get; set; }
     public Gender? Gender { get; set; }
     public UserRole Role { get; set; }
-    public string? Positions { get; set; }
+    public string? PreferredPositions { get; set; }
     public int? ShirtNumber { get; set; }
     public string? PreferredFoot { get; set; }
     public string? IdentityId { get; set; }
     public bool IsEmailVerified { get; set; } = false;
     public bool IsActive { get; set; } = true;
+    public string? FcmToken { get; set; }
 
     // Navigation properties
     public PlayerProfile? PlayerProfile { get; set; }
+    public Wallet? Wallet { get; set; }
     public NotificationPreference? NotificationPreference { get; set; }
     public ICollection<PlayerAchievement> PlayerAchievements { get; set; } = new List<PlayerAchievement>();
     public ICollection<Venue> Venues { get; set; } = new List<Venue>();

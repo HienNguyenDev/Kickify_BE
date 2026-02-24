@@ -13,6 +13,7 @@ namespace Kickify.Application.Abstractions.Repositories
     {
         Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);
         Task<bool> IsEmailExistsAsync(string email);
+        Task<IEnumerable<User>> GetByIdsAsync(IEnumerable<Guid> userIds, CancellationToken cancellationToken = default);
         Task<(IEnumerable<User> Users, int Total)> GetPagedUsersAsync(
             UserRole? role = null,
             bool? isActive = null,

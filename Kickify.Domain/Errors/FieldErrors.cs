@@ -23,5 +23,9 @@ namespace Kickify.Domain.Errors
         public static readonly Error NotAvailable = Error.Conflict(
             "Fields.NotAvailable",
             "The field is not available for the requested time slot");
+
+        public static readonly Error Unauthorized = Error.Problem(
+            "Fields.Unauthorized",
+            "You are not authorized to perform this action on this field");
     }
 }

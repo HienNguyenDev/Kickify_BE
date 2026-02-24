@@ -2,14 +2,18 @@ using Kickify.Api.Extensions;
 using Kickify.Api.Requests;
 using Kickify.Application.Features.Bookings.Commands.ProcessPayment;
 using Kickify.Application.Features.Bookings.Queries.CheckAvailability;
+using Kickify.Application.Features.Bookings.Queries.CheckConsecutiveSlots;
+using Kickify.Application.Features.Bookings.Queries.GetAllBookings;
+using Kickify.Application.Features.Bookings.Queries.GetBookingById;
 using Kickify.Application.Features.Bookings.Queries.GetBookingPreview;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Kickify.Api.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/bookings")]
     public class BookingsController : ControllerBase
     {
         private readonly ISender _sender;
@@ -20,19 +24,34 @@ namespace Kickify.Api.Controllers
         }
 
         /// <summary>
-        /// Check availability for a field on a specific date
+        /// Get all bookings with pagination and optional filters
         /// </summary>
-        [HttpGet("availability")]
-        public async Task<IResult> CheckAvailability(
-            [FromQuery] Guid fieldId,
-            [FromQuery] DateTime date,
-            CancellationToken cancellationToken)
+        [HttpGet]
+        public async Task<IResult> GetAllBookings(
+            [FromQuery] Guid? fieldId,
+            [FromQuery] DateTime? date,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
+            CancellationToken cancellationToken = default)
         {
-            var query = new CheckAvailabilityQuery(fieldId, date);
+            var query = new GetAllBookingsQuery(fieldId, date, page, pageSize);
             var result = await _sender.Send(query, cancellationToken);
 
             return result.MatchOk();
         }
+
+        /// <summary>
+        /// Get booking by ID with full details
+        /// </summary>
+        [HttpGet("{bookingId:guid}")]
+        public async Task<IResult> GetBookingById(Guid bookingId, CancellationToken cancellationToken)
+        {
+            var query = new GetBookingByIdQuery(bookingId);
+            var result = await _sender.Send(query, cancellationToken);
+
+            return result.MatchOk();
+        }
+
 
         /// <summary>
         /// Get booking preview with pricing calculation
@@ -42,7 +61,7 @@ namespace Kickify.Api.Controllers
             [FromQuery] Guid fieldId,
             [FromQuery] DateTime date,
             [FromQuery] TimeSpan startTime,
-            [FromQuery] TimeSpan endTime,
+            [FromQuery] int durationMinutes,
             [FromQuery] int numberOfPlayers,
             CancellationToken cancellationToken)
         {
@@ -50,7 +69,7 @@ namespace Kickify.Api.Controllers
                 fieldId,
                 date,
                 startTime,
-                endTime,
+                durationMinutes,
                 numberOfPlayers
             );
 
@@ -61,15 +80,16 @@ namespace Kickify.Api.Controllers
 
         /// <summary>
         /// Process payment for a room participant (with race condition handling)
+        /// Uses current authenticated user from token
         /// </summary>
         [HttpPost("process-payment")]
+        [Authorize]
         public async Task<IResult> ProcessPayment(
             [FromBody] ProcessPaymentRequest request,
             CancellationToken cancellationToken)
         {
             var command = new ProcessPaymentCommand(
-                request.RoomId,
-                request.UserId
+                request.RoomId
             );
 
             var result = await _sender.Send(command, cancellationToken);

@@ -17,10 +17,12 @@ namespace Kickify.Infrastructure.Repositories
         {
             return await _dbSet
                 .AsNoTracking()
+                .Include(v => v.Owner)
                 .Include(v => v.Fields)
                 .Include(v => v.VenueOperatingHours)
                 .Include(v => v.VenuePhotos.OrderByDescending(p => p.DisplayOrder).Take(5))
-                .Include(v => v.VenueWallet)
+                .Include(v => v.VenueReviews.OrderByDescending(r => r.CreatedAt))
+                    .ThenInclude(r => r.User)
                 .FirstOrDefaultAsync(v => v.VenueId == venueId, cancellationToken);
         }
 
@@ -35,16 +37,32 @@ namespace Kickify.Infrastructure.Repositories
             decimal? longitude = null,
             double? radiusKm = null,
             DateTime? date = null,
-            FieldType? sportType = null,
+            FieldType? fieldType = null,
+            string? searchName = null,
+            VenueStatus? status = null,
             int page = 1,
             int pageSize = 10,
             CancellationToken cancellationToken = default)
         {
             var query = _dbSet
                 .AsNoTracking()
-                .Include(v => v.Fields)
+                //.Include(v => v.Fields.Where(f => f.IsActive))
+                .Include(v => v.Owner)
                 .Include(v => v.VenuePhotos.OrderBy(p => p.DisplayOrder).Take(1))
                 .AsQueryable();
+
+            // Filter by venue name (case-insensitive search)
+            if (!string.IsNullOrWhiteSpace(searchName))
+            {
+                var searchLower = searchName.ToLower();
+                query = query.Where(v => v.VenueName.ToLower().Contains(searchLower));
+            }
+
+            // Filter by venue status
+            if (status.HasValue)
+            {
+                query = query.Where(v => v.Status == status.Value);
+            }
 
             // Filter by location (simplified - in production use PostGIS)
             if (latitude.HasValue && longitude.HasValue && radiusKm.HasValue)
@@ -61,10 +79,16 @@ namespace Kickify.Infrastructure.Repositories
                 );
             }
 
-            // Filter by sport type
-            if (sportType.HasValue)
+            // Filter by field type (only venues with active fields of this type)
+            if (fieldType.HasValue)
             {
-                query = query.Where(v => v.Fields.Any(f => f.FieldType == sportType.Value));
+                query = query.Where(v => v.Fields.Any(f => f.FieldType == fieldType.Value && f.IsActive));
+
+                query = query.Include(v => v.Fields.Where(f => f.FieldType == fieldType.Value && f.IsActive));
+            }
+            else
+            {
+                query = query.Include(v => v.Fields.Where(f => f.IsActive));
             }
 
             // Filter by availability on specific date (if provided)
@@ -82,7 +106,96 @@ namespace Kickify.Infrastructure.Repositories
                 .Take(pageSize)
                 .ToListAsync(cancellationToken);
 
+            // If fieldType filter is applied, filter fields in-memory to only include matching fields
+            //if (fieldType.HasValue)
+            //{
+            //    foreach (var venue in venues)
+            //    {
+            //        var filteredFields = venue.Fields.Where(f => f.FieldType == fieldType.Value).ToList();
+            //        venue.Fields.Clear();
+            //        foreach (var field in filteredFields)
+            //        {
+            //            venue.Fields.Add(field);
+            //        }
+            //    }
+            //}
+
             return (venues, total);
+        }
+
+        public async Task<Venue?> GetVenueForUpdateAsync(
+            Guid venueId,
+            CancellationToken cancellationToken = default)
+        {
+            return await _dbSet
+                .FirstOrDefaultAsync(v => v.VenueId == venueId, cancellationToken);
+        }
+
+        public async Task<(IEnumerable<Venue> Venues, int Total)> GetVenuesByOwnerPagedAsync(
+            Guid ownerId,
+            string? searchName = null,
+            VenueStatus? status = null,
+            int page = 1,
+            int pageSize = 10,
+            CancellationToken cancellationToken = default)
+        {
+            var query = _dbSet
+                .AsNoTracking()
+                .Include(v => v.Fields)
+                .Include(v => v.VenueOperatingHours)
+                .Include(v => v.VenuePhotos)
+                .Where(v => v.OwnerId == ownerId);
+
+            // Filter by venue name (case-insensitive search)
+            if (!string.IsNullOrWhiteSpace(searchName))
+            {
+                var searchLower = searchName.ToLower();
+                query = query.Where(v => v.VenueName.ToLower().Contains(searchLower));
+            }
+
+            // Filter by venue status
+            if (status.HasValue)
+            {
+                query = query.Where(v => v.Status == status.Value);
+            }
+
+            var total = await query.CountAsync(cancellationToken);
+
+            var venues = await query
+                .OrderByDescending(v => v.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+
+            return (venues, total);
+        }
+
+        public async Task<int> GetMaxPhotoDisplayOrderAsync(
+            Guid venueId,
+            CancellationToken cancellationToken = default)
+        {
+            return await _context.VenuePhotos
+                .Where(vp => vp.VenueId == venueId)
+                .MaxAsync(vp => (int?)vp.DisplayOrder, cancellationToken) ?? -1;
+        }
+
+        public async Task AddVenuePhotosAsync(
+            IEnumerable<VenuePhoto> photos,
+            CancellationToken cancellationToken = default)
+        {
+            await _context.VenuePhotos.AddRangeAsync(photos, cancellationToken);
+        }
+
+        public async Task<Dictionary<Guid, int>> GetBookingCountsByVenueIdsAsync(
+            IEnumerable<Guid> venueIds,
+            CancellationToken cancellationToken = default)
+        {
+            return await _context.Bookings
+                .AsNoTracking()
+                .Where(b => venueIds.Contains(b.Field.VenueId))
+                .GroupBy(b => b.Field.VenueId)
+                .Select(g => new { VenueId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.VenueId, x => x.Count, cancellationToken);
         }
     }
 }

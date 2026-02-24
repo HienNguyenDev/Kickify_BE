@@ -1,11 +1,11 @@
+using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
 using Kickify.Domain.Enums;
-using MediatR;
 
 namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
 {
-    public class GetAllVenuesQueryHandler : IRequestHandler<GetAllVenuesQuery, Result<GetAllVenuesResponse>>
+    public class GetAllVenuesQueryHandler : IQueryHandler<GetAllVenuesQuery, GetAllVenuesResponse>
     {
         private readonly IVenueRepository _venueRepository;
 
@@ -16,12 +16,21 @@ namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
 
         public async Task<Result<GetAllVenuesResponse>> Handle(GetAllVenuesQuery request, CancellationToken cancellationToken)
         {
-            FieldType? sportType = null;
-            if (!string.IsNullOrEmpty(request.SportType))
+            FieldType? fieldType = null;
+            if (!string.IsNullOrEmpty(request.FieldType))
             {
-                if (Enum.TryParse<FieldType>(request.SportType, true, out var parsed))
+                if (Enum.TryParse<FieldType>(request.FieldType, true, out var parsed))
                 {
-                    sportType = parsed;
+                    fieldType = parsed;
+                }
+            }
+
+            VenueStatus? venueStatus = null;
+            if (!string.IsNullOrEmpty(request.Status))
+            {
+                if (Enum.TryParse<VenueStatus>(request.Status, true, out var parsedStatus))
+                {
+                    venueStatus = parsedStatus;
                 }
             }
 
@@ -30,11 +39,16 @@ namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
                 request.Longitude,
                 request.RadiusKm,
                 request.Date,
-                sportType,
+                fieldType,
+                request.SearchName,
+                venueStatus,
                 request.Page,
                 request.PageSize,
                 cancellationToken
             );
+
+            var venueIds = venues.Select(v => v.VenueId).ToList();
+            var bookingCounts = await _venueRepository.GetBookingCountsByVenueIdsAsync(venueIds, cancellationToken);
 
             var venueItems = venues.Select(v => new VenueItemDto(
                 v.VenueId,
@@ -42,12 +56,39 @@ namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
                 v.Address,
                 v.Latitude ?? 0,
                 v.Longitude ?? 0,
+                v.ContactPhone,
+                v.ContactEmail,
                 v.Description,
+                v.Amenities,
+                v.Status.ToString(),
+                v.AdminNotes,
+                v.AverageRating,
+                v.VenueReviews.Count,
+                bookingCounts.GetValueOrDefault(v.VenueId, 0),
+                new VenueOwnerDto(
+                    v.Owner.UserId,
+                    v.Owner.FullName,
+                    v.Owner.Phone,
+                    v.Owner.AvatarUrl,
+                    v.Owner.Bio,
+                    v.Owner.DateOfBirth,
+                    v.Owner.Gender?.ToString(),
+                    v.Owner.Role.ToString(),
+                    v.Owner.PreferredPositions,
+                    v.Owner.ShirtNumber,
+                    v.Owner.PreferredFoot,
+                    v.Owner.IsActive
+                ),
                 v.Fields.Select(f => new FieldSummaryDto(
                     f.FieldId,
                     f.FieldName,
                     f.FieldType.ToString(),
-                    f.HourlyRate
+                    f.SurfaceType,
+                    f.HourlyRate,
+                    f.PeakHourSurcharge,
+                    f.IsActive,
+                    f.CreatedAt,
+                    f.UpdatedAt
                 )).ToList(),
                 v.VenuePhotos.FirstOrDefault(p => p.DisplayOrder == 0)?.PhotoUrl,
                 v.CreatedAt
@@ -57,7 +98,8 @@ namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
                 venueItems,
                 total,
                 request.Page,
-                request.PageSize
+                request.PageSize,
+                (int)Math.Ceiling(total / (double)request.PageSize)
             );
 
             return Result.Success(response);

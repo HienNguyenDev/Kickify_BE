@@ -193,7 +193,18 @@ namespace Kickify.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ConversationType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("Private");
+
                     b.Property<bool>("IsEdited")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("IsRead")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
                         .HasDefaultValue(false);
@@ -208,7 +219,13 @@ namespace Kickify.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasDefaultValue("Text");
 
-                    b.Property<Guid>("RoomId")
+                    b.Property<Guid?>("ReceiverId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RoomChatChannel")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("RoomId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("SenderId")
@@ -219,11 +236,20 @@ namespace Kickify.Infrastructure.Migrations
 
                     b.HasKey("MessageId");
 
+                    b.HasIndex("ReceiverId");
+
                     b.HasIndex("RoomId");
 
                     b.HasIndex("SenderId");
 
                     b.HasIndex("SentAt");
+
+                    b.HasIndex("ReceiverId", "IsRead")
+                        .HasFilter("\"ReceiverId\" IS NOT NULL AND \"IsRead\" = false");
+
+                    b.HasIndex("RoomId", "RoomChatChannel", "SentAt");
+
+                    b.HasIndex("SenderId", "ReceiverId", "SentAt");
 
                     b.ToTable("ChatMessages", "social");
                 });
@@ -301,12 +327,6 @@ namespace Kickify.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("UserId")
@@ -503,48 +523,100 @@ namespace Kickify.Infrastructure.Migrations
                     b.ToTable("Fields", "venue");
                 });
 
+            modelBuilder.Entity("Kickify.Domain.Entities.FormationAssignment", b =>
+                {
+                    b.Property<Guid>("AssignmentId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FormationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PlayerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SlotId")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.HasKey("AssignmentId");
+
+                    b.HasIndex("PlayerId");
+
+                    b.HasIndex("FormationId", "PlayerId")
+                        .IsUnique();
+
+                    b.HasIndex("FormationId", "SlotId")
+                        .IsUnique();
+
+                    b.ToTable("FormationAssignments", "match");
+                });
+
+            modelBuilder.Entity("Kickify.Domain.Entities.Friendship", b =>
+                {
+                    b.Property<Guid>("FriendshipId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AddresseeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("RequesterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("RespondedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("Pending");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("FriendshipId");
+
+                    b.HasIndex("AddresseeId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("RequesterId", "AddresseeId")
+                        .IsUnique();
+
+                    b.ToTable("Friendships", "social");
+                });
+
             modelBuilder.Entity("Kickify.Domain.Entities.MatchFeedback", b =>
                 {
                     b.Property<Guid>("FeedbackId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<int>("AttackRating")
-                        .HasColumnType("integer")
-                        .HasComment("1-5");
-
-                    b.Property<decimal>("AverageRating")
-                        .HasColumnType("decimal(3,2)");
-
                     b.Property<string>("Comment")
+                        .IsRequired()
                         .HasColumnType("text");
-
-                    b.Property<int>("CommunicationRating")
-                        .HasColumnType("integer")
-                        .HasComment("1-5");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("DefenseRating")
-                        .HasColumnType("integer")
-                        .HasComment("1-5");
-
-                    b.Property<int>("FairplayRating")
-                        .HasColumnType("integer")
-                        .HasComment("1-5");
-
                     b.Property<Guid>("MatchId")
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime?>("ResponseDate")
-                        .HasColumnType("timestamp");
+                    b.Property<int>("Rating")
+                        .HasColumnType("integer")
+                        .HasComment("1-5");
 
                     b.Property<Guid>("RevieweeId")
                         .HasColumnType("uuid");
-
-                    b.Property<string>("RevieweeResponse")
-                        .HasColumnType("text");
 
                     b.Property<Guid>("ReviewerId")
                         .HasColumnType("uuid");
@@ -555,10 +627,6 @@ namespace Kickify.Infrastructure.Migrations
                     b.Property<decimal?>("SentimentScore")
                         .HasColumnType("decimal(5,2)")
                         .HasComment("AI-analyzed: -1.00 to 1.00");
-
-                    b.Property<int>("TeamworkRating")
-                        .HasColumnType("integer")
-                        .HasComment("1-5");
 
                     b.HasKey("FeedbackId");
 
@@ -572,6 +640,37 @@ namespace Kickify.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("MatchFeedbacks", "evaluation");
+                });
+
+            modelBuilder.Entity("Kickify.Domain.Entities.MatchFormation", b =>
+                {
+                    b.Property<Guid>("FormationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("FormationName")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("MatchFormat")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("RoomId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TeamAssignment")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("FormationId");
+
+                    b.HasIndex("RoomId", "TeamAssignment")
+                        .IsUnique();
+
+                    b.ToTable("MatchFormations", "match");
                 });
 
             modelBuilder.Entity("Kickify.Domain.Entities.MatchPreset", b =>
@@ -616,11 +715,49 @@ namespace Kickify.Infrastructure.Migrations
                     b.ToTable("MatchPresets", "match");
                 });
 
+            modelBuilder.Entity("Kickify.Domain.Entities.MatchResultVote", b =>
+                {
+                    b.Property<Guid>("VoteId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("vote_id");
+
+                    b.Property<Guid>("RoomId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("room_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<string>("Vote")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("vote");
+
+                    b.Property<DateTime>("VotedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("voted_at");
+
+                    b.HasKey("VoteId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("RoomId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("match_result_votes", "match");
+                });
+
             modelBuilder.Entity("Kickify.Domain.Entities.MatchRoom", b =>
                 {
                     b.Property<Guid>("RoomId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<string>("AutoCloseJobId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -640,6 +777,10 @@ namespace Kickify.Infrastructure.Migrations
                     b.Property<int>("DurationMinutes")
                         .HasColumnType("integer");
 
+                    b.Property<string>("EndMatchJobId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<Guid?>("FieldId")
                         .HasColumnType("uuid");
 
@@ -647,6 +788,13 @@ namespace Kickify.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
+
+                    b.Property<string>("FinalResult")
+                        .HasColumnType("text");
+
+                    b.Property<string>("FinalizeResultJobId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<Guid>("HostId")
                         .HasColumnType("uuid");
@@ -668,8 +816,18 @@ namespace Kickify.Infrastructure.Migrations
                         .HasDefaultValue(0)
                         .HasComment("count of confirmations");
 
+                    b.Property<string>("RoomName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RoomPassword")
+                        .HasColumnType("text");
+
                     b.Property<string>("Rules")
                         .HasColumnType("text");
+
+                    b.Property<string>("StartMatchJobId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<TimeSpan>("StartTime")
                         .HasColumnType("time");
@@ -680,8 +838,16 @@ namespace Kickify.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasDefaultValue("Open");
 
+                    b.Property<string>("TeamAName")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<int?>("TeamAScore")
                         .HasColumnType("integer");
+
+                    b.Property<string>("TeamBName")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<int?>("TeamBScore")
                         .HasColumnType("integer");
@@ -725,6 +891,10 @@ namespace Kickify.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("DeepLink")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<bool>("IsRead")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -741,12 +911,8 @@ namespace Kickify.Infrastructure.Migrations
                     b.Property<DateTime?>("ReadAt")
                         .HasColumnType("timestamp");
 
-                    b.Property<Guid?>("RelatedEntityId")
+                    b.Property<Guid?>("SenderId")
                         .HasColumnType("uuid");
-
-                    b.Property<string>("RelatedEntityType")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -762,6 +928,8 @@ namespace Kickify.Infrastructure.Migrations
 
                     b.HasIndex("IsRead");
 
+                    b.HasIndex("SenderId");
+
                     b.HasIndex("UserId");
 
                     b.ToTable("Notifications", "identity");
@@ -773,33 +941,23 @@ namespace Kickify.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<bool>("ChatMessages")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true);
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<bool>("MatchInvites")
+                    b.Property<bool>("Friendship")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
                         .HasDefaultValue(true);
 
-                    b.Property<bool>("MatchResults")
+                    b.Property<bool>("MatchRoom")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
                         .HasDefaultValue(true);
 
-                    b.Property<bool>("RoomUpdates")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true);
-
-                    b.Property<bool>("SystemAnnouncements")
+                    b.Property<bool>("Post")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
                         .HasDefaultValue(true);
@@ -816,6 +974,58 @@ namespace Kickify.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("NotificationPreferences", "identity");
+                });
+
+            modelBuilder.Entity("Kickify.Domain.Entities.PaymentRequest", b =>
+                {
+                    b.Property<Guid>("PaymentRequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("TxnRef")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("VnpayTransactionNo")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("WalletId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("PaymentRequestId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("TxnRef")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("WalletId");
+
+                    b.ToTable("PaymentRequests", "payment");
                 });
 
             modelBuilder.Entity("Kickify.Domain.Entities.PlayerAchievement", b =>
@@ -849,11 +1059,6 @@ namespace Kickify.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<int>("AfkCount")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0);
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -885,10 +1090,6 @@ namespace Kickify.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
 
-                    b.Property<string>("PreferredPositions")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
                     b.Property<int>("ReportCount")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
@@ -899,10 +1100,10 @@ namespace Kickify.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
 
-                    b.Property<decimal>("TrustScore")
+                    b.Property<int>("TrustScore")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("decimal(5,2)")
-                        .HasDefaultValue(100.00m);
+                        .HasColumnType("integer")
+                        .HasDefaultValue(100);
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -1009,7 +1210,7 @@ namespace Kickify.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("EditedAt")
-                        .HasColumnType("timestamp");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
@@ -1299,6 +1500,9 @@ namespace Kickify.Infrastructure.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(false);
 
+                    b.Property<bool>("IsCaptain")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTime>("JoinDate")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
@@ -1318,6 +1522,9 @@ namespace Kickify.Infrastructure.Migrations
                     b.Property<string>("TeamAssignment")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
@@ -1415,6 +1622,10 @@ namespace Kickify.Infrastructure.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<string>("FcmToken")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<string>("FullName")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
@@ -1444,14 +1655,14 @@ namespace Kickify.Infrastructure.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
-                    b.Property<string>("Positions")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasComment("JSON array: [\"ST\", \"CM\", \"CB\"]");
-
                     b.Property<string>("PreferredFoot")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
+
+                    b.Property<string>("PreferredPositions")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasComment("JSON array: [\"ST\", \"CM\", \"CB\"]");
 
                     b.Property<string>("Role")
                         .IsRequired()
@@ -1466,7 +1677,8 @@ namespace Kickify.Infrastructure.Migrations
                     b.HasKey("UserId");
 
                     b.HasIndex("Email")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("\"DeletedAt\" IS NULL");
 
                     b.HasIndex("IdentityId")
                         .IsUnique();
@@ -1654,7 +1866,7 @@ namespace Kickify.Infrastructure.Migrations
                     b.ToTable("VenueReviews", "venue");
                 });
 
-            modelBuilder.Entity("Kickify.Domain.Entities.VenueWallet", b =>
+            modelBuilder.Entity("Kickify.Domain.Entities.Wallet", b =>
                 {
                     b.Property<Guid>("WalletId")
                         .ValueGeneratedOnAdd()
@@ -1666,7 +1878,8 @@ namespace Kickify.Infrastructure.Migrations
 
                     b.Property<decimal>("Balance")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("decimal(12,2)")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
                         .HasDefaultValue(0m);
 
                     b.Property<string>("BankAccountNumber")
@@ -1683,23 +1896,22 @@ namespace Kickify.Infrastructure.Migrations
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<bool>("IsBankVerified")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false);
-
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("VenueId")
+                    b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("WalletType")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.HasKey("WalletId");
 
-                    b.HasIndex("VenueId")
+                    b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("VenueWallets", "venue");
+                    b.ToTable("Wallets", "payment");
                 });
 
             modelBuilder.Entity("Kickify.Domain.Entities.WalletTransaction", b =>
@@ -1709,20 +1921,26 @@ namespace Kickify.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(10,2)");
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<decimal>("BalanceAfter")
-                        .HasColumnType("decimal(12,2)");
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Description")
-                        .HasColumnType("text");
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<Guid?>("ReferenceId")
-                        .HasColumnType("uuid")
-                        .HasComment("booking_id or withdrawal_id");
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TransactionCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("TransactionType")
                         .IsRequired()
@@ -1735,25 +1953,32 @@ namespace Kickify.Infrastructure.Migrations
 
                     b.HasIndex("CreatedAt");
 
+                    b.HasIndex("TransactionCode");
+
                     b.HasIndex("WalletId");
 
-                    b.ToTable("WalletTransactions", "venue");
+                    b.ToTable("WalletTransactions", "payment");
                 });
 
-            modelBuilder.Entity("Kickify.Domain.Entities.Withdrawal", b =>
+            modelBuilder.Entity("Kickify.Domain.Entities.WalletWithdrawal", b =>
                 {
                     b.Property<Guid>("WithdrawalId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<string>("AdminNotes")
-                        .HasColumnType("text");
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(10,2)");
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid?>("ProcessedByAdminId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("ProcessedDate")
-                        .HasColumnType("timestamp");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("RequestDate")
                         .HasColumnType("timestamp with time zone");
@@ -1769,9 +1994,15 @@ namespace Kickify.Infrastructure.Migrations
 
                     b.HasKey("WithdrawalId");
 
+                    b.HasIndex("ProcessedByAdminId");
+
+                    b.HasIndex("RequestDate");
+
+                    b.HasIndex("Status");
+
                     b.HasIndex("WalletId");
 
-                    b.ToTable("Withdrawals", "venue");
+                    b.ToTable("WalletWithdrawals", "payment");
                 });
 
             modelBuilder.Entity("Kickify.Domain.Entities.Announcement", b =>
@@ -1806,11 +2037,15 @@ namespace Kickify.Infrastructure.Migrations
 
             modelBuilder.Entity("Kickify.Domain.Entities.ChatMessage", b =>
                 {
+                    b.HasOne("Kickify.Domain.Entities.User", "Receiver")
+                        .WithMany()
+                        .HasForeignKey("ReceiverId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Kickify.Domain.Entities.MatchRoom", "MatchRoom")
                         .WithMany("ChatMessages")
                         .HasForeignKey("RoomId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("Kickify.Domain.Entities.User", "Sender")
                         .WithMany("ChatMessages")
@@ -1819,6 +2054,8 @@ namespace Kickify.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("MatchRoom");
+
+                    b.Navigation("Receiver");
 
                     b.Navigation("Sender");
                 });
@@ -1907,6 +2144,44 @@ namespace Kickify.Infrastructure.Migrations
                     b.Navigation("Venue");
                 });
 
+            modelBuilder.Entity("Kickify.Domain.Entities.FormationAssignment", b =>
+                {
+                    b.HasOne("Kickify.Domain.Entities.MatchFormation", "Formation")
+                        .WithMany("Assignments")
+                        .HasForeignKey("FormationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Kickify.Domain.Entities.User", "Player")
+                        .WithMany()
+                        .HasForeignKey("PlayerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Formation");
+
+                    b.Navigation("Player");
+                });
+
+            modelBuilder.Entity("Kickify.Domain.Entities.Friendship", b =>
+                {
+                    b.HasOne("Kickify.Domain.Entities.User", "Addressee")
+                        .WithMany()
+                        .HasForeignKey("AddresseeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Kickify.Domain.Entities.User", "Requester")
+                        .WithMany()
+                        .HasForeignKey("RequesterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Addressee");
+
+                    b.Navigation("Requester");
+                });
+
             modelBuilder.Entity("Kickify.Domain.Entities.MatchFeedback", b =>
                 {
                     b.HasOne("Kickify.Domain.Entities.MatchRoom", "Match")
@@ -1934,6 +2209,17 @@ namespace Kickify.Infrastructure.Migrations
                     b.Navigation("Reviewer");
                 });
 
+            modelBuilder.Entity("Kickify.Domain.Entities.MatchFormation", b =>
+                {
+                    b.HasOne("Kickify.Domain.Entities.MatchRoom", "MatchRoom")
+                        .WithMany("Formations")
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("MatchRoom");
+                });
+
             modelBuilder.Entity("Kickify.Domain.Entities.MatchPreset", b =>
                 {
                     b.HasOne("Kickify.Domain.Entities.Field", "Field")
@@ -1948,6 +2234,25 @@ namespace Kickify.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Field");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Kickify.Domain.Entities.MatchResultVote", b =>
+                {
+                    b.HasOne("Kickify.Domain.Entities.MatchRoom", "MatchRoom")
+                        .WithMany("ResultVotes")
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Kickify.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("MatchRoom");
 
                     b.Navigation("User");
                 });
@@ -1972,11 +2277,18 @@ namespace Kickify.Infrastructure.Migrations
 
             modelBuilder.Entity("Kickify.Domain.Entities.Notification", b =>
                 {
+                    b.HasOne("Kickify.Domain.Entities.User", "Sender")
+                        .WithMany()
+                        .HasForeignKey("SenderId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Kickify.Domain.Entities.User", "User")
                         .WithMany("Notifications")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Sender");
 
                     b.Navigation("User");
                 });
@@ -1990,6 +2302,24 @@ namespace Kickify.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Kickify.Domain.Entities.PaymentRequest", b =>
+                {
+                    b.HasOne("Kickify.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Kickify.Domain.Entities.Wallet", "Wallet")
+                        .WithMany()
+                        .HasForeignKey("WalletId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
+
+                    b.Navigation("Wallet");
                 });
 
             modelBuilder.Entity("Kickify.Domain.Entities.PlayerAchievement", b =>
@@ -2223,37 +2553,44 @@ namespace Kickify.Infrastructure.Migrations
                     b.Navigation("Venue");
                 });
 
-            modelBuilder.Entity("Kickify.Domain.Entities.VenueWallet", b =>
+            modelBuilder.Entity("Kickify.Domain.Entities.Wallet", b =>
                 {
-                    b.HasOne("Kickify.Domain.Entities.Venue", "Venue")
-                        .WithOne("VenueWallet")
-                        .HasForeignKey("Kickify.Domain.Entities.VenueWallet", "VenueId")
+                    b.HasOne("Kickify.Domain.Entities.User", "User")
+                        .WithOne("Wallet")
+                        .HasForeignKey("Kickify.Domain.Entities.Wallet", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Venue");
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Kickify.Domain.Entities.WalletTransaction", b =>
                 {
-                    b.HasOne("Kickify.Domain.Entities.VenueWallet", "VenueWallet")
-                        .WithMany("WalletTransactions")
+                    b.HasOne("Kickify.Domain.Entities.Wallet", "Wallet")
+                        .WithMany("Transactions")
                         .HasForeignKey("WalletId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("VenueWallet");
+                    b.Navigation("Wallet");
                 });
 
-            modelBuilder.Entity("Kickify.Domain.Entities.Withdrawal", b =>
+            modelBuilder.Entity("Kickify.Domain.Entities.WalletWithdrawal", b =>
                 {
-                    b.HasOne("Kickify.Domain.Entities.VenueWallet", "VenueWallet")
+                    b.HasOne("Kickify.Domain.Entities.User", "ProcessedByAdmin")
+                        .WithMany()
+                        .HasForeignKey("ProcessedByAdminId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Kickify.Domain.Entities.Wallet", "Wallet")
                         .WithMany("Withdrawals")
                         .HasForeignKey("WalletId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("VenueWallet");
+                    b.Navigation("ProcessedByAdmin");
+
+                    b.Navigation("Wallet");
                 });
 
             modelBuilder.Entity("Kickify.Domain.Entities.Achievement", b =>
@@ -2282,6 +2619,11 @@ namespace Kickify.Infrastructure.Migrations
                     b.Navigation("MatchRooms");
                 });
 
+            modelBuilder.Entity("Kickify.Domain.Entities.MatchFormation", b =>
+                {
+                    b.Navigation("Assignments");
+                });
+
             modelBuilder.Entity("Kickify.Domain.Entities.MatchRoom", b =>
                 {
                     b.Navigation("Booking");
@@ -2290,9 +2632,13 @@ namespace Kickify.Infrastructure.Migrations
 
                     b.Navigation("EloHistories");
 
+                    b.Navigation("Formations");
+
                     b.Navigation("MatchFeedbacks");
 
                     b.Navigation("PlayerReports");
+
+                    b.Navigation("ResultVotes");
 
                     b.Navigation("RoomInvitations");
 
@@ -2361,6 +2707,8 @@ namespace Kickify.Infrastructure.Migrations
                     b.Navigation("VenueReviews");
 
                     b.Navigation("Venues");
+
+                    b.Navigation("Wallet");
                 });
 
             modelBuilder.Entity("Kickify.Domain.Entities.Venue", b =>
@@ -2372,13 +2720,11 @@ namespace Kickify.Infrastructure.Migrations
                     b.Navigation("VenuePhotos");
 
                     b.Navigation("VenueReviews");
-
-                    b.Navigation("VenueWallet");
                 });
 
-            modelBuilder.Entity("Kickify.Domain.Entities.VenueWallet", b =>
+            modelBuilder.Entity("Kickify.Domain.Entities.Wallet", b =>
                 {
-                    b.Navigation("WalletTransactions");
+                    b.Navigation("Transactions");
 
                     b.Navigation("Withdrawals");
                 });

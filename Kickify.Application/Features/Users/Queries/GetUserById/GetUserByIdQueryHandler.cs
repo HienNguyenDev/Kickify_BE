@@ -43,6 +43,9 @@ namespace Kickify.Application.Features.Users.Queries.GetUserById
                 DateOfBirth = user.DateOfBirth,
                 Gender = user.Gender,
                 Role = user.Role,
+                PreferredPositions = user.PreferredPositions,
+                ShirtNumber = user.ShirtNumber,
+                PreferredFoot = user.PreferredFoot,
                 IsEmailVerified = user.IsEmailVerified,
                 IsActive = user.IsActive,
                 CreatedAt = user.CreatedAt,
@@ -59,9 +62,7 @@ namespace Kickify.Application.Features.Users.Queries.GetUserById
                     MvpCount = user.PlayerProfile.MvpCount,
                     WinStreak = user.PlayerProfile.WinStreak,
                     MaxWinStreak = user.PlayerProfile.MaxWinStreak,
-                    AfkCount = user.PlayerProfile.AfkCount,
                     ReportCount = user.PlayerProfile.ReportCount,
-                    PreferredPositions = user.PlayerProfile.PreferredPositions
                 } : null
             };
 

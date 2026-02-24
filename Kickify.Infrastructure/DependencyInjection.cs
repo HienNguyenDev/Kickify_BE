@@ -2,13 +2,16 @@
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
 using Kickify.Application.Abstractions.Authentication;
+using Kickify.Application.Abstractions.Jobs;
 using Kickify.Application.Abstractions.OTP;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Application.Abstractions.Services;
 using Kickify.Infrastructure.Authentication;
 using Kickify.Infrastructure.Database;
+using Kickify.Infrastructure.Jobs;
 using Kickify.Infrastructure.Mail;
+using Kickify.Infrastructure.Payment;
 using Kickify.Infrastructure.Persistence;
 using Kickify.Infrastructure.Redis;
 using Kickify.Infrastructure.Repositories;
@@ -21,11 +24,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Minio;
 using StackExchange.Redis;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+using Kickify.Infrastructure.ChatConnection;
+using VNPAY.Extensions;
+using Hangfire;
+using Hangfire.PostgreSql;
 
 namespace Kickify.Infrastructure
 {
@@ -39,7 +42,11 @@ namespace Kickify.Infrastructure
             .AddRepository()
             .AddFirebase()
             .AddRedisStore(configuration)
-            .AddMinioStorage(configuration);
+            .AddMinioStorage(configuration)
+            .AddSignalRServices()
+            .AddVNPay(configuration)
+            .AddHangfireServices(configuration)
+            .AddBackgroundJobs();
 
         private static IServiceCollection AddAuthenticationInternal(this IServiceCollection services, IConfiguration configuration)
         {
@@ -95,6 +102,18 @@ namespace Kickify.Infrastructure
             services.AddScoped<IOtpGenerator, OtpGenerator>();
             services.AddScoped<IRedisOtpStore, RedisOtpStore>();
             services.AddTransient<IResetPasswordGenerator, ResetPasswordGenerator>();
+            services.AddScoped<IPushNotificationService, PushNotificationService>();
+            services.AddSingleton<IQrCodeService, QrCodeService>();
+
+            // AI Sentiment Analysis Service
+            services.AddHttpClient<ISentimentAnalysisService, SentimentAnalysisService>((sp, client) =>
+            {
+                var config = sp.GetRequiredService<IConfiguration>();
+                var baseUrl = config["SentimentAnalysis:BaseUrl"] ?? "http://localhost:8000";
+                client.BaseAddress = new Uri(baseUrl);
+                client.Timeout = TimeSpan.FromSeconds(30);
+            });
+
             return services;
         }
         private static IServiceCollection AddRepository(this IServiceCollection services)
@@ -103,12 +122,33 @@ namespace Kickify.Infrastructure
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
             services.AddScoped<IPostRepository, PostRepository>();
+            services.AddScoped<IPaymentRequestRepository, PaymentRequestRepository>();
             services.AddScoped<IPlayerProfileRepository, PlayerProfileRepository>();
+            services.AddScoped<IWalletRepository, WalletRepository>();
+            services.AddScoped<IWalletTransactionRepository, WalletTransactionRepository>();
+            services.AddScoped<IWalletWithdrawalRepository, WalletWithdrawalRepository>();
             services.AddScoped<IVenueRepository, VenueRepository>();
+            services.AddScoped<IVenuePhotoRepository, VenuePhotoRepository>();
+            services.AddScoped<IVenueOperatingHourRepository, VenueOperatingHourRepository>();
             services.AddScoped<IFieldRepository, FieldRepository>();
             services.AddScoped<IBookingRepository, BookingRepository>();
-            services.AddScoped<IVenueWalletRepository, VenueWalletRepository>();
             services.AddScoped<IMatchRoomRepository, MatchRoomRepository>();
+            services.AddScoped<IMatchPresetRepository, MatchPresetRepository>();
+            services.AddScoped<IMatchFeedbackRepository, MatchFeedbackRepository>();
+            services.AddScoped<IRoomParticipantRepository, RoomParticipantRepository>();
+            services.AddScoped<IPostLikeRepository, PostLikeRepository>();
+            services.AddScoped<IChatMessageRepository, ChatMessageRepository>();
+            services.AddScoped<ICommentRepository, CommentRepository>();
+            services.AddScoped<ICommentLikeRepository, CommentLikeRepository>();
+            services.AddScoped<IFriendshipRepository, FriendshipRepository>();
+            services.AddScoped<IMatchFormationRepository, MatchFormationRepository>();
+            services.AddScoped<IFormationAssignmentRepository, FormationAssignmentRepository>();
+            services.AddScoped<IMatchResultVoteRepository, MatchResultVoteRepository>();
+            services.AddScoped<INotificationRepository, NotificationRepository>();
+            services.AddScoped<INotificationPreferenceRepository, NotificationPreferenceRepository>();
+            services.AddScoped<IRoomInvitationRepository, RoomInvitationRepository>();
+            services.AddScoped<IAchievementRepository, AchievementRepository>();
+            services.AddScoped<IVenueReviewRepository, VenueReviewRepository>();
             return services;
         }
         private static IServiceCollection AddFirebase(this IServiceCollection services)
@@ -146,6 +186,62 @@ namespace Kickify.Infrastructure
             });
 
             services.AddScoped<IStorageService, MinioStorageService>();
+
+            return services;
+        }
+
+        private static IServiceCollection AddSignalRServices(this IServiceCollection services)
+        {
+            services.AddSignalR();
+            services.AddSingleton<ConnectionMapping>();
+            return services;
+        }
+
+        private static IServiceCollection AddVNPay(this IServiceCollection services, IConfiguration configuration)
+        {
+            var vnpayConfig = configuration.GetSection("VNPAY");
+            services.AddVnpayClient(config =>
+            {
+                config.TmnCode = vnpayConfig["TmnCode"]!;
+                config.HashSecret = vnpayConfig["HashSecret"]!;
+                config.BaseUrl = vnpayConfig["BaseUrl"]!;
+                config.CallbackUrl = vnpayConfig["CallbackUrl"]!;
+                config.Version = vnpayConfig["Version"]!;
+                config.OrderType = vnpayConfig["OrderType"]!;
+            });
+
+            services.AddScoped<IVnPayService, VnPayService>();
+
+            return services;
+        }
+
+        private static IServiceCollection AddHangfireServices(this IServiceCollection services, IConfiguration configuration)
+        {
+            var connectionString = configuration.GetConnectionString("Database");
+
+            services.AddHangfire(config => config
+                .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+                .UseSimpleAssemblyNameTypeSerializer()
+                .UseRecommendedSerializerSettings()
+                .UsePostgreSqlStorage(options =>
+                    options.UseNpgsqlConnection(connectionString),
+                    new PostgreSqlStorageOptions
+                    {
+                        PrepareSchemaIfNecessary = true,
+                        SchemaName = "hangfire",
+                        QueuePollInterval = TimeSpan.FromSeconds(15)
+                    }));
+
+            services.AddHangfireServer();
+
+            return services;
+        }
+
+        private static IServiceCollection AddBackgroundJobs(this IServiceCollection services)
+        {
+            services.AddScoped<IEmailJobService, EmailJobService>();
+            services.AddScoped<IRoomAutoCloseService, RoomAutoCloseService>();
+            services.AddScoped<IMatchLifecycleService, MatchLifecycleService>();
 
             return services;
         }

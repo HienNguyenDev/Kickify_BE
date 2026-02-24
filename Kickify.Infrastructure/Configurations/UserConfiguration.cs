@@ -1,10 +1,8 @@
 using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
 using Kickify.Infrastructure.Database;
-using Kickify.Infrastructure.Persistence.Converter;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Kickify.Infrastructure.Configurations;
 
@@ -48,7 +46,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .HasConversion<string>()
             .IsRequired();
 
-        builder.Property(p => p.Positions)
+        builder.Property(p => p.PreferredPositions)
             .HasMaxLength(255)
             .HasComment("JSON array: [\"ST\", \"CM\", \"CB\"]");
 
@@ -66,8 +64,12 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.IsActive)
             .HasDefaultValue(true);
 
+        builder.Property(u => u.FcmToken)
+            .HasMaxLength(500);
+
         builder.HasIndex(u => u.Email)
-            .IsUnique();
+            .IsUnique()
+            .HasFilter("\"DeletedAt\" IS NULL");
 
         builder.HasIndex(u => u.IdentityId)
             .IsUnique();

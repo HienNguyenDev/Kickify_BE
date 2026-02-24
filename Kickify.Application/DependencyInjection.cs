@@ -1,11 +1,7 @@
 ﻿using FluentValidation;
 using Kickify.Application.Common.Behaviors;
+using Kickify.Application.Common.Mappings;
 using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Kickify.Application
 {
@@ -22,6 +18,9 @@ namespace Kickify.Application
             });
 
             services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly, includeInternalTypes: true);
+
+            // Register AutoMapper
+            services.AddAutoMapper(typeof(MappingProfile).Assembly);
 
             return services;
         }

@@ -5,5 +5,6 @@ public enum WithdrawalStatus
     Pending,
     Processing,
     Completed,
-    Failed
+    Rejected,
+    Cancelled
 }

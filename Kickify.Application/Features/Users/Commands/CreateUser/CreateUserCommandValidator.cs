@@ -24,10 +24,6 @@ namespace Kickify.Application.Features.Users.Commands.CreateUser
                 .Matches(@"^\+?[1-9]\d{1,14}$").WithMessage("Invalid phone number format")
                 .When(x => !string.IsNullOrEmpty(x.Phone));
 
-            RuleFor(x => x.AvatarUrl)
-                .Must(BeAValidUrl).WithMessage("Invalid avatar URL")
-                .When(x => !string.IsNullOrEmpty(x.AvatarUrl));
-
             RuleFor(x => x.Bio)
                 .MaximumLength(500).WithMessage("Bio must not exceed 500 characters")
                 .When(x => !string.IsNullOrEmpty(x.Bio));

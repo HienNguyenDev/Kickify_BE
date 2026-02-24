@@ -5,12 +5,6 @@ using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
 using Kickify.Domain.Entities;
 using Kickify.Domain.Errors;
-using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Kickify.Application.Features.Auth.Commands.Login
 {
@@ -31,7 +25,7 @@ namespace Kickify.Application.Features.Auth.Commands.Login
             _unitOfWork = unitOfWork;
         }
 
-        public async Task<Result<LoginCommandResponse>> Handle(LoginCommand request,CancellationToken cancellationToken)
+        public async Task<Result<LoginCommandResponse>> Handle(LoginCommand request, CancellationToken cancellationToken)
         {
             var user = await _userRepository.GetByEmailAsync(request.Email);
 
@@ -46,14 +40,15 @@ namespace Kickify.Application.Features.Auth.Commands.Login
             {
                 return Result.Failure<LoginCommandResponse>(UserErrors.WrongPassword);
             }
-            if (user.IsActive == false)
+
+            if (!user.IsActive)
             {
                 return Result.Failure<LoginCommandResponse>(UserErrors.InActive);
             }
 
-            if (user.IsEmailVerified == false)
+            if (!user.IsEmailVerified)
             {
-                return Result.Failure<LoginCommandResponse>(UserErrors.IsNotVerified);
+                return Result.Failure<LoginCommandResponse>(UserErrors.IsNotVerified.WithMetadata("userId", user.UserId));
             }
 
             var token = await _jwtProvider.GetForCredentialsAsync(request.Email);
@@ -76,6 +71,7 @@ namespace Kickify.Application.Features.Auth.Commands.Login
                 Email = user.Email,
                 FullName = user.FullName,
                 Role = user.Role.ToString(),
+                AvatarUrl = user.AvatarUrl,
                 IsEmailVerified = user.IsEmailVerified,
                 IsActive = user.IsActive,
                 AccessToken = token,

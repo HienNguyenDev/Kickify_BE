@@ -23,8 +23,7 @@ public class PlayerProfileConfiguration : IEntityTypeConfiguration<PlayerProfile
             .HasDefaultValue(1000);
 
         builder.Property(p => p.TrustScore)
-            .HasColumnType("decimal(5,2)")
-            .HasDefaultValue(100.00m);
+            .HasDefaultValue(100);
 
         builder.Property(p => p.TotalMatches)
             .HasDefaultValue(0);
@@ -47,13 +46,7 @@ public class PlayerProfileConfiguration : IEntityTypeConfiguration<PlayerProfile
         builder.Property(p => p.MaxWinStreak)
             .HasDefaultValue(0);
 
-        builder.Property(p => p.AfkCount)
-            .HasDefaultValue(0);
-
         builder.Property(p => p.ReportCount)
             .HasDefaultValue(0);
-
-        builder.Property(p => p.PreferredPositions)
-            .HasMaxLength(255);
     }
 }

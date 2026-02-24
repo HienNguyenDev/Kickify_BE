@@ -1,14 +1,14 @@
+using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
 using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
 using Kickify.Domain.Errors;
-using MediatR;
 
 namespace Kickify.Application.Features.Venues.Commands.AddField
 {
-    public class AddFieldCommandHandler : IRequestHandler<AddFieldCommand, Result<AddFieldResponse>>
+    public class AddFieldCommandHandler : ICommandHandler<AddFieldCommand, AddFieldResponse>
     {
         private readonly IVenueRepository _venueRepository;
         private readonly IFieldRepository _fieldRepository;
@@ -36,8 +36,7 @@ namespace Kickify.Application.Features.Venues.Commands.AddField
             // Parse field type
             if (!Enum.TryParse<FieldType>(request.FieldType, true, out var fieldType))
             {
-                return Result.Failure<AddFieldResponse>(
-                    new Error("Field.InvalidType", $"Invalid field type: {request.FieldType}", ErrorType.Validation));
+                return Result.Failure<AddFieldResponse>(VenueErrors.InvalidFieldType(request.FieldType));
             }
 
             // Create new field
@@ -47,7 +46,9 @@ namespace Kickify.Application.Features.Venues.Commands.AddField
                 VenueId = request.VenueId,
                 FieldName = request.Name,
                 FieldType = fieldType,
-                HourlyRate = request.PricePerHour,
+                SurfaceType = request.SurfaceType,
+                HourlyRate = request.HourlyRate,
+                PeakHourSurcharge = request.PeakHourSurcharge,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -59,9 +60,9 @@ namespace Kickify.Application.Features.Venues.Commands.AddField
                 field.VenueId,
                 field.FieldName,
                 field.FieldType.ToString(),
-                0, // MaxPlayers not in entity
+                field.SurfaceType,
                 field.HourlyRate,
-                null, // Description not in entity
+                field.PeakHourSurcharge,
                 field.CreatedAt
             ));
         }
