@@ -55,9 +55,26 @@ public class MatchRoomHub : Hub
     }
 
     /// <summary>
-    /// Join a SignalR group for a specific room to receive real-time updates
+    /// Join a SignalR group for a specific room to receive real-time updates.
+    /// FIX: Split from original JoinRoomGroup(Guid roomId, string? teamAssignment = null)
+    /// because SignalR matches methods by exact argument count — optional parameters
+    /// are NOT supported when invoked from JS (sends 1-arg array, server finds no 1-arg match).
     /// </summary>
-    public async Task JoinRoomGroup(Guid roomId, string? teamAssignment = null)
+    public async Task JoinRoomGroup(Guid roomId)
+    {
+        await JoinRoomGroupInternalAsync(roomId, null);
+    }
+
+    /// <summary>
+    /// Join a SignalR group for a specific room with explicit team assignment.
+    /// Called with exactly 2 args from JS: connection.invoke("JoinRoomGroupWithTeam", roomId, teamAssignment)
+    /// </summary>
+    public async Task JoinRoomGroupWithTeam(Guid roomId, string teamAssignment)
+    {
+        await JoinRoomGroupInternalAsync(roomId, teamAssignment);
+    }
+
+    private async Task JoinRoomGroupInternalAsync(Guid roomId, string? teamAssignment)
     {
         // Join main room group (for room events)
         await Groups.AddToGroupAsync(Context.ConnectionId, GetRoomGroupName(roomId));
