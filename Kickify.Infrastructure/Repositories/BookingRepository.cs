@@ -129,5 +129,47 @@ namespace Kickify.Infrastructure.Repositories
 
             return (bookings, total);
         }
+
+        public async Task<(IEnumerable<Booking> Bookings, int Total)> GetBookingsByVenueOwnerPagedAsync(
+            Guid ownerId,
+            Guid? fieldId = null,
+            DateTime? date = null,
+            string? status = null,
+            int page = 1,
+            int pageSize = 10,
+            CancellationToken cancellationToken = default)
+        {
+            var query = _dbSet
+                .AsNoTracking()
+                .Include(b => b.Field)
+                    .ThenInclude(f => f.Venue)
+                .Where(b => b.Field.Venue.OwnerId == ownerId);
+
+            if (fieldId.HasValue)
+            {
+                query = query.Where(b => b.FieldId == fieldId.Value);
+            }
+
+            if (date.HasValue)
+            {
+                query = query.Where(b => b.BookingDate == date.Value);
+            }
+
+            if (!string.IsNullOrEmpty(status) && Enum.TryParse<Domain.Enums.BookingStatus>(status, true, out var bookingStatus))
+            {
+                query = query.Where(b => b.Status == bookingStatus);
+            }
+
+            var total = await query.CountAsync(cancellationToken);
+
+            var bookings = await query
+                .OrderByDescending(b => b.BookingDate)
+                .ThenByDescending(b => b.StartTime)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+
+            return (bookings, total);
+        }
     }
 }

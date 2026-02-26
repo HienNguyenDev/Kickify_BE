@@ -51,5 +51,9 @@ namespace Kickify.Domain.Errors
         public static readonly Error PaymentProcessFailed = Error.Problem(
             "Bookings.PaymentProcessFailed",
             "Failed to process payment");
+
+        public static readonly Error NotVenueOwner = Error.Failure(
+            "Bookings.NotVenueOwner",
+            "You must be a venue owner to access this resource");
     }
 }
