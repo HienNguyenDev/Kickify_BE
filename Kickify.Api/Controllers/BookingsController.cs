@@ -6,6 +6,7 @@ using Kickify.Application.Features.Bookings.Queries.CheckConsecutiveSlots;
 using Kickify.Application.Features.Bookings.Queries.GetAllBookings;
 using Kickify.Application.Features.Bookings.Queries.GetBookingById;
 using Kickify.Application.Features.Bookings.Queries.GetBookingPreview;
+using Kickify.Application.Features.Bookings.Queries.GetVenueOwnerBookings;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -73,6 +74,25 @@ namespace Kickify.Api.Controllers
                 numberOfPlayers
             );
 
+            var result = await _sender.Send(query, cancellationToken);
+
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Get all bookings for venues owned by the authenticated venue owner
+        /// </summary>
+        [HttpGet("my-venues")]
+        [Authorize(Roles = "VenueOwner")]
+        public async Task<IResult> GetVenueOwnerBookings(
+            [FromQuery] Guid? fieldId,
+            [FromQuery] DateTime? date,
+            [FromQuery] string? status,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
+            CancellationToken cancellationToken = default)
+        {
+            var query = new GetVenueOwnerBookingsQuery(fieldId, date, status, page, pageSize);
             var result = await _sender.Send(query, cancellationToken);
 
             return result.MatchOk();
