@@ -191,6 +191,6 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             .HasQueryFilter(e => e.Venue.DeletedAt == null);
 
         modelBuilder.Entity<VenueReview>()
-            .HasQueryFilter(e => e.Venue.DeletedAt == null && e.User.DeletedAt == null && e.Booking.DeletedAt == null);
+            .HasQueryFilter(e => e.DeletedAt == null && e.Venue.DeletedAt == null && e.User.DeletedAt == null && e.Booking.DeletedAt == null);
     }
 }
