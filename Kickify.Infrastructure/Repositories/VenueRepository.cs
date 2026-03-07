@@ -42,6 +42,7 @@ namespace Kickify.Infrastructure.Repositories
             VenueStatus? status = null,
             int page = 1,
             int pageSize = 10,
+            bool excludeSuspended = false,
             CancellationToken cancellationToken = default)
         {
             var query = _dbSet
@@ -62,6 +63,10 @@ namespace Kickify.Infrastructure.Repositories
             if (status.HasValue)
             {
                 query = query.Where(v => v.Status == status.Value);
+            }
+            else if (excludeSuspended)
+            {
+                query = query.Where(v => v.Status != VenueStatus.Suspended);
             }
 
             // Filter by location (simplified - in production use PostGIS)

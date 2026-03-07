@@ -17,6 +17,10 @@ public class PostRepository : GenericRepository<Post>, IPostRepository
         return await _dbSet
             .Include(p => p.User)
             .Include(p => p.PostMedia.OrderBy(m => m.DisplayOrder))
+            .Include(p => p.PostLikes)
+                .ThenInclude(pl => pl.User)
+            .Include(p => p.Comments.Where(c => c.ParentCommentId == null))
+                .ThenInclude(c => c.User)
             .FirstOrDefaultAsync(p => p.PostId == postId, cancellationToken);
     }
 

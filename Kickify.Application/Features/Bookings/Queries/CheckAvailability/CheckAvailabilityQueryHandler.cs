@@ -3,7 +3,6 @@ using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
 using Kickify.Domain.Enums;
 using Kickify.Domain.Errors;
-
 namespace Kickify.Application.Features.Bookings.Queries.CheckAvailability
 {
     public class CheckAvailabilityQueryHandler : IQueryHandler<CheckAvailabilityQuery, CheckAvailabilityResponse>
@@ -26,6 +25,12 @@ namespace Kickify.Application.Features.Bookings.Queries.CheckAvailability
             if (field == null)
             {
                 return Result.Failure<CheckAvailabilityResponse>(FieldErrors.NotFound(request.FieldId));
+            }
+
+            // Check if venue is suspended
+            if (field.Venue.Status == VenueStatus.Suspended)
+            {
+                return Result.Failure<CheckAvailabilityResponse>(FieldErrors.VenueSuspended);
             }
 
             // Get day of week

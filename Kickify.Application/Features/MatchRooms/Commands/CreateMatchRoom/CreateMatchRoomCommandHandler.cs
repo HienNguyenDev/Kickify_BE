@@ -54,6 +54,12 @@ public class CreateMatchRoomCommandHandler : ICommandHandler<CreateMatchRoomComm
             return Result.Failure<CreateMatchRoomResponse>(FieldErrors.NotFound(request.FieldId));
         }
 
+        // Check if venue is suspended
+        if (field.Venue.Status == VenueStatus.Suspended)
+        {
+            return Result.Failure<CreateMatchRoomResponse>(MatchRoomErrors.VenueSuspended);
+        }
+
         var endTime = request.StartTime.Add(TimeSpan.FromMinutes(request.DurationMinutes));
 
         var dayOfWeek = (DayOfWeekEnum)request.MatchDate.DayOfWeek;

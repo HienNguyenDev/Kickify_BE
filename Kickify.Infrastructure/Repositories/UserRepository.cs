@@ -84,6 +84,8 @@ public class UserRepository : GenericRepository<User>, IUserRepository
             .AsNoTracking()
             .Include(u => u.PlayerProfile)
             .Include(u => u.NotificationPreference)
+            .Include(u => u.PlayerAchievements)
+                .ThenInclude(pa => pa.Achievement)
             .FirstOrDefaultAsync(u => u.UserId == userId, cancellationToken);
     }
 

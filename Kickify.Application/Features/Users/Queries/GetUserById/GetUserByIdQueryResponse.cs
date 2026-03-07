@@ -23,6 +23,9 @@ namespace Kickify.Application.Features.Users.Queries.GetUserById
         
         // PlayerProfile information
         public PlayerProfileDto? PlayerProfile { get; set; }
+
+        // Achievements
+        public List<AchievementDto> Achievements { get; set; } = new();
     }
 
     public class PlayerProfileDto
@@ -39,5 +42,14 @@ namespace Kickify.Application.Features.Users.Queries.GetUserById
         public int MaxWinStreak { get; set; }
         public int AfkCount { get; set; }
         public int ReportCount { get; set; }
+    }
+
+    public class AchievementDto
+    {
+        public Guid AchievementId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public string? BadgeIconUrl { get; set; }
+        public DateTime EarnedAt { get; set; }
     }
 }

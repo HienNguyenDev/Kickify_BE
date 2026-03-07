@@ -1,6 +1,7 @@
 using Kickify.Api.Extensions;
 using Kickify.Api.Requests;
 using Kickify.Application.Abstractions.Services;
+using Kickify.Application.Features.Users.Commands.BanUnbanUser;
 using Kickify.Application.Features.Users.Commands.CreateUser;
 using Kickify.Application.Features.Users.Commands.DeleteUser;
 using Kickify.Application.Features.Users.Commands.UpdateFcmToken;
@@ -126,6 +127,21 @@ public class UsersController : ControllerBase
     {
         var command = new DeleteUserCommand { UserId = userId };
         Result<DeleteUserCommandResponse> result = await _mediator.Send(command, cancellationToken);
+        return result.MatchOk();
+    }
+
+    /// <summary>
+    /// Ban or unban a user (Admin only)
+    /// </summary>
+    [Authorize(Roles = "Admin")]
+    [HttpPatch("{userId:guid}/ban")]
+    public async Task<IResult> BanUnbanUser(
+        Guid userId,
+        [FromQuery] bool ban = true,
+        CancellationToken cancellationToken = default)
+    {
+        var command = new BanUnbanUserCommand(userId, ban);
+        var result = await _mediator.Send(command, cancellationToken);
         return result.MatchOk();
     }
 

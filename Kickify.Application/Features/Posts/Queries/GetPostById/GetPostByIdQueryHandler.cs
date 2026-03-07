@@ -58,7 +58,29 @@ public class GetPostByIdQueryHandler : IQueryHandler<GetPostByIdQuery, GetPostBy
                 Width = m.Width,
                 Height = m.Height,
                 Duration = m.Duration
-            }).ToList()
+            }).ToList(),
+            LikedByUsers = post.PostLikes
+                .OrderByDescending(pl => pl.CreatedAt)
+                .Select(pl => new PostLikeUserDto
+                {
+                    UserId = pl.UserId,
+                    FullName = pl.User?.FullName,
+                    AvatarUrl = pl.User?.AvatarUrl,
+                    LikedAt = pl.CreatedAt
+                }).ToList(),
+            Comments = post.Comments
+                .OrderByDescending(c => c.CreatedAt)
+                .Select(c => new PostCommentDto
+                {
+                    CommentId = c.CommentId,
+                    UserId = c.UserId,
+                    UserFullName = c.User?.FullName,
+                    UserAvatarUrl = c.User?.AvatarUrl,
+                    Content = c.Content,
+                    TotalLikes = c.TotalLikes,
+                    TotalReplies = c.TotalReplies,
+                    CreatedAt = c.CreatedAt
+                }).ToList()
         };
 
         return Result.Success(response);

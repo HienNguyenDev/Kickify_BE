@@ -66,6 +66,19 @@ namespace Kickify.Application.Features.Users.Queries.GetUserById
                 } : null
             };
 
+            // Map achievements
+            response.Achievements = user.PlayerAchievements
+                .Select(pa => new AchievementDto
+                {
+                    AchievementId = pa.AchievementId,
+                    Name = pa.Achievement.Name,
+                    Description = pa.Achievement.Description,
+                    BadgeIconUrl = pa.Achievement.BadgeIconUrl,
+                    EarnedAt = pa.EarnedAt
+                })
+                .OrderByDescending(a => a.EarnedAt)
+                .ToList();
+
             return Result.Success(response);
         }
     }
