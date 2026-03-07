@@ -2,6 +2,7 @@ using Kickify.Api.Extensions;
 using Kickify.Api.Requests;
 using Kickify.Application.Abstractions.Services;
 using Kickify.Application.Features.Users.Commands.BanUnbanUser;
+using Kickify.Application.Features.Users.Commands.BanUser;
 using Kickify.Application.Features.Users.Commands.CreateUser;
 using Kickify.Application.Features.Users.Commands.DeleteUser;
 using Kickify.Application.Features.Users.Commands.UpdateFcmToken;
@@ -131,22 +132,36 @@ public class UsersController : ControllerBase
     }
 
     /// <summary>
-    /// Ban or unban a user (Admin only). Set isActive=false to ban, isActive=true to unban.
+    /// [Admin] Ban user with specific duration (1, 3, 7, 30 days or permanent)
     /// </summary>
     [Authorize(Roles = "Admin")]
-    [HttpPatch("{userId:guid}/ban")]
-    public async Task<IResult> BanUnbanUser(
+    [HttpPost("{userId:guid}/ban")]
+    public async Task<IResult> BanUser(
         Guid userId,
-        [FromQuery] bool isActive = false,
-        CancellationToken cancellationToken = default)
+        [FromBody] BanUserRequest request,
+        CancellationToken cancellationToken)
     {
-        var command = new BanUnbanUserCommand(userId, isActive);
+        var command = new BanUserCommand(userId, request.Duration, request.Reason);
         var result = await _mediator.Send(command, cancellationToken);
         return result.MatchOk();
     }
 
     /// <summary>
-    /// Get all banned users (isActive = false) — Admin only
+    /// [Admin] Unban user
+    /// </summary>
+    [Authorize(Roles = "Admin")]
+    [HttpDelete("{userId:guid}/ban")]
+    public async Task<IResult> UnbanUser(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        var command = new BanUnbanUserCommand(userId, IsActive: true);
+        var result = await _mediator.Send(command, cancellationToken);
+        return result.MatchOk();
+    }
+
+    /// <summary>
+    /// Get all banned users — Admin only
     /// </summary>
     [Authorize(Roles = "Admin")]
     [HttpGet("banned")]
@@ -173,18 +188,17 @@ public class UsersController : ControllerBase
     [HttpPost("avatar")]
     [Authorize]
     [Consumes("multipart/form-data")]
-    public async Task<IResult> UploadAvatar(
-        IFormFile file,
-        CancellationToken cancellationToken)
+    public async Task<IResult> UploadAvatar(IFormFile file, CancellationToken cancellationToken)
     {
-        var fileUploadRequest = new FileUploadRequest(file.OpenReadStream(), file.FileName, file.ContentType, file.Length);
+        var fileUploadRequest = new FileUploadRequest(
+            file.OpenReadStream(), file.FileName, file.ContentType, file.Length);
         var command = new UploadUserAvatarCommand { File = fileUploadRequest };
         Result<UploadUserAvatarCommandResponse> result = await _mediator.Send(command, cancellationToken);
         return result.MatchOk();
     }
 
     /// <summary>
-    /// C?p nh?t FCM token cho push notification
+    /// Cập nhật FCM token cho push notification
     /// </summary>
     [HttpPut("fcm-token")]
     [Authorize]
