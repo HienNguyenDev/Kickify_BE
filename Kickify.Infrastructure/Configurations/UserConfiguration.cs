@@ -64,6 +64,10 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.IsActive)
             .HasDefaultValue(true);
 
+        builder.Property(u => u.BannedUntil)
+            .HasColumnType("timestamp with time zone")
+            .IsRequired(false);
+
         builder.Property(u => u.FcmToken)
             .HasMaxLength(500);
 

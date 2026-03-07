@@ -7,6 +7,7 @@ using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
 using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
+using Kickify.Domain.Errors;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -63,6 +64,19 @@ namespace Kickify.Application.Features.Auth.Commands.Login
                     Balance = 0,
                 };
                 await _walletRepository.AddAsync(wallet);
+            }
+            else
+            {
+                // Auto-unban nếu đã hết thời gian ban
+                if (!user.IsActive && user.BannedUntil.HasValue && user.BannedUntil.Value <= DateTime.UtcNow)
+                {
+                    user.IsActive = true;
+                    user.BannedUntil = null;
+                    _userRepository.Update(user);
+                }
+
+                if (!user.IsActive)
+                    return Result.Failure<LoginWithFirebaseCommandResponse>(UserErrors.InActive);
             }
 
             var accessToken = _jwtProvider.GenerateBackendJwt(user);

@@ -2,9 +2,9 @@ namespace Kickify.Domain.Enums;
 
 public enum ReportType
 {
-    AFK,
-    Toxic,
-    Cheating,
+    InappropriateBehavior,
     Harassment,
-    Other
+    Spamming,
+    FakeAccount,
+    Scamming
 }

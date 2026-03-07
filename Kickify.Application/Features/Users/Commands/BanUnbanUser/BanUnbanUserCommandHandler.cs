@@ -46,6 +46,7 @@ public class BanUnbanUserCommandHandler : ICommandHandler<BanUnbanUserCommand, B
                 return Result.Failure<BanUnbanUserResponse>(UserErrors.NotBanned);
             }
             user.IsActive = true;
+            user.BannedUntil = null; // Clear ban duration khi unban
         }
 
         _userRepository.Update(user);

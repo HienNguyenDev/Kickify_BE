@@ -30,26 +30,26 @@ namespace Kickify.Application.Features.Auth.Commands.Login
             var user = await _userRepository.GetByEmailAsync(request.Email);
 
             if (user is null)
-            {
                 return Result.Failure<LoginCommandResponse>(UserErrors.NotFoundByEmail);
-            }
 
             bool isValidPassword = _passwordHasher.Verify(request.Password, user.PasswordHash ?? "0");
 
             if (!isValidPassword)
-            {
                 return Result.Failure<LoginCommandResponse>(UserErrors.WrongPassword);
+
+            // Auto-unban nếu đã hết thời gian ban
+            if (!user.IsActive && user.BannedUntil.HasValue && user.BannedUntil.Value <= DateTime.UtcNow)
+            {
+                user.IsActive = true;
+                user.BannedUntil = null;
+                _userRepository.Update(user);
             }
 
             if (!user.IsActive)
-            {
                 return Result.Failure<LoginCommandResponse>(UserErrors.InActive);
-            }
 
             if (!user.IsEmailVerified)
-            {
                 return Result.Failure<LoginCommandResponse>(UserErrors.IsNotVerified.WithMetadata("userId", user.UserId));
-            }
 
             var token = await _jwtProvider.GetForCredentialsAsync(request.Email);
             RefreshToken refreshToken = new RefreshToken
