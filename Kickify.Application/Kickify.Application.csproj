@@ -9,8 +9,6 @@
   <ItemGroup>
     <Folder Include="Features\MatchFeedbacks\Queries\" />
     <Folder Include="Features\NotificationPreferences\Commands\UpdateNotificationPreference\" />
-    <Folder Include="Features\NotificationPreferences\Queries\" />
-    <Folder Include="Features\Notifications\Queries\" />
     <Folder Include="Features\Users\Queries\" />
   </ItemGroup>
 

@@ -118,6 +118,7 @@ namespace Kickify.Infrastructure
             services.AddTransient<IResetPasswordGenerator, ResetPasswordGenerator>();
             services.AddScoped<IPushNotificationService, PushNotificationService>();
             services.AddSingleton<IQrCodeService, QrCodeService>();
+            services.AddScoped<ILeaderboardCacheService, LeaderboardCacheService>();
 
             // AI Sentiment Analysis Service
             services.AddHttpClient<ISentimentAnalysisService, SentimentAnalysisService>((sp, client) =>
@@ -163,6 +164,7 @@ namespace Kickify.Infrastructure
             services.AddScoped<IRoomInvitationRepository, RoomInvitationRepository>();
             services.AddScoped<IAchievementRepository, AchievementRepository>();
             services.AddScoped<IVenueReviewRepository, VenueReviewRepository>();
+            services.AddScoped<IPlayerReportRepository, PlayerReportRepository>();
             return services;
         }
         private static IServiceCollection AddFirebase(this IServiceCollection services)
@@ -256,6 +258,8 @@ namespace Kickify.Infrastructure
             services.AddScoped<IEmailJobService, EmailJobService>();
             services.AddScoped<IRoomAutoCloseService, RoomAutoCloseService>();
             services.AddScoped<IMatchLifecycleService, MatchLifecycleService>();
+            services.AddScoped<ILeaderboardUpdateService, LeaderboardUpdateService>();
+            services.AddHostedService<JobSchedulerStartupService>();
 
             return services;
         }

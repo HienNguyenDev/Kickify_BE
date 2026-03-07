@@ -1,0 +1,5 @@
+using Kickify.Application.Abstractions.Messaging;
+
+namespace Kickify.Application.Features.NotificationPreferences.Queries.GetMyNotificationPreferences;
+
+public record GetMyNotificationPreferencesQuery : IQuery<GetMyNotificationPreferencesResponse>;
