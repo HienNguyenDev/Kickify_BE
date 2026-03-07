@@ -7,6 +7,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace Kickify.Api.Hubs;
 
@@ -18,13 +19,16 @@ public class ChatHub : Hub
 {
     private readonly IMediator _mediator;
     private readonly ConnectionMapping _connectionMapping;
+    private readonly ILogger<ChatHub> _logger;
 
     public ChatHub(
         IMediator mediator,
-        ConnectionMapping connectionMapping)
+        ConnectionMapping connectionMapping,
+        ILogger<ChatHub> logger)
     {
         _mediator = mediator;
         _connectionMapping = connectionMapping;
+        _logger = logger;
     }
 
     private Guid CurrentUserId => Guid.Parse(
@@ -34,12 +38,26 @@ public class ChatHub : Hub
     private string CurrentUserName =>
         Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
 
+    private void LogInboundEvent(string methodName, object? payload = null)
+    {
+        var payloadJson = payload != null ? JsonSerializer.Serialize(payload) : "{}";
+        _logger.LogInformation(
+            "\ud83d\udce5 [SignalR Inbound] Method: {MethodName} | Caller UserId: {UserId} | Payload: {Payload}",
+            methodName,
+            CurrentUserId,
+            payloadJson);
+    }
+
     #region Connection Management
 
     public override async Task OnConnectedAsync()
     {
         var userId = CurrentUserId;
         _connectionMapping.Add(userId, Context.ConnectionId);
+
+        _logger.LogInformation(
+            "\ud83d\udce5 [SignalR Connected] UserId: {UserId} | ConnectionId: {ConnectionId}",
+            userId, Context.ConnectionId);
 
         await Clients.Others.SendAsync("UserOnlineStatus", new
         {
@@ -56,6 +74,10 @@ public class ChatHub : Hub
         {
             var userId = CurrentUserId;
             _connectionMapping.Remove(userId, Context.ConnectionId);
+
+            _logger.LogInformation(
+                "\ud83d\udce5 [SignalR Disconnected] UserId: {UserId} | ConnectionId: {ConnectionId}",
+                userId, Context.ConnectionId);
 
             if (!_connectionMapping.IsOnline(userId))
             {
@@ -77,6 +99,8 @@ public class ChatHub : Hub
 
     public async Task SendPrivateMessage(Guid receiverId, string messageText, int messageType = 0)
     {
+        LogInboundEvent(nameof(SendPrivateMessage), new { ReceiverId = receiverId, MessageText = messageText, MessageType = messageType });
+
         try
         {
             var command = new SendPrivateMessageCommand
@@ -96,12 +120,15 @@ public class ChatHub : Hub
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "\u274c [SignalR Error] Method: {MethodName} | UserId: {UserId} | Error: {Error}",
+                nameof(SendPrivateMessage), CurrentUserId, ex.Message);
             await Clients.Caller.SendAsync("Error", new { Message = ex.Message });
         }
     }
 
     public async Task Typing(Guid toUserId)
     {
+        LogInboundEvent(nameof(Typing), new { ToUserId = toUserId });
         var connectionIds = _connectionMapping.GetConnections(toUserId).ToList();
         if (connectionIds.Any())
         {
@@ -115,6 +142,8 @@ public class ChatHub : Hub
 
     public async Task StopTyping(Guid toUserId)
     {
+        LogInboundEvent(nameof(StopTyping), new { ToUserId = toUserId });
+
         var connectionIds = _connectionMapping.GetConnections(toUserId).ToList();
         if (connectionIds.Any())
         {
@@ -127,6 +156,8 @@ public class ChatHub : Hub
 
     public async Task MarkAsRead(Guid fromUserId)
     {
+        LogInboundEvent(nameof(MarkAsRead), new { FromUserId = fromUserId });
+
         try
         {
             var command = new MarkMessagesAsReadCommand
@@ -143,12 +174,16 @@ public class ChatHub : Hub
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "\u274c [SignalR Error] Method: {MethodName} | UserId: {UserId} | Error: {Error}",
+                nameof(MarkAsRead), CurrentUserId, ex.Message);
             await Clients.Caller.SendAsync("Error", new { Message = ex.Message });
         }
     }
 
     public async Task GetConversation(Guid otherUserId, int pageNumber = 1, int pageSize = 50)
     {
+        LogInboundEvent(nameof(GetConversation), new { OtherUserId = otherUserId, PageNumber = pageNumber, PageSize = pageSize });
+
         try
         {
             var query = new GetPrivateConversationQuery
@@ -172,6 +207,8 @@ public class ChatHub : Hub
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "\u274c [SignalR Error] Method: {MethodName} | UserId: {UserId} | Error: {Error}",
+                nameof(GetConversation), CurrentUserId, ex.Message);
             await Clients.Caller.SendAsync("Error", new { Message = ex.Message });
         }
     }
@@ -182,6 +219,7 @@ public class ChatHub : Hub
 
     public async Task GetOnlineStatus(Guid userId)
     {
+        LogInboundEvent(nameof(GetOnlineStatus), new { UserId = userId });
         var isOnline = _connectionMapping.IsOnline(userId);
         await Clients.Caller.SendAsync("UserOnlineStatus", new
         {
@@ -192,6 +230,8 @@ public class ChatHub : Hub
 
     public async Task GetOnlineUsers()
     {
+        LogInboundEvent(nameof(GetOnlineUsers));
+
         var onlineUsers = _connectionMapping.GetOnlineUsers();
         await Clients.Caller.SendAsync("OnlineUsers", onlineUsers);
     }

@@ -4,6 +4,14 @@ namespace Kickify.Domain.Errors
 {
     public static class VenueReviewErrors
     {
+        public static Error NotFound(Guid reviewId) => Error.NotFound(
+            "VenueReviews.NotFound",
+            $"The venue review with Id = '{reviewId}' was not found");
+
+        public static readonly Error NotVenueOwner = Error.Failure(
+            "VenueReviews.NotVenueOwner",
+            "You must be a venue owner to access this resource");
+
         public static Error BookingNotFound(Guid bookingId) => Error.NotFound(
             "VenueReviews.BookingNotFound",
             $"The booking with Id = '{bookingId}' was not found");

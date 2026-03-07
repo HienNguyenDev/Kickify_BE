@@ -7,6 +7,7 @@ using Kickify.Application.Features.Venues.Commands.DeleteVenue;
 using Kickify.Application.Features.Venues.Commands.UpdateOperatingHours;
 using Kickify.Application.Features.Venues.Commands.UpdateVenue;
 using Kickify.Application.Features.Venues.Commands.UpdateVenueStatus;
+using Kickify.Application.Features.Venues.Commands.ToggleVenueSuspension;
 using Kickify.Application.Features.Venues.Queries.GetAllVenues;
 using Kickify.Application.Features.Venues.Queries.GetFieldsByVenue;
 using Kickify.Application.Features.Venues.Queries.GetOperatingHours;
@@ -300,6 +301,21 @@ namespace Kickify.Api.Controllers
 
             var result = await _sender.Send(command, cancellationToken);
 
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Toggle venue suspension (VenueOwner only).
+        /// Approved → Suspended (close venue), Suspended → Approved (reopen venue).
+        /// </summary>
+        [Authorize(Roles = "VenueOwner")]
+        [HttpPatch("{venueId:guid}/toggle-suspension")]
+        public async Task<IResult> ToggleVenueSuspension(
+            Guid venueId,
+            CancellationToken cancellationToken)
+        {
+            var command = new ToggleVenueSuspensionCommand(venueId);
+            var result = await _sender.Send(command, cancellationToken);
             return result.MatchOk();
         }
 

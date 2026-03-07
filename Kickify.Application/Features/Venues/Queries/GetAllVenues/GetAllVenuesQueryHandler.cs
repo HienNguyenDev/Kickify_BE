@@ -34,6 +34,9 @@ namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
                 }
             }
 
+            // When no status filter is provided, exclude Suspended venues from public listing
+            bool excludeSuspended = !venueStatus.HasValue;
+
             var (venues, total) = await _venueRepository.SearchVenuesAsync(
                 request.Latitude,
                 request.Longitude,
@@ -44,6 +47,7 @@ namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
                 venueStatus,
                 request.Page,
                 request.PageSize,
+                excludeSuspended,
                 cancellationToken
             );
 
