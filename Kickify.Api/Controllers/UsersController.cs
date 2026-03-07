@@ -131,17 +131,39 @@ public class UsersController : ControllerBase
     }
 
     /// <summary>
-    /// Ban or unban a user (Admin only)
+    /// Ban or unban a user (Admin only). Set isActive=false to ban, isActive=true to unban.
     /// </summary>
     [Authorize(Roles = "Admin")]
     [HttpPatch("{userId:guid}/ban")]
     public async Task<IResult> BanUnbanUser(
         Guid userId,
-        [FromQuery] bool ban = true,
+        [FromQuery] bool isActive = false,
         CancellationToken cancellationToken = default)
     {
-        var command = new BanUnbanUserCommand(userId, ban);
+        var command = new BanUnbanUserCommand(userId, isActive);
         var result = await _mediator.Send(command, cancellationToken);
+        return result.MatchOk();
+    }
+
+    /// <summary>
+    /// Get all banned users (isActive = false) — Admin only
+    /// </summary>
+    [Authorize(Roles = "Admin")]
+    [HttpGet("banned")]
+    public async Task<IResult> GetBannedUsers(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string? searchTerm = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = new GetAllUsersQuery
+        {
+            Page = page,
+            PageSize = pageSize,
+            IsActive = false,
+            SearchTerm = searchTerm
+        };
+        Result<GetAllUsersQueryResponse> result = await _mediator.Send(query, cancellationToken);
         return result.MatchOk();
     }
 

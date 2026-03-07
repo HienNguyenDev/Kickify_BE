@@ -4,5 +4,5 @@ namespace Kickify.Application.Features.Users.Commands.BanUnbanUser;
 
 public record BanUnbanUserCommand(
     Guid UserId,
-    bool Ban
+    bool IsActive
 ) : ICommand<BanUnbanUserResponse>;

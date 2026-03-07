@@ -29,7 +29,7 @@ public class BanUnbanUserCommandHandler : ICommandHandler<BanUnbanUserCommand, B
             return Result.Failure<BanUnbanUserResponse>(UserErrors.NotFound(request.UserId));
         }
 
-        if (request.Ban)
+        if (!request.IsActive)
         {
             // Ban: isActive must be true currently
             if (!user.IsActive)
@@ -51,7 +51,7 @@ public class BanUnbanUserCommandHandler : ICommandHandler<BanUnbanUserCommand, B
         _userRepository.Update(user);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var message = request.Ban ? "User has been banned" : "User has been unbanned";
+        var message = !request.IsActive ? "User has been banned" : "User has been unbanned";
         return Result.Success(new BanUnbanUserResponse(user.UserId, user.IsActive, message));
     }
 }
