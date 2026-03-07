@@ -26,4 +26,6 @@ public static class UserErrors
     public static readonly Error WrongOtp = Error.Conflict("Users.OtpNotFound", "The OTP code is wrong");
     public static readonly Error UserAlreadyVerified = Error.Conflict("Users.UserAlreadyVerified", "The user has already verified");
     public static Error AvatarUploadFailed(string error) => Error.Problem("Users.AvatarUploadFailed", $"Failed to upload avatar: {error}");
+    public static readonly Error AlreadyBanned = Error.Conflict("Users.AlreadyBanned", "The user is already banned");
+    public static readonly Error NotBanned = Error.Conflict("Users.NotBanned", "The user is not banned");
 }

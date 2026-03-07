@@ -47,5 +47,9 @@ namespace Kickify.Domain.Errors
         public static Error InvalidStatus(string status) => Error.Problem(
             "Venues.InvalidStatus",
             $"Invalid venue status: '{status}'. Allowed values: Pending, Active, Approved, Rejected, Suspended");
+
+        public static Error CannotToggleSuspension(string currentStatus) => Error.Problem(
+            "Venues.CannotToggleSuspension",
+            $"Cannot toggle suspension when venue status is '{currentStatus}'. Only Approved or Suspended venues can be toggled");
     }
 }

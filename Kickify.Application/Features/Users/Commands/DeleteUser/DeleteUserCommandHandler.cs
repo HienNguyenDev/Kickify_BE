@@ -35,7 +35,10 @@ namespace Kickify.Application.Features.Users.Commands.DeleteUser
             }
 
             _userRepository.Remove(user);
-            await _authenticationServices.DeleteUserAsync(user.IdentityId);
+            if (!string.IsNullOrEmpty(user.IdentityId))
+            {
+                await _authenticationServices.DeleteUserAsync(user.IdentityId);
+            }
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             var response = new DeleteUserCommandResponse

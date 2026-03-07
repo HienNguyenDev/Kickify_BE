@@ -185,5 +185,9 @@ namespace Kickify.Domain.Errors
         public static Error VotingPeriodClosed => Error.Conflict(
             "MatchRoom.VotingPeriodClosed",
             "Vote time has ended");
+
+        public static readonly Error VenueSuspended = Error.Problem(
+            "MatchRoom.VenueSuspended",
+            "Cannot create a match room because the venue is currently suspended");
     }
 }
