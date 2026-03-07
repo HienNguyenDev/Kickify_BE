@@ -79,5 +79,66 @@ namespace Kickify.Infrastructure.Repositories
 
             return (profiles, total);
         }
+
+        public async Task<List<(PlayerProfile Profile, int LatestEloChange)>> GetTopPlayersByEloWithChangeAsync(int count, CancellationToken cancellationToken = default)
+        {
+            var topProfiles = await _dbSet
+                .AsNoTracking()
+                .Include(p => p.User)
+                .OrderByDescending(p => p.CurrentElo)
+                .ThenByDescending(p => p.TotalMatches)
+                .Take(count)
+                .ToListAsync(cancellationToken);
+
+            var result = new List<(PlayerProfile, int)>();
+
+            foreach (var profile in topProfiles)
+            {
+                var latestEloChange = await GetLatestEloChangeAsync(profile.UserId, cancellationToken);
+                result.Add((profile, latestEloChange));
+            }
+
+            return result;
+        }
+
+        public async Task<int> GetPlayerRankByEloAsync(Guid userId, CancellationToken cancellationToken = default)
+        {
+            var myProfile = await _dbSet
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.UserId == userId, cancellationToken);
+
+            if (myProfile == null)
+            {
+                return 0;
+            }
+
+            // Count how many players have higher ELO (or same ELO but more matches)
+            var rank = await _dbSet
+                .AsNoTracking()
+                .CountAsync(p => 
+                    p.CurrentElo > myProfile.CurrentElo || 
+                    (p.CurrentElo == myProfile.CurrentElo && p.TotalMatches > myProfile.TotalMatches),
+                    cancellationToken);
+
+            return rank + 1; // +1 because rank starts from 1
+        }
+
+        public async Task<int> GetTotalPlayersCountAsync(CancellationToken cancellationToken = default)
+        {
+            return await _dbSet
+                .AsNoTracking()
+                .CountAsync(cancellationToken);
+        }
+
+        public async Task<int> GetLatestEloChangeAsync(Guid userId, CancellationToken cancellationToken = default)
+        {
+            var latestEloHistory = await _context.Set<EloHistory>()
+                .AsNoTracking()
+                .Where(eh => eh.UserId == userId)
+                .OrderByDescending(eh => eh.CreatedAt)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            return latestEloHistory?.EloChange ?? 0;
+        }
     }
 }

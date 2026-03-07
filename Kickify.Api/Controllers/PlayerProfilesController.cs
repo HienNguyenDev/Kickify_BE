@@ -3,9 +3,12 @@ using Kickify.Api.Requests;
 using Kickify.Application.Features.PlayerProfiles.Commands.DeletePlayerProfile;
 using Kickify.Application.Features.PlayerProfiles.Commands.UpdatePlayerProfile;
 using Kickify.Application.Features.PlayerProfiles.Queries.GetAllPlayerProfiles;
+using Kickify.Application.Features.PlayerProfiles.Queries.GetLeaderboard;
+using Kickify.Application.Features.PlayerProfiles.Queries.GetMyRank;
 using Kickify.Application.Features.PlayerProfiles.Queries.GetPlayerProfileById;
 using Kickify.Domain.Common;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Kickify.Api.Controllers
@@ -45,6 +48,29 @@ namespace Kickify.Api.Controllers
             };
 
             Result<GetAllPlayerProfilesQueryResponse> result = await _mediator.Send(query, cancellationToken);
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Get top 20 players leaderboard by ELO
+        /// </summary>
+        [HttpGet("leaderboard")]
+        public async Task<IResult> GetLeaderboard(CancellationToken cancellationToken)
+        {
+            var query = new GetLeaderboardQuery();
+            Result<GetLeaderboardResponse> result = await _mediator.Send(query, cancellationToken);
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Get current user's rank in leaderboard
+        /// </summary>
+        [HttpGet("my-rank")]
+        [Authorize]
+        public async Task<IResult> GetMyRank(CancellationToken cancellationToken)
+        {
+            var query = new GetMyRankQuery();
+            Result<GetMyRankResponse> result = await _mediator.Send(query, cancellationToken);
             return result.MatchOk();
         }
 

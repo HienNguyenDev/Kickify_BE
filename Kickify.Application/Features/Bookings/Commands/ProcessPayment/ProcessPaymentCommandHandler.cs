@@ -117,7 +117,7 @@ public class ProcessPaymentCommandHandler : ICommandHandler<ProcessPaymentComman
         {
             TransactionId = Guid.NewGuid(),
             WalletId = playerWallet.WalletId,
-            TransactionType = TransactionType.BookingPayment,
+            TransactionType = TransactionType.CheckInFee,
             Amount = -depositAmount,
             BalanceAfter = playerWallet.Balance,
             ReferenceId = room.RoomId,

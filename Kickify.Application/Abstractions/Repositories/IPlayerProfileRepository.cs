@@ -15,5 +15,25 @@ namespace Kickify.Application.Abstractions.Repositories
             int page = 1,
             int pageSize = 10,
             CancellationToken cancellationToken = default);
+        
+        /// <summary>
+        /// Get top N players by ELO rating with latest ELO change
+        /// </summary>
+        Task<List<(PlayerProfile Profile, int LatestEloChange)>> GetTopPlayersByEloWithChangeAsync(int count, CancellationToken cancellationToken = default);
+        
+        /// <summary>
+        /// Get player's rank based on ELO (1 = highest ELO)
+        /// </summary>
+        Task<int> GetPlayerRankByEloAsync(Guid userId, CancellationToken cancellationToken = default);
+        
+        /// <summary>
+        /// Get total count of all players
+        /// </summary>
+        Task<int> GetTotalPlayersCountAsync(CancellationToken cancellationToken = default);
+        
+        /// <summary>
+        /// Get latest ELO change for a user
+        /// </summary>
+        Task<int> GetLatestEloChangeAsync(Guid userId, CancellationToken cancellationToken = default);
     }
 }
