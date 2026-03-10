@@ -12,6 +12,9 @@ namespace Kickify.Application.Abstractions.Repositories
             DateTime? date,
             string? matchFormat,
             bool? availableOnly,
+            decimal? latitude,
+            decimal? longitude,
+            double? radiusKm,
             int page,
             int pageSize,
             CancellationToken cancellationToken = default);

@@ -100,11 +100,14 @@ namespace Kickify.Api.Controllers
             [FromQuery] DateTime? date,
             [FromQuery] string? matchFormat,
             [FromQuery] bool? availableOnly,
+            [FromQuery] decimal? latitude,
+            [FromQuery] decimal? longitude,
+            [FromQuery] double? radiusKm,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10,
             CancellationToken cancellationToken = default)
         {
-            var query = new GetMatchRoomsQuery(date, matchFormat, availableOnly, page, pageSize);
+            var query = new GetMatchRoomsQuery(date, matchFormat, availableOnly, latitude, longitude, radiusKm, page, pageSize);
 
             var result = await _sender.Send(query, cancellationToken);
 
