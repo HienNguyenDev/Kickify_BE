@@ -51,5 +51,7 @@ public class PostCommentDto
     public string Content { get; set; } = string.Empty;
     public int TotalLikes { get; set; }
     public int TotalReplies { get; set; }
+    public bool IsEdited { get; set; }
     public DateTime CreatedAt { get; set; }
+    public List<PostCommentDto> Replies { get; set; } = new();
 }

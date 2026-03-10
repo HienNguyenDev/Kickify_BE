@@ -27,10 +27,10 @@ namespace Kickify.Application.Features.Bookings.Queries.CheckAvailability
                 return Result.Failure<CheckAvailabilityResponse>(FieldErrors.NotFound(request.FieldId));
             }
 
-            // Check if venue is suspended
-            if (field.Venue.Status == VenueStatus.Suspended)
+            // Check if venue is archived
+            if (field.Venue.Status == VenueStatus.Archived)
             {
-                return Result.Failure<CheckAvailabilityResponse>(FieldErrors.VenueSuspended);
+                return Result.Failure<CheckAvailabilityResponse>(FieldErrors.VenueArchived);
             }
 
             // Get day of week

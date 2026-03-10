@@ -28,8 +28,8 @@ namespace Kickify.Domain.Errors
             "Fields.Unauthorized",
             "You are not authorized to perform this action on this field");
 
-        public static readonly Error VenueSuspended = Error.Problem(
-            "Fields.VenueSuspended",
-            "The venue this field belongs to is currently suspended");
+        public static readonly Error VenueArchived = Error.Problem(
+            "Fields.VenueArchived",
+            "The venue this field belongs to is currently archived");
     }
 }
