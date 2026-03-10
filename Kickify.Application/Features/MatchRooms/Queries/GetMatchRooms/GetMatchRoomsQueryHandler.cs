@@ -23,6 +23,9 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRooms
                 request.Date,
                 request.MatchFormat,
                 request.AvailableOnly,
+                request.Latitude,
+                request.Longitude,
+                request.RadiusKm,
                 request.Page,
                 request.PageSize,
                 cancellationToken
