@@ -46,10 +46,30 @@ namespace Kickify.Domain.Errors
 
         public static Error InvalidStatus(string status) => Error.Problem(
             "Venues.InvalidStatus",
-            $"Invalid venue status: '{status}'. Allowed values: Pending, Active, Approved, Rejected, Suspended");
+            $"Invalid venue status: '{status}'. Allowed values: Draft, PendingVerification, Approved, Rejected, Suspended, Archived");
 
         public static Error CannotToggleSuspension(string currentStatus) => Error.Problem(
             "Venues.CannotToggleSuspension",
             $"Cannot toggle suspension when venue status is '{currentStatus}'. Only Approved or Suspended venues can be toggled");
+
+        public static readonly Error InsufficientPhotos = Error.Problem(
+            "Venues.InsufficientPhotos",
+            "At least 1 venue photo is required before submitting for verification.");
+
+        public static readonly Error InsufficientEvidences = Error.Problem(
+            "Venues.InsufficientEvidences",
+            "At least 1 evidence document is required before submitting for verification.");
+
+        public static readonly Error InvalidVerificationStatus = Error.Problem(
+            "Venues.InvalidVerificationStatus",
+            "Only venues with status 'Draft' or 'Rejected' can be submitted for verification.");
+
+        public static readonly Error EvidenceNotFound = Error.NotFound(
+            "Venues.EvidenceNotFound",
+            "The evidence document was not found.");
+
+        public static readonly Error InvalidEvidenceFileType = Error.Problem(
+            "Venues.InvalidEvidenceFileType",
+            "Invalid file type. Allowed types: images (jpg, png, etc.), PDF, DOCX.");
     }
 }

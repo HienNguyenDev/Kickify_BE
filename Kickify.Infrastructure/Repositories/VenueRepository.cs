@@ -66,7 +66,7 @@ namespace Kickify.Infrastructure.Repositories
             }
             else if (excludeSuspended)
             {
-                query = query.Where(v => v.Status != VenueStatus.Suspended);
+                query = query.Where(v => v.Status == VenueStatus.Approved);
             }
 
             // Filter by location (simplified - in production use PostGIS)

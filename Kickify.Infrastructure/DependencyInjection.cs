@@ -167,6 +167,7 @@ namespace Kickify.Infrastructure
             services.AddScoped<IPlayerReportRepository, PlayerReportRepository>();
             services.AddScoped<IContentReportRepository, ContentReportRepository>();
             services.AddScoped<IAnnouncementRepository, AnnouncementRepository>();
+            services.AddScoped<IVenueEvidenceRepository, VenueEvidenceRepository>();
             return services;
         }
         private static IServiceCollection AddFirebase(this IServiceCollection services)

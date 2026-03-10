@@ -2,9 +2,10 @@ namespace Kickify.Domain.Enums;
 
 public enum VenueStatus
 {
-    Pending,
-    Active,
+    Draft,
+    PendingVerification,
     Approved,
     Rejected,
-    Suspended
+    Suspended,
+    Archived
 }
