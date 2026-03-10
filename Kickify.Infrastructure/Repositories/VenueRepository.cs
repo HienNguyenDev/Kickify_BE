@@ -42,7 +42,7 @@ namespace Kickify.Infrastructure.Repositories
             VenueStatus? status = null,
             int page = 1,
             int pageSize = 10,
-            bool excludeSuspended = false,
+            bool excludeArchived = false,
             CancellationToken cancellationToken = default)
         {
             var query = _dbSet
@@ -64,7 +64,7 @@ namespace Kickify.Infrastructure.Repositories
             {
                 query = query.Where(v => v.Status == status.Value);
             }
-            else if (excludeSuspended)
+            else if (excludeArchived)
             {
                 query = query.Where(v => v.Status == VenueStatus.Approved);
             }

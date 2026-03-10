@@ -9,7 +9,7 @@ using Kickify.Application.Features.Venues.Commands.SubmitVenueVerification;
 using Kickify.Application.Features.Venues.Commands.UpdateOperatingHours;
 using Kickify.Application.Features.Venues.Commands.UpdateVenue;
 using Kickify.Application.Features.Venues.Commands.UpdateVenueStatus;
-using Kickify.Application.Features.Venues.Commands.ToggleVenueSuspension;
+using Kickify.Application.Features.Venues.Commands.ToggleVenueArchived;
 using Kickify.Application.Features.Venues.Queries.GetAllVenues;
 using Kickify.Application.Features.Venues.Queries.GetFieldsByVenue;
 using Kickify.Application.Features.Venues.Queries.GetOperatingHours;
@@ -310,16 +310,16 @@ namespace Kickify.Api.Controllers
         }
 
         /// <summary>
-        /// [Admin] Toggle venue suspension.
-        /// Approved → Suspended, Suspended → Approved.
+        /// [Admin] Toggle venue archived.
+        /// Approved → Archived, Archived → Approved.
         /// </summary>
-        [Authorize(Roles = "Admin")]
-        [HttpPatch("{venueId:guid}/toggle-suspension")]
-        public async Task<IResult> ToggleVenueSuspension(
+        [Authorize(Roles = "VenueOwner")]
+        [HttpPatch("{venueId:guid}/toggle-archived")]
+        public async Task<IResult> ToggleVenueArchived(
             Guid venueId,
             CancellationToken cancellationToken)
         {
-            var command = new ToggleVenueSuspensionCommand(venueId);
+            var command = new ToggleVenueArchivedCommand(venueId);
             var result = await _sender.Send(command, cancellationToken);
             return result.MatchOk();
         }

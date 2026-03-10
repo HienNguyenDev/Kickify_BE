@@ -54,10 +54,10 @@ public class CreateMatchRoomCommandHandler : ICommandHandler<CreateMatchRoomComm
             return Result.Failure<CreateMatchRoomResponse>(FieldErrors.NotFound(request.FieldId));
         }
 
-        // Check if venue is suspended
-        if (field.Venue.Status == VenueStatus.Suspended)
+        // Check if venue is archived
+        if (field.Venue.Status == VenueStatus.Archived)
         {
-            return Result.Failure<CreateMatchRoomResponse>(MatchRoomErrors.VenueSuspended);
+            return Result.Failure<CreateMatchRoomResponse>(MatchRoomErrors.VenueArchived);
         }
 
         var endTime = request.StartTime.Add(TimeSpan.FromMinutes(request.DurationMinutes));
