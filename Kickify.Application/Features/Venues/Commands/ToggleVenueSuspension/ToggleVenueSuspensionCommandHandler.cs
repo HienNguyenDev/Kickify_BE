@@ -1,4 +1,3 @@
-using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
@@ -12,16 +11,13 @@ public class ToggleVenueSuspensionCommandHandler : ICommandHandler<ToggleVenueSu
 {
     private readonly IVenueRepository _venueRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IUserContext _userContext;
 
     public ToggleVenueSuspensionCommandHandler(
         IVenueRepository venueRepository,
-        IUnitOfWork unitOfWork,
-        IUserContext userContext)
+        IUnitOfWork unitOfWork)
     {
         _venueRepository = venueRepository;
         _unitOfWork = unitOfWork;
-        _userContext = userContext;
     }
 
     public async Task<Result<ToggleVenueSuspensionResponse>> Handle(
@@ -34,27 +30,18 @@ public class ToggleVenueSuspensionCommandHandler : ICommandHandler<ToggleVenueSu
             return Result.Failure<ToggleVenueSuspensionResponse>(VenueErrors.NotFound(request.VenueId));
         }
 
-        // Verify ownership
-        if (venue.OwnerId != _userContext.UserId)
-        {
-            return Result.Failure<ToggleVenueSuspensionResponse>(VenueErrors.Unauthorized);
-        }
-
         var previousStatus = venue.Status;
 
         if (venue.Status == VenueStatus.Approved)
         {
-            // Suspend the venue
             venue.Status = VenueStatus.Suspended;
         }
         else if (venue.Status == VenueStatus.Suspended)
         {
-            // Unsuspend -> back to Approved
             venue.Status = VenueStatus.Approved;
         }
         else
         {
-            // Only Approved venues can be suspended, only Suspended can be unsuspended
             return Result.Failure<ToggleVenueSuspensionResponse>(VenueErrors.CannotToggleSuspension(venue.Status.ToString()));
         }
 

@@ -42,6 +42,9 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<CommentLike> CommentLikes { get; set; }
     public DbSet<Friendship> Friendships { get; set; }
 
+    // Venue Schema
+    public DbSet<VenueEvidence> VenueEvidences { get; set; }
+
     // Evaluation Schema
     public DbSet<MatchFeedback> MatchFeedbacks { get; set; }
     public DbSet<EloHistory> EloHistories { get; set; }
