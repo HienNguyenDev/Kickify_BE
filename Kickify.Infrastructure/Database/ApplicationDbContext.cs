@@ -47,6 +47,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<EloHistory> EloHistories { get; set; }
     public DbSet<EloConfiguration> EloConfigurations { get; set; }
     public DbSet<PlayerReport> PlayerReports { get; set; }
+    public DbSet<ContentReport> ContentReports { get; set; }
 
     // System Schema
     public DbSet<Notification> Notifications { get; set; }
