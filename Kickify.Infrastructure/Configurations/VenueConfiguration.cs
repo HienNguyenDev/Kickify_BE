@@ -48,7 +48,7 @@ public class VenueConfiguration : IEntityTypeConfiguration<Venue>
 
         builder.Property(v => v.Status)
             .HasConversion<string>()
-            .HasDefaultValue(Domain.Enums.VenueStatus.Pending);
+            .HasDefaultValue(Domain.Enums.VenueStatus.Draft);
 
         builder.Property(v => v.AdminNotes)
             .HasColumnType("text");

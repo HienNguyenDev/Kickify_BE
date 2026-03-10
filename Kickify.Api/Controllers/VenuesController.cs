@@ -1,9 +1,11 @@
 using Kickify.Api.Extensions;
 using Kickify.Api.Requests;
+using Kickify.Application.Abstractions.Services;
 using Kickify.Application.Features.Fields.Commands.BlockFieldSlot;
 using Kickify.Application.Features.Venues.Commands.AddField;
 using Kickify.Application.Features.Venues.Commands.CreateVenue;
 using Kickify.Application.Features.Venues.Commands.DeleteVenue;
+using Kickify.Application.Features.Venues.Commands.SubmitVenueVerification;
 using Kickify.Application.Features.Venues.Commands.UpdateOperatingHours;
 using Kickify.Application.Features.Venues.Commands.UpdateVenue;
 using Kickify.Application.Features.Venues.Commands.UpdateVenueStatus;
@@ -13,6 +15,9 @@ using Kickify.Application.Features.Venues.Queries.GetFieldsByVenue;
 using Kickify.Application.Features.Venues.Queries.GetOperatingHours;
 using Kickify.Application.Features.Venues.Queries.GetVenueById;
 using Kickify.Application.Features.Venues.Queries.GetVenuesByOwner;
+using Kickify.Application.Features.VenueEvidences.Commands.DeleteVenueEvidence;
+using Kickify.Application.Features.VenueEvidences.Commands.UploadVenueEvidence;
+using Kickify.Application.Features.VenueEvidences.Queries.GetVenueEvidences;
 using Kickify.Application.Features.VenueReviews.Commands.CreateVenueReview;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -305,10 +310,10 @@ namespace Kickify.Api.Controllers
         }
 
         /// <summary>
-        /// Toggle venue suspension (VenueOwner only).
-        /// Approved → Suspended (close venue), Suspended → Approved (reopen venue).
+        /// [Admin] Toggle venue suspension.
+        /// Approved → Suspended, Suspended → Approved.
         /// </summary>
-        [Authorize(Roles = "VenueOwner")]
+        [Authorize(Roles = "Admin")]
         [HttpPatch("{venueId:guid}/toggle-suspension")]
         public async Task<IResult> ToggleVenueSuspension(
             Guid venueId,
@@ -335,6 +340,80 @@ namespace Kickify.Api.Controllers
                 request.Comment
             );
 
+            var result = await _sender.Send(command, cancellationToken);
+
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Upload evidence files (images, PDF, DOCX) for a venue. [VenueOwner]
+        /// </summary>
+        [Authorize]
+        [HttpPost("{venueId:guid}/evidences")]
+        [Consumes("multipart/form-data")]
+        public async Task<IResult> UploadVenueEvidence(
+            Guid venueId,
+            [FromForm] List<IFormFile> files,
+            CancellationToken cancellationToken)
+        {
+            var uploadRequests = new List<FileUploadRequest>();
+            foreach (var file in files)
+            {
+                uploadRequests.Add(new FileUploadRequest(
+                    file.OpenReadStream(),
+                    file.FileName,
+                    file.ContentType,
+                    file.Length));
+            }
+
+            var command = new UploadVenueEvidenceCommand(venueId, uploadRequests);
+            var result = await _sender.Send(command, cancellationToken);
+
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Get all evidence files for a venue. [Authorized]
+        /// </summary>
+        [Authorize]
+        [HttpGet("{venueId:guid}/evidences")]
+        public async Task<IResult> GetVenueEvidences(
+            Guid venueId,
+            CancellationToken cancellationToken)
+        {
+            var query = new GetVenueEvidencesQuery(venueId);
+            var result = await _sender.Send(query, cancellationToken);
+
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Delete an evidence file. [VenueOwner]
+        /// </summary>
+        [Authorize]
+        [HttpDelete("{venueId:guid}/evidences/{evidenceId:guid}")]
+        public async Task<IResult> DeleteVenueEvidence(
+            Guid venueId,
+            Guid evidenceId,
+            CancellationToken cancellationToken)
+        {
+            var command = new DeleteVenueEvidenceCommand(evidenceId);
+            var result = await _sender.Send(command, cancellationToken);
+
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Submit a venue for admin verification.
+        /// Requires: venue in Draft or Rejected status, at least 1 photo and 1 evidence file. [VenueOwner]
+        /// </summary>
+        [Authorize]
+        [HttpPost("{venueId:guid}/submit-verification")]
+        public async Task<IResult> SubmitVenueVerification(
+            Guid venueId,
+            CancellationToken cancellationToken)
+        {
+            var command = new SubmitVenueVerificationCommand(venueId);
             var result = await _sender.Send(command, cancellationToken);
 
             return result.MatchOk();

@@ -59,6 +59,7 @@ public class CreateVenueCommandHandler : ICommandHandler<CreateVenueCommand, Cre
                 ContactEmail = request.ContactEmail,
                 Description = request.Description,
                 Amenities = request.Amenities,
+                Status = VenueStatus.Draft,
                 CreatedAt = DateTime.UtcNow
             };
 
