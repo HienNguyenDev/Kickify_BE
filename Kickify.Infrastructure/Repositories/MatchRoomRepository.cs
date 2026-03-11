@@ -46,6 +46,9 @@ namespace Kickify.Infrastructure.Repositories
             DateTime? date,
             string? matchFormat,
             bool? availableOnly,
+            decimal? latitude,
+            decimal? longitude,
+            double? radiusKm,
             int page,
             int pageSize,
             CancellationToken cancellationToken = default)
@@ -76,6 +79,20 @@ namespace Kickify.Infrastructure.Repositories
             if (availableOnly.HasValue && availableOnly.Value)
             {
                 query = query.Where(r => r.FilledSlots < r.TotalSlots && r.Status == Domain.Enums.RoomStatus.Open);
+            }
+
+            // Filter by location (bounding box)
+            if (latitude.HasValue && longitude.HasValue && radiusKm.HasValue)
+            {
+                var latOffset = (decimal)(radiusKm.Value / 111.0);
+                var lonOffset = (decimal)(radiusKm.Value / (111.0 * Math.Cos(Convert.ToDouble(latitude.Value) * Math.PI / 180.0)));
+
+                query = query.Where(r =>
+                    r.Field != null && r.Field.Venue != null &&
+                    r.Field.Venue.Latitude >= latitude.Value - latOffset &&
+                    r.Field.Venue.Latitude <= latitude.Value + latOffset &&
+                    r.Field.Venue.Longitude >= longitude.Value - lonOffset &&
+                    r.Field.Venue.Longitude <= longitude.Value + lonOffset);
             }
 
             var total = await query.CountAsync(cancellationToken);

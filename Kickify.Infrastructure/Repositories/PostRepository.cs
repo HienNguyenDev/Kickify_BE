@@ -19,7 +19,7 @@ public class PostRepository : GenericRepository<Post>, IPostRepository
             .Include(p => p.PostMedia.OrderBy(m => m.DisplayOrder))
             .Include(p => p.PostLikes)
                 .ThenInclude(pl => pl.User)
-            .Include(p => p.Comments.Where(c => c.ParentCommentId == null))
+            .Include(p => p.Comments.Where(c => c.IsActive))
                 .ThenInclude(c => c.User)
             .FirstOrDefaultAsync(p => p.PostId == postId, cancellationToken);
     }

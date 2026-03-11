@@ -51,6 +51,9 @@ namespace Kickify.Domain.Errors
         public static Error CannotToggleSuspension(string currentStatus) => Error.Conflict(
             "Venues.CannotToggleSuspension",
             $"Cannot toggle suspension when venue status is '{currentStatus}'. Only Approved or Suspended venues can be toggled");
+        public static Error CannotToggleArchived(string currentStatus) => Error.Problem(
+            "Venues.CannotToggleArchived",
+            $"Cannot toggle archived when venue status is '{currentStatus}'. Only Approved or Archived venues can be toggled");
 
         public static readonly Error InsufficientPhotos = Error.Conflict(
             "Venues.InsufficientPhotos",

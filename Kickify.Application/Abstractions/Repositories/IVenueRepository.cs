@@ -18,7 +18,7 @@ namespace Kickify.Application.Abstractions.Repositories
             VenueStatus? status = null,
             int page = 1,
             int pageSize = 10,
-            bool excludeSuspended = false,
+            bool excludeArchived = false,
             CancellationToken cancellationToken = default);
 
         /// <summary>

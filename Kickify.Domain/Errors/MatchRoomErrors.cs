@@ -189,5 +189,8 @@ namespace Kickify.Domain.Errors
         public static readonly Error VenueSuspended = Error.Conflict(
             "MatchRoom.VenueSuspended",
             "Cannot create a match room because the venue is currently suspended");
+        public static readonly Error VenueArchived = Error.Problem(
+            "MatchRoom.VenueArchived",
+            "Cannot create a match room because the venue is currently archived");
     }
 }

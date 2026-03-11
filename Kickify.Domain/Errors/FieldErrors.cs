@@ -31,5 +31,8 @@ namespace Kickify.Domain.Errors
         public static readonly Error VenueSuspended = Error.Conflict(
             "Fields.VenueSuspended",
             "The venue this field belongs to is currently suspended");
+        public static readonly Error VenueArchived = Error.Problem(
+            "Fields.VenueArchived",
+            "The venue this field belongs to is currently archived");
     }
 }

@@ -2,6 +2,7 @@ using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
+using Kickify.Domain.Entities;
 using Kickify.Domain.Errors;
 
 namespace Kickify.Application.Features.Posts.Queries.GetPostById;
@@ -68,21 +69,52 @@ public class GetPostByIdQueryHandler : IQueryHandler<GetPostByIdQuery, GetPostBy
                     AvatarUrl = pl.User?.AvatarUrl,
                     LikedAt = pl.CreatedAt
                 }).ToList(),
-            Comments = post.Comments
-                .OrderByDescending(c => c.CreatedAt)
-                .Select(c => new PostCommentDto
-                {
-                    CommentId = c.CommentId,
-                    UserId = c.UserId,
-                    UserFullName = c.User?.FullName,
-                    UserAvatarUrl = c.User?.AvatarUrl,
-                    Content = c.Content,
-                    TotalLikes = c.TotalLikes,
-                    TotalReplies = c.TotalReplies,
-                    CreatedAt = c.CreatedAt
-                }).ToList()
+            Comments = BuildCommentTree(post.Comments)
         };
 
         return Result.Success(response);
+    }
+
+    private static List<PostCommentDto> BuildCommentTree(ICollection<Comment> allComments)
+    {
+        var lookup = allComments.ToLookup(c => c.ParentCommentId);
+
+        return lookup[null]
+            .OrderByDescending(c => c.CreatedAt)
+            .Select(c => MapComment(c, lookup))
+            .ToList();
+    }
+
+    private static PostCommentDto MapComment(Comment comment, ILookup<Guid?, Comment> lookup)
+    {
+        var replies = lookup[comment.CommentId]
+            .OrderBy(r => r.CreatedAt)
+            .Select(r => MapComment(r, lookup))
+            .ToList();
+
+        return new PostCommentDto
+        {
+            CommentId = comment.CommentId,
+            UserId = comment.UserId,
+            UserFullName = comment.User?.FullName,
+            UserAvatarUrl = comment.User?.AvatarUrl,
+            Content = comment.Content,
+            TotalLikes = comment.TotalLikes,
+            TotalReplies = CountDescendants(comment.CommentId, lookup),
+            IsEdited = comment.IsEdited,
+            CreatedAt = comment.CreatedAt,
+            Replies = replies
+        };
+    }
+
+    private static int CountDescendants(Guid commentId, ILookup<Guid?, Comment> lookup)
+    {
+        var children = lookup[commentId].ToList();
+        var count = children.Count;
+        foreach (var child in children)
+        {
+            count += CountDescendants(child.CommentId, lookup);
+        }
+        return count;
     }
 }
