@@ -70,7 +70,7 @@ internal sealed class UploadVenueEvidenceCommandHandler : ICommandHandler<Upload
                 FileName = request.Files[i].FileName,
                 ContentType = request.Files[i].ContentType,
                 FileSize = upload.FileSize,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
             };
 
             evidences.Add(evidence);
