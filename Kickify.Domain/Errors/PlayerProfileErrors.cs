@@ -16,15 +16,15 @@ namespace Kickify.Domain.Errors
             "PlayerProfiles.AlreadyExists",
             $"The player profile for user with Id = '{userId}' already exists");
 
-        public static readonly Error InvalidElo = Error.Problem(
+        public static readonly Error InvalidElo = Error.Conflict(
             "PlayerProfiles.InvalidElo",
             "The ELO rating must be between 0 and 5000");
 
-        public static readonly Error InvalidTrustScore = Error.Problem(
+        public static readonly Error InvalidTrustScore = Error.Conflict(
             "PlayerProfiles.InvalidTrustScore",
             "The trust score must be between 0 and 100");
 
-        public static readonly Error InvalidStats = Error.Problem(
+        public static readonly Error InvalidStats = Error.Conflict(
             "PlayerProfiles.InvalidStats",
             "Player statistics cannot be negative");
 

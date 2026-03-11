@@ -4,7 +4,7 @@ namespace Kickify.Domain.Errors;
 
 public static class BanErrors
 {
-    public static readonly Error CannotBanAdmin = Error.Problem(
+    public static readonly Error CannotBanAdmin = Error.Conflict(
         "Ban.CannotBanAdmin",
         "Cannot ban an admin account");
     

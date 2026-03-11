@@ -4,7 +4,7 @@ namespace Kickify.Domain.Errors
 {
     public static class BlockSlotErrors
     {
-        public static readonly Error InvalidTimeRange = Error.Problem(
+        public static readonly Error InvalidTimeRange = Error.Conflict(
             "BlockSlot.InvalidTimeRange",
             "End time must be greater than start time");
 
@@ -20,19 +20,19 @@ namespace Kickify.Domain.Errors
             "BlockSlot.VenueNotFound",
             "The specified venue was not found");
 
-        public static readonly Error Unauthorized = Error.Problem(
+        public static readonly Error Unauthorized = Error.Conflict(
             "BlockSlot.Unauthorized",
             "You are not authorized to block slots on this field. Only the venue owner can perform this action");
 
-        public static readonly Error FieldNotBelongToVenue = Error.Problem(
+        public static readonly Error FieldNotBelongToVenue = Error.Conflict(
             "BlockSlot.FieldNotBelongToVenue",
             "The specified field does not belong to the specified venue");
 
-        public static readonly Error OutsideOperatingHours = Error.Problem(
+        public static readonly Error OutsideOperatingHours = Error.Conflict(
             "BlockSlot.OutsideOperatingHours",
             "The requested time slot is outside venue operating hours");
 
-        public static readonly Error VenueClosedOnDay = Error.Problem(
+        public static readonly Error VenueClosedOnDay = Error.Conflict(
             "BlockSlot.VenueClosedOnDay",
             "The venue is closed on the specified day");
 
