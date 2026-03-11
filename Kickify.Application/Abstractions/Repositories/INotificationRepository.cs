@@ -12,4 +12,8 @@ public interface INotificationRepository : IGenericRepository<Notification>
         int page = 1,
         int pageSize = 20,
         CancellationToken cancellationToken = default);
+
+    Task<Notification?> GetByIdAndUserIdAsync(Guid notificationId, Guid userId, CancellationToken cancellationToken = default);
+
+    Task MarkAllAsReadAsync(Guid userId, CancellationToken cancellationToken = default);
 }

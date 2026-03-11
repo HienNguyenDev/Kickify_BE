@@ -23,6 +23,8 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<VenueOperatingHour> VenueOperatingHours { get; set; }
     public DbSet<Field> Fields { get; set; }
     public DbSet<VenueReview> VenueReviews { get; set; }
+    public DbSet<VenueEvidence> VenueEvidences { get; set; }
+    public DbSet<VenueFeedback> VenueFeedbacks { get; set; }
 
     // Match Schema
     public DbSet<MatchRoom> MatchRooms { get; set; }
@@ -41,9 +43,6 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<Comment> Comments { get; set; }
     public DbSet<CommentLike> CommentLikes { get; set; }
     public DbSet<Friendship> Friendships { get; set; }
-
-    // Venue Schema
-    public DbSet<VenueEvidence> VenueEvidences { get; set; }
 
     // Evaluation Schema
     public DbSet<MatchFeedback> MatchFeedbacks { get; set; }

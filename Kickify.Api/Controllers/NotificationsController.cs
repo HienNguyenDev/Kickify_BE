@@ -1,4 +1,6 @@
 using Kickify.Api.Extensions;
+using Kickify.Application.Features.Notifications.Commands.MarkAllNotificationsRead;
+using Kickify.Application.Features.Notifications.Commands.MarkNotificationRead;
 using Kickify.Application.Features.Notifications.Queries.GetMyNotifications;
 using Kickify.Domain.Enums;
 using MediatR;
@@ -31,6 +33,30 @@ public class NotificationsController : ControllerBase
     {
         var query = new GetMyNotificationsQuery(type, page, pageSize);
         var result = await _sender.Send(query, cancellationToken);
+        return result.MatchOk();
+    }
+
+    /// <summary>
+    /// Mark a single notification as read.
+    /// </summary>
+    [HttpPatch("{notificationId:guid}/read")]
+    public async Task<IResult> MarkNotificationRead(
+        Guid notificationId,
+        CancellationToken cancellationToken)
+    {
+        var command = new MarkNotificationReadCommand(notificationId);
+        var result = await _sender.Send(command, cancellationToken);
+        return result.MatchOk();
+    }
+
+    /// <summary>
+    /// Mark all notifications of current user as read.
+    /// </summary>
+    [HttpPatch("read-all")]
+    public async Task<IResult> MarkAllNotificationsRead(CancellationToken cancellationToken)
+    {
+        var command = new MarkAllNotificationsReadCommand();
+        var result = await _sender.Send(command, cancellationToken);
         return result.MatchOk();
     }
 }
