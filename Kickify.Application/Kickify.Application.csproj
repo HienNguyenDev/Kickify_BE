@@ -10,6 +10,8 @@
     <Folder Include="Features\MatchFeedbacks\Queries\" />
     <Folder Include="Features\NotificationPreferences\Commands\UpdateNotificationPreference\" />
     <Folder Include="Features\Users\Queries\" />
+    <Folder Include="Features\VenueFeedbacks\Commands\SendVenueFeedback\" />
+    <Folder Include="Features\VenueFeedbacks\Queries\GetVenueFeedbacks\" />
   </ItemGroup>
 
   <ItemGroup>

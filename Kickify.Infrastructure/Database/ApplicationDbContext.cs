@@ -24,7 +24,6 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<Field> Fields { get; set; }
     public DbSet<VenueReview> VenueReviews { get; set; }
     public DbSet<VenueEvidence> VenueEvidences { get; set; }
-    public DbSet<VenueFeedback> VenueFeedbacks { get; set; }
 
     // Match Schema
     public DbSet<MatchRoom> MatchRooms { get; set; }

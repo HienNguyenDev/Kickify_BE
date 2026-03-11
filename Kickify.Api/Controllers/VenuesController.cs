@@ -19,9 +19,6 @@ using Kickify.Application.Features.VenueEvidences.Commands.DeleteVenueEvidence;
 using Kickify.Application.Features.VenueEvidences.Commands.UploadVenueEvidence;
 using Kickify.Application.Features.VenueEvidences.Queries.GetVenueEvidences;
 using Kickify.Application.Features.VenueReviews.Commands.CreateVenueReview;
-using Kickify.Application.Features.VenueFeedbacks.Commands.SendVenueFeedback;
-using Kickify.Application.Features.VenueFeedbacks.Queries.GetVenueFeedbacks;
-using Kickify.Api.Requests;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -422,37 +419,5 @@ namespace Kickify.Api.Controllers
             return result.MatchOk();
         }
 
-        /// <summary>
-        /// Send feedback to a venue owner. Cannot be sent by the venue owner themselves.
-        /// </summary>
-        [Authorize]
-        [HttpPost("{venueId:guid}/feedbacks")]
-        public async Task<IResult> SendVenueFeedback(
-            Guid venueId,
-            [FromBody] SendVenueFeedbackRequest request,
-            CancellationToken cancellationToken)
-        {
-            var command = new SendVenueFeedbackCommand(venueId, request.Message, request.Rating);
-            var result = await _sender.Send(command, cancellationToken);
-
-            return result.MatchOk();
+            }
         }
-
-        /// <summary>
-        /// Get all feedbacks for a venue. [VenueOwner only]
-        /// </summary>
-        [Authorize]
-        [HttpGet("{venueId:guid}/feedbacks")]
-        public async Task<IResult> GetVenueFeedbacks(
-            Guid venueId,
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 10,
-            CancellationToken cancellationToken = default)
-        {
-            var query = new GetVenueFeedbacksQuery(venueId, page, pageSize);
-            var result = await _sender.Send(query, cancellationToken);
-
-            return result.MatchOk();
-        }
-    }
-}
