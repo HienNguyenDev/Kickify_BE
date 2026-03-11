@@ -9,7 +9,7 @@ public static class ContentReportErrors
         Error.NotFound("ContentReport.NotFound", $"Content report with ID '{reportId}' was not found.");
 
     public static readonly Error SelfReport =
-        Error.Problem("ContentReport.SelfReport", "You cannot report your own content.");
+        Error.Conflict("ContentReport.SelfReport", "You cannot report your own content.");
 
     public static readonly Error AlreadyReported =
         Error.Conflict("ContentReport.AlreadyReported", "You have already reported this content.");

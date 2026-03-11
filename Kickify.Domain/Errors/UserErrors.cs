@@ -1,4 +1,4 @@
-﻿using Kickify.Domain.Common;
+using Kickify.Domain.Common;
 
 namespace Kickify.Domain.Errors;
 
@@ -10,22 +10,22 @@ public static class UserErrors
     public static readonly Error WrongPassword = Error.Conflict("Users.WrongPassword", "The passsword for this account is wrong");
     public static readonly Error IsNotVerified = Error.Conflict("NotVerified", "Account is not verified");
     public static readonly Error InActive = Error.Conflict("Users.InActive", "The user is inactive");
-    public static readonly Error InvalidEmail = Error.Problem("Users.InvalidEmail", "The email format is invalid");
-    public static readonly Error InvalidPassword = Error.Problem("Users.InvalidPassword", "The password does not meet the requirements");
-    public static readonly Error InvalidPhoneNumber = Error.Problem("Users.InvalidPhoneNumber", "The phone number format is invalid");
-    public static readonly Error InvalidDateOfBirth = Error.Problem("Users.InvalidDateOfBirth", "The date of birth is invalid");
+    public static readonly Error InvalidEmail = Error.Conflict("Users.InvalidEmail", "The email format is invalid");
+    public static readonly Error InvalidPassword = Error.Conflict("Users.InvalidPassword", "The password does not meet the requirements");
+    public static readonly Error InvalidPhoneNumber = Error.Conflict("Users.InvalidPhoneNumber", "The phone number format is invalid");
+    public static readonly Error InvalidDateOfBirth = Error.Conflict("Users.InvalidDateOfBirth", "The date of birth is invalid");
     public static readonly Error UserAlreadyDeleted = Error.Conflict("Users.AlreadyDeleted", "The user has already been deleted");
     public static readonly Error CannotDeleteActiveUser = Error.Conflict("Users.CannotDeleteActive", "Cannot delete an active user. Deactivate the user first.");
-    public static readonly Error UpdateFailed = Error.Problem("Users.UpdateFailed", "Failed to update user information");
-    public static readonly Error CreateFailed = Error.Problem("Users.CreateFailed", "Failed to create user");
-    public static readonly Error DeleteFailed = Error.Problem("Users.DeleteFailed", "Failed to delete user");
-    public static readonly Error InvalidRefreshToken = Error.Problem("User.InvalidRefreshToken", "Invalid refresh token");
-    public static readonly Error RefreshTokenExpired = Error.Problem("User.RefreshTokenExpired", "Refresh token has expired");
-    public static readonly Error TokenReuseDetected = Error.Problem("User.TokenReuseDetected", "Token reuse detected. All sessions have been revoked for security reasons.");
+    public static readonly Error UpdateFailed = Error.Conflict("Users.UpdateFailed", "Failed to update user information");
+    public static readonly Error CreateFailed = Error.Conflict("Users.CreateFailed", "Failed to create user");
+    public static readonly Error DeleteFailed = Error.Conflict("Users.DeleteFailed", "Failed to delete user");
+    public static readonly Error InvalidRefreshToken = Error.Conflict("User.InvalidRefreshToken", "Invalid refresh token");
+    public static readonly Error RefreshTokenExpired = Error.Conflict("User.RefreshTokenExpired", "Refresh token has expired");
+    public static readonly Error TokenReuseDetected = Error.Conflict("User.TokenReuseDetected", "Token reuse detected. All sessions have been revoked for security reasons.");
     public static readonly Error OtpExpired = Error.Conflict("Users.OtpExpired", "The OTP code not found or expired");
     public static readonly Error WrongOtp = Error.Conflict("Users.OtpNotFound", "The OTP code is wrong");
     public static readonly Error UserAlreadyVerified = Error.Conflict("Users.UserAlreadyVerified", "The user has already verified");
-    public static Error AvatarUploadFailed(string error) => Error.Problem("Users.AvatarUploadFailed", $"Failed to upload avatar: {error}");
+    public static Error AvatarUploadFailed(string error) => Error.Conflict("Users.AvatarUploadFailed", $"Failed to upload avatar: {error}");
     public static readonly Error AlreadyBanned = Error.Conflict("Users.AlreadyBanned", "The user is already banned");
     public static readonly Error NotBanned = Error.Conflict("Users.NotBanned", "The user is not banned");
 }
