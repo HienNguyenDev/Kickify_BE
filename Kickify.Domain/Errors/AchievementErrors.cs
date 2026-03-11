@@ -12,11 +12,11 @@ public static class AchievementErrors
         "Achievement.NameAlreadyExists",
         "An achievement with this name already exists");
 
-    public static readonly Error IconUploadFailed = Error.Problem(
+    public static readonly Error IconUploadFailed = Error.Conflict(
         "Achievement.IconUploadFailed",
         "Failed to upload badge icon");
 
-    public static readonly Error InvalidCriteriaType = Error.Problem(
+    public static readonly Error InvalidCriteriaType = Error.Conflict(
         "Achievement.InvalidCriteriaType",
         "Invalid criteria type");
 }

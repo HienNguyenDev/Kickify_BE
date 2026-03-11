@@ -12,11 +12,11 @@ namespace Kickify.Domain.Errors
             "Fields.VenueNotFound",
             "The venue associated with this field was not found");
 
-        public static readonly Error InvalidHourlyRate = Error.Problem(
+        public static readonly Error InvalidHourlyRate = Error.Conflict(
             "Fields.InvalidHourlyRate",
             "Hourly rate must be greater than zero");
 
-        public static readonly Error FieldInactive = Error.Problem(
+        public static readonly Error FieldInactive = Error.Conflict(
             "Fields.FieldInactive",
             "This field is currently inactive and cannot be booked");
 
@@ -24,10 +24,13 @@ namespace Kickify.Domain.Errors
             "Fields.NotAvailable",
             "The field is not available for the requested time slot");
 
-        public static readonly Error Unauthorized = Error.Problem(
+        public static readonly Error Unauthorized = Error.Conflict(
             "Fields.Unauthorized",
             "You are not authorized to perform this action on this field");
 
+        public static readonly Error VenueSuspended = Error.Conflict(
+            "Fields.VenueSuspended",
+            "The venue this field belongs to is currently suspended");
         public static readonly Error VenueArchived = Error.Problem(
             "Fields.VenueArchived",
             "The venue this field belongs to is currently archived");
