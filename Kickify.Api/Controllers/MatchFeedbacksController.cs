@@ -1,6 +1,6 @@
 using Kickify.Api.Extensions;
+using Kickify.Api.Requests;
 using Kickify.Application.Features.MatchFeedbacks.Commands.CreateMatchFeedback;
-using Kickify.Domain.Common;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,12 +20,27 @@ public class MatchFeedbacksController : ControllerBase
     }
 
     /// <summary>
-    /// T?o feedback cho m?t ng??i ch?i khác sau khi tr?n ??u hoàn thành
+    /// G?i t?t c? feedback c?a các reviewer dành cho 1 reviewee trong 1 request.
+    /// Ví d? tr?n 5v5: g?i 4 feedback t? 4 ng??i còn l?i cho 1 ng??i.
     /// </summary>
     [HttpPost]
-    public async Task<IResult> CreateMatchFeedback([FromBody] CreateMatchFeedbackCommand command, CancellationToken cancellationToken)
+    public async Task<IResult> CreateMatchFeedback([FromBody] CreateMatchFeedbackRequest request, CancellationToken cancellationToken)
     {
-        Result<CreateMatchFeedbackCommandResponse> result = await _mediator.Send(command, cancellationToken);
+        var command = new CreateMatchFeedbackCommand
+        {
+            MatchId = request.MatchId,
+            RevieweeId = request.RevieweeId,
+            Feedbacks = request.Feedbacks.Select(f => new FeedbackItemDto
+            {
+                FeedbackId = f.FeedbackId,
+                ReviewerId = f.ReviewerId,
+                Comment = f.Comment,
+                Rating = f.Rating
+            }).ToList()
+        };
+
+        var result = await _mediator.Send(command, cancellationToken);
         return result.MatchOk();
     }
 }
+

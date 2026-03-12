@@ -2,10 +2,15 @@ namespace Kickify.Application.Features.MatchFeedbacks.Commands.CreateMatchFeedba
 
 public class CreateMatchFeedbackCommandResponse
 {
-    public Guid FeedbackId { get; set; }
     public Guid MatchId { get; set; }
-    public Guid ReviewerId { get; set; }
     public Guid RevieweeId { get; set; }
+    public List<FeedbackResultItemDto> Feedbacks { get; set; } = new();
+}
+
+public class FeedbackResultItemDto
+{
+    public Guid FeedbackId { get; set; }
+    public Guid ReviewerId { get; set; }
     public int Rating { get; set; }
     public string? Comment { get; set; }
     public DateTime CreatedAt { get; set; }
