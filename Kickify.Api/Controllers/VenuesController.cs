@@ -418,5 +418,6 @@ namespace Kickify.Api.Controllers
 
             return result.MatchOk();
         }
-    }
-}
+
+            }
+        }

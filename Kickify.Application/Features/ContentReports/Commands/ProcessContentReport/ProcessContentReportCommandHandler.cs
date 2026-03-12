@@ -36,7 +36,7 @@ internal sealed class ProcessContentReportCommandHandler : ICommandHandler<Proce
         report.Status = request.Action;
         report.AdminNotes = request.AdminNotes;
         report.ResolvedBy = _userContext.UserId;
-        report.ResolvedAt = DateTime.UtcNow;
+        report.ResolvedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
 
         _contentReportRepository.Update(report);
         await _unitOfWork.SaveChangesAsync(cancellationToken);

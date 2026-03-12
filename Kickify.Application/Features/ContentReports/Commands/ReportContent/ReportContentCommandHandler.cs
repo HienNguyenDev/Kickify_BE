@@ -71,7 +71,7 @@ internal sealed class ReportContentCommandHandler : ICommandHandler<ReportConten
             Reason = request.Reason,
             Description = request.Description,
             Status = ReportStatus.Pending,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
         };
 
         await _contentReportRepository.AddAsync(report);
