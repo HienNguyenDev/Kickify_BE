@@ -4,6 +4,7 @@ using Kickify.Domain.Enums;
 using Kickify.Infrastructure.Database;
 using Kickify.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query;
 
 namespace Kickify.Infrastructure.Repositories;
 
@@ -34,5 +35,23 @@ public class NotificationRepository : GenericRepository<Notification>, INotifica
             .ToListAsync(cancellationToken);
 
         return (notifications, total);
+    }
+
+    public async Task<Notification?> GetByIdAndUserIdAsync(Guid notificationId, Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await _dbSet
+            .FirstOrDefaultAsync(n => n.NotificationId == notificationId && n.UserId == userId, cancellationToken);
+    }
+
+    public async Task MarkAllAsReadAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var readAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+
+        await _dbSet
+            .Where(n => n.UserId == userId && !n.IsRead)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(n => n.IsRead, true)
+                .SetProperty(n => n.ReadAt, readAt),
+                cancellationToken);
     }
 }

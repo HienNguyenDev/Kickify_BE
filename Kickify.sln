@@ -1,7 +1,6 @@
-﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.14.36401.2
+# Visual Studio Version 18
+VisualStudioVersion = 18.4.11519.219
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kickify.Domain", "Kickify.Domain\Kickify.Domain.csproj", "{97543254-3F97-4FCC-B7DE-A4130B99CDCA}"
 EndProject
@@ -17,6 +16,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		Jenkinsfile = Jenkinsfile
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kickify.Application.UnitTests", "Kickify.Application.UnitTests\Kickify.Application.UnitTests.csproj", "{EB821AD2-4EF0-42A4-B30F-76B5B39CBB0F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -43,6 +44,10 @@ Global
 		{81DDED9D-158B-E303-5F62-77A2896D2A5A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{81DDED9D-158B-E303-5F62-77A2896D2A5A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{81DDED9D-158B-E303-5F62-77A2896D2A5A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EB821AD2-4EF0-42A4-B30F-76B5B39CBB0F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EB821AD2-4EF0-42A4-B30F-76B5B39CBB0F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EB821AD2-4EF0-42A4-B30F-76B5B39CBB0F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EB821AD2-4EF0-42A4-B30F-76B5B39CBB0F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
