@@ -30,6 +30,11 @@ internal sealed class CreateAnnouncementCommandHandler : ICommandHandler<CreateA
 
     public async Task<Result<CreateAnnouncementResponse>> Handle(CreateAnnouncementCommand request, CancellationToken cancellationToken)
     {
+        var showFrom = DateTime.SpecifyKind(request.ShowFrom, DateTimeKind.Unspecified);
+        DateTime? showTo = request.ShowTo.HasValue
+            ? DateTime.SpecifyKind(request.ShowTo.Value, DateTimeKind.Unspecified)
+            : null;
+
         var announcement = new Announcement
         {
             AnnouncementId = Guid.NewGuid(),
@@ -37,8 +42,8 @@ internal sealed class CreateAnnouncementCommandHandler : ICommandHandler<CreateA
             Content = request.Content,
             AnnouncementType = request.AnnouncementType,
             Priority = request.Priority,
-            ShowFrom = request.ShowFrom,
-            ShowTo = request.ShowTo,
+            ShowFrom = showFrom,
+            ShowTo = showTo,
             IsActive = true,
             CreatedBy = _userContext.UserId
         };

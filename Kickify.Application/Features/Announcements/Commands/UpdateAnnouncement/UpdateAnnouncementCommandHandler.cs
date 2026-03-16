@@ -34,12 +34,17 @@ internal sealed class UpdateAnnouncementCommandHandler : ICommandHandler<UpdateA
         if (announcement is null)
             return Result.Failure<UpdateAnnouncementResponse>(AnnouncementErrors.NotFound(request.AnnouncementId));
 
+        var showFrom = DateTime.SpecifyKind(request.ShowFrom, DateTimeKind.Unspecified);
+        DateTime? showTo = request.ShowTo.HasValue
+            ? DateTime.SpecifyKind(request.ShowTo.Value, DateTimeKind.Unspecified)
+            : null;
+
         announcement.Title = request.Title;
         announcement.Content = request.Content;
         announcement.AnnouncementType = request.AnnouncementType;
         announcement.Priority = request.Priority;
-        announcement.ShowFrom = request.ShowFrom;
-        announcement.ShowTo = request.ShowTo;
+        announcement.ShowFrom = showFrom;
+        announcement.ShowTo = showTo;
         announcement.IsActive = request.IsActive;
 
         _announcementRepository.Update(announcement);
