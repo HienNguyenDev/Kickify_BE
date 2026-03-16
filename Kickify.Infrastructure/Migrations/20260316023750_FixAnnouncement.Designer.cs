@@ -3,6 +3,7 @@ using System;
 using Kickify.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Kickify.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260316023750_FixAnnouncement")]
+    partial class FixAnnouncement
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -554,11 +557,6 @@ namespace Kickify.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<decimal>("HolidaySurcharge")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("decimal(10,2)")
-                        .HasDefaultValue(0m);
-
                     b.Property<decimal>("HourlyRate")
                         .HasColumnType("decimal(10,2)");
 
@@ -567,16 +565,10 @@ namespace Kickify.Infrastructure.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(true);
 
-                    b.Property<TimeSpan?>("PeakEndTime")
-                        .HasColumnType("time");
-
                     b.Property<decimal>("PeakHourSurcharge")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("decimal(10,2)")
                         .HasDefaultValue(0m);
-
-                    b.Property<TimeSpan?>("PeakStartTime")
-                        .HasColumnType("time");
 
                     b.Property<string>("SurfaceType")
                         .HasMaxLength(50)
@@ -588,11 +580,6 @@ namespace Kickify.Infrastructure.Migrations
 
                     b.Property<Guid>("VenueId")
                         .HasColumnType("uuid");
-
-                    b.Property<decimal>("WeekendSurcharge")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("decimal(10,2)")
-                        .HasDefaultValue(0m);
 
                     b.HasKey("FieldId");
 
@@ -671,37 +658,6 @@ namespace Kickify.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Friendships", "social");
-                });
-
-            modelBuilder.Entity("Kickify.Domain.Entities.Holiday", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("Date")
-                        .HasColumnType("date");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Date")
-                        .IsUnique();
-
-                    b.ToTable("Holidays", "system");
                 });
 
             modelBuilder.Entity("Kickify.Domain.Entities.MatchFeedback", b =>
@@ -2156,21 +2112,6 @@ namespace Kickify.Infrastructure.Migrations
                     b.ToTable("WalletWithdrawals", "payment");
                 });
 
-            modelBuilder.Entity("VenueIgnoredHolidays", b =>
-                {
-                    b.Property<Guid>("VenueId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("HolidayId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("VenueId", "HolidayId");
-
-                    b.HasIndex("HolidayId");
-
-                    b.ToTable("VenueIgnoredHolidays", "venue");
-                });
-
             modelBuilder.Entity("Kickify.Domain.Entities.Announcement", b =>
                 {
                     b.HasOne("Kickify.Domain.Entities.User", "Creator")
@@ -2798,23 +2739,6 @@ namespace Kickify.Infrastructure.Migrations
                     b.Navigation("ProcessedByAdmin");
 
                     b.Navigation("Wallet");
-                });
-
-            modelBuilder.Entity("VenueIgnoredHolidays", b =>
-                {
-                    b.HasOne("Kickify.Domain.Entities.Holiday", null)
-                        .WithMany()
-                        .HasForeignKey("HolidayId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("FK_VenueIgnoredHolidays_Holidays_HolidayId");
-
-                    b.HasOne("Kickify.Domain.Entities.Venue", null)
-                        .WithMany()
-                        .HasForeignKey("VenueId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("FK_VenueIgnoredHolidays_Venues_VenueId");
                 });
 
             modelBuilder.Entity("Kickify.Domain.Entities.Achievement", b =>

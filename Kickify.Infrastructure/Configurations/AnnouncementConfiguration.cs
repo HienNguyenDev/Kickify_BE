@@ -44,6 +44,11 @@ public class AnnouncementConfiguration : IEntityTypeConfiguration<Announcement>
         builder.Property(a => a.CreatedBy)
             .IsRequired();
 
+        builder.HasOne(a => a.Creator)
+            .WithMany()
+            .HasForeignKey(a => a.CreatedBy)
+            .OnDelete(DeleteBehavior.Restrict);
+
         // Indexes
         builder.HasIndex(a => a.IsActive);
         builder.HasIndex(a => a.ShowFrom);
