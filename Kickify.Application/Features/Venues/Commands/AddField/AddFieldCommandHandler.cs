@@ -49,6 +49,10 @@ namespace Kickify.Application.Features.Venues.Commands.AddField
                 SurfaceType = request.SurfaceType,
                 HourlyRate = request.HourlyRate,
                 PeakHourSurcharge = request.PeakHourSurcharge,
+                PeakStartTime = request.PeakStartTime,
+                PeakEndTime = request.PeakEndTime,
+                WeekendSurcharge = request.WeekendSurcharge,
+                HolidaySurcharge = request.HolidaySurcharge,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -63,6 +67,10 @@ namespace Kickify.Application.Features.Venues.Commands.AddField
                 field.SurfaceType,
                 field.HourlyRate,
                 field.PeakHourSurcharge,
+                field.PeakStartTime,
+                field.PeakEndTime,
+                field.WeekendSurcharge,
+                field.HolidaySurcharge,
                 field.CreatedAt
             ));
         }

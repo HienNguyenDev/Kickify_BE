@@ -90,6 +90,10 @@ namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
                     f.SurfaceType,
                     f.HourlyRate,
                     f.PeakHourSurcharge,
+                    f.PeakStartTime,
+                    f.PeakEndTime,
+                    f.WeekendSurcharge,
+                    f.HolidaySurcharge,
                     f.IsActive,
                     f.CreatedAt,
                     f.UpdatedAt

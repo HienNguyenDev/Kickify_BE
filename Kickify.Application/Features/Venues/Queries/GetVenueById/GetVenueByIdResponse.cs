@@ -16,6 +16,7 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenueById
         int TotalReviews,
         int TotalBookings,
         VenueOwnerDto Owner,
+        List<IgnoredHolidayDto> IgnoredHolidays,
         List<VenueFieldDto> Fields,
         List<OperatingHoursDto> OperatingHours,
         List<VenuePhotoDto> Photos,
@@ -47,9 +48,19 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenueById
         string? SurfaceType,
         decimal HourlyRate,
         decimal? PeakHourSurcharge,
+        TimeSpan? PeakStartTime,
+        TimeSpan? PeakEndTime,
+        decimal WeekendSurcharge,
+        decimal HolidaySurcharge,
         bool IsActive,
         DateTime CreatedAt,
         DateTime UpdatedAt
+    );
+
+    public record IgnoredHolidayDto(
+        Guid Id,
+        string Name,
+        DateTime Date
     );
 
     public record OperatingHoursDto(

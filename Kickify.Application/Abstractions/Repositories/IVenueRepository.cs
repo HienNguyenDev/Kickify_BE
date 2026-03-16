@@ -28,6 +28,11 @@ namespace Kickify.Application.Abstractions.Repositories
             Guid venueId,
             CancellationToken cancellationToken = default);
 
+        Task SyncIgnoredHolidaysAsync(
+            Venue venue,
+            IReadOnlyCollection<Holiday> holidays,
+            CancellationToken cancellationToken = default);
+
         /// <summary>
         /// Get paged venues by owner
         /// </summary>

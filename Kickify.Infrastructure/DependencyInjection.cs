@@ -143,6 +143,7 @@ namespace Kickify.Infrastructure
             services.AddScoped<IWalletTransactionRepository, WalletTransactionRepository>();
             services.AddScoped<IWalletWithdrawalRepository, WalletWithdrawalRepository>();
             services.AddScoped<IVenueRepository, VenueRepository>();
+            services.AddScoped<IHolidayRepository, HolidayRepository>();
             services.AddScoped<IVenuePhotoRepository, VenuePhotoRepository>();
             services.AddScoped<IVenueOperatingHourRepository, VenueOperatingHourRepository>();
             services.AddScoped<IFieldRepository, FieldRepository>();

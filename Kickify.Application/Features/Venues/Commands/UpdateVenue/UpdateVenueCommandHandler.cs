@@ -13,6 +13,7 @@ namespace Kickify.Application.Features.Venues.Commands.UpdateVenue
     public class UpdateVenueCommandHandler : ICommandHandler<UpdateVenueCommand, UpdateVenueResponse>
     {
         private readonly IVenueRepository _venueRepository;
+        private readonly IHolidayRepository _holidayRepository;
         private readonly IVenueOperatingHourRepository _operatingHourRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
@@ -20,12 +21,14 @@ namespace Kickify.Application.Features.Venues.Commands.UpdateVenue
 
         public UpdateVenueCommandHandler(
             IVenueRepository venueRepository,
+            IHolidayRepository holidayRepository,
             IVenueOperatingHourRepository operatingHourRepository,
             IUnitOfWork unitOfWork,
             IMapper mapper,
             IUserContext userContext)
         {
             _venueRepository = venueRepository;
+            _holidayRepository = holidayRepository;
             _operatingHourRepository = operatingHourRepository;
             _unitOfWork = unitOfWork;
             _mapper = mapper;
@@ -53,6 +56,20 @@ namespace Kickify.Application.Features.Venues.Commands.UpdateVenue
             // Map properties from command to entity
             // Rule: null = keep old value, non-null (including empty string) = update
             _mapper.Map(request, venue);
+
+            if (request.IgnoredHolidayIds != null)
+            {
+                var ignoredHolidayIds = request.IgnoredHolidayIds.Distinct().ToList();
+                var holidays = await _holidayRepository.GetByIdsAsync(ignoredHolidayIds, cancellationToken);
+
+                if (holidays.Count != ignoredHolidayIds.Count)
+                {
+                    var missingHolidayIds = ignoredHolidayIds.Except(holidays.Select(h => h.Id)).ToList();
+                    return Result.Failure<UpdateVenueResponse>(HolidayErrors.InvalidIds(missingHolidayIds));
+                }
+
+                await _venueRepository.SyncIgnoredHolidaysAsync(venue, holidays, cancellationToken);
+            }
 
             venue.UpdatedAt = DateTime.UtcNow;
 

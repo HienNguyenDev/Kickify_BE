@@ -10,6 +10,10 @@ namespace Kickify.Application.Features.Fields.Queries.GetFieldById
         string? SurfaceType,
         decimal HourlyRate,
         decimal PeakHourSurcharge,
+        TimeSpan? PeakStartTime,
+        TimeSpan? PeakEndTime,
+        decimal WeekendSurcharge,
+        decimal HolidaySurcharge,
         bool IsActive,
         List<OperatingHourDto> OperatingHours,
         DateTime CreatedAt

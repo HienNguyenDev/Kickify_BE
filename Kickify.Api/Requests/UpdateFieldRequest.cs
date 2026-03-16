@@ -6,5 +6,9 @@ public sealed record UpdateFieldRequest(
     string? SurfaceType,
     decimal? HourlyRate,
     decimal? PeakHourSurcharge,
+    TimeSpan? PeakStartTime,
+    TimeSpan? PeakEndTime,
+    decimal? WeekendSurcharge,
+    decimal? HolidaySurcharge,
     bool? IsActive
 );

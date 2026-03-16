@@ -51,6 +51,13 @@ namespace Kickify.Application.Features.Venues.Commands.UpdateVenue
                     .EmailAddress()
                     .WithMessage("ContactEmail must be a valid email address");
             });
+
+            When(x => x.IgnoredHolidayIds != null, () =>
+            {
+                RuleFor(x => x.IgnoredHolidayIds!)
+                    .Must(ids => ids.Distinct().Count() == ids.Count)
+                    .WithMessage("IgnoredHolidayIds must not contain duplicate values");
+            });
         }
     }
 }
