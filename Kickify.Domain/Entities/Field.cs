@@ -12,6 +12,10 @@ public class Field : BaseEntity
     public string? SurfaceType { get; set; } // Grass, Artificial, etc.
     public decimal HourlyRate { get; set; }
     public decimal PeakHourSurcharge { get; set; } = 0;
+    public TimeSpan? PeakStartTime { get; set; }
+    public TimeSpan? PeakEndTime { get; set; }
+    public decimal WeekendSurcharge { get; set; } = 0;
+    public decimal HolidaySurcharge { get; set; } = 0;
     public bool IsActive { get; set; } = true;
 
     // Navigation properties

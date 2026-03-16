@@ -43,6 +43,10 @@ namespace Kickify.Application.Features.Fields.Queries.GetAllFields
                 f.SurfaceType,
                 f.HourlyRate,
                 f.PeakHourSurcharge,
+                f.PeakStartTime,
+                f.PeakEndTime,
+                f.WeekendSurcharge,
+                f.HolidaySurcharge,
                 f.IsActive,
                 f.CreatedAt
             )).ToList();

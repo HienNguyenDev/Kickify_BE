@@ -72,6 +72,10 @@ namespace Kickify.Application.Features.Fields.Commands.UpdateField
                 field.SurfaceType,
                 field.HourlyRate,
                 field.PeakHourSurcharge,
+                field.PeakStartTime,
+                field.PeakEndTime,
+                field.WeekendSurcharge,
+                field.HolidaySurcharge,
                 field.IsActive,
                 field.UpdatedAt
             ));

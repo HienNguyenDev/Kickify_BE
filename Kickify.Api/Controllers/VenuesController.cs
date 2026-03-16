@@ -43,6 +43,24 @@ namespace Kickify.Api.Controllers
         [HttpPost]
         public async Task<IResult> CreateVenue([FromBody] CreateVenueRequest request, CancellationToken cancellationToken)
         {
+            var fieldDtos = request.Fields.Select(f => new CreateVenueFieldDto(
+                f.Name,
+                f.FieldType,
+                f.SurfaceType,
+                f.HourlyRate,
+                f.PeakHourSurcharge,
+                f.PeakStartTime,
+                f.PeakEndTime,
+                f.WeekendSurcharge,
+                f.HolidaySurcharge
+            )).ToList();
+
+            var operatingHourDtos = request.OperatingHours.Select(oh => new CreateVenueOperatingHoursDto(
+                oh.DayOfWeek,
+                oh.OpenTime,
+                oh.CloseTime
+            )).ToList();
+
             var command = new CreateVenueCommand(
                 request.Name,
                 request.Address,
@@ -52,18 +70,9 @@ namespace Kickify.Api.Controllers
                 request.ContactEmail,
                 request.Description,
                 request.Amenities,
-                request.Fields.Select(f => new CreateVenueFieldDto(
-                    f.Name,
-                    f.FieldType,
-                    f.SurfaceType,
-                    f.HourlyRate,
-                    f.PeakHourSurcharge
-                )).ToList(),
-                request.OperatingHours.Select(oh => new CreateVenueOperatingHoursDto(
-                    oh.DayOfWeek,
-                    oh.OpenTime,
-                    oh.CloseTime
-                )).ToList()
+                request.IgnoredHolidayIds,
+                fieldDtos,
+                operatingHourDtos
             );
 
             var result = await _sender.Send(command, cancellationToken);
@@ -134,7 +143,11 @@ namespace Kickify.Api.Controllers
                 request.FieldType,
                 request.SurfaceType,
                 request.HourlyRate,
-                request.PeakHourSurcharge
+                request.PeakHourSurcharge,
+                request.PeakStartTime,
+                request.PeakEndTime,
+                request.WeekendSurcharge,
+                request.HolidaySurcharge
             );
 
             var result = await _sender.Send(command, cancellationToken);
@@ -225,6 +238,12 @@ namespace Kickify.Api.Controllers
             [FromBody] UpdateVenueRequest request,
             CancellationToken cancellationToken)
         {
+            var operatingHourDtos = request.OperatingHours?.Select(oh => new UpdateVenueOperatingHourItemDto(
+                oh.DayOfWeek,
+                oh.OpenTime,
+                oh.CloseTime
+            )).ToList();
+
             var command = new UpdateVenueCommand(
                 venueId,
                 request.Name,
@@ -235,11 +254,8 @@ namespace Kickify.Api.Controllers
                 request.ContactEmail,
                 request.Description,
                 request.Amenities,
-                request.OperatingHours?.Select(oh => new UpdateVenueOperatingHourItemDto(
-                    oh.DayOfWeek,
-                    oh.OpenTime,
-                    oh.CloseTime
-                )).ToList()
+                request.IgnoredHolidayIds,
+                operatingHourDtos
             );
 
             var result = await _sender.Send(command, cancellationToken);
@@ -421,3 +437,5 @@ namespace Kickify.Api.Controllers
 
             }
         }
+
+

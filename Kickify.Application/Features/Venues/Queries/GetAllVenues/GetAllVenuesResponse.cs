@@ -51,6 +51,10 @@ namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
         string? SurfaceType,
         decimal HourlyRate,
         decimal? PeakHourSurcharge,
+        TimeSpan? PeakStartTime,
+        TimeSpan? PeakEndTime,
+        decimal WeekendSurcharge,
+        decimal HolidaySurcharge,
         bool IsActive,
         DateTime CreatedAt,
         DateTime UpdatedAt
