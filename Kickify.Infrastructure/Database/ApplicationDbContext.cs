@@ -19,6 +19,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
 
     // Venue Schema
     public DbSet<Venue> Venues { get; set; }
+    public DbSet<Holiday> Holidays { get; set; }
     public DbSet<VenuePhoto> VenuePhotos { get; set; }
     public DbSet<VenueOperatingHour> VenueOperatingHours { get; set; }
     public DbSet<Field> Fields { get; set; }

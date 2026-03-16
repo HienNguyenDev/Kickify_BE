@@ -36,6 +36,7 @@ namespace Kickify.Application.Common.Mappings
                 .ForMember(dest => dest.VenueOperatingHours, opt => opt.Ignore())
                 .ForMember(dest => dest.Fields, opt => opt.Ignore())
                 .ForMember(dest => dest.VenueReviews, opt => opt.Ignore())
+                .ForMember(dest => dest.IgnoredHolidays, opt => opt.Ignore())
                 .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
                 .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore());
 
@@ -46,6 +47,10 @@ namespace Kickify.Application.Common.Mappings
                 .ForMember(dest => dest.SurfaceType, opt => opt.Condition((src, dest, srcMember) => src.SurfaceType != null))
                 .ForMember(dest => dest.HourlyRate, opt => opt.Condition((src, dest, srcMember) => src.HourlyRate.HasValue))
                 .ForMember(dest => dest.PeakHourSurcharge, opt => opt.Condition((src, dest, srcMember) => src.PeakHourSurcharge.HasValue))
+                .ForMember(dest => dest.PeakStartTime, opt => opt.Condition((src, dest, srcMember) => src.PeakStartTime.HasValue))
+                .ForMember(dest => dest.PeakEndTime, opt => opt.Condition((src, dest, srcMember) => src.PeakEndTime.HasValue))
+                .ForMember(dest => dest.WeekendSurcharge, opt => opt.Condition((src, dest, srcMember) => src.WeekendSurcharge.HasValue))
+                .ForMember(dest => dest.HolidaySurcharge, opt => opt.Condition((src, dest, srcMember) => src.HolidaySurcharge.HasValue))
                 .ForMember(dest => dest.IsActive, opt => opt.Condition((src, dest, srcMember) => src.IsActive.HasValue))
                 // Special handling for FieldType enum - handled manually in handler
                 .ForMember(dest => dest.FieldType, opt => opt.Ignore())

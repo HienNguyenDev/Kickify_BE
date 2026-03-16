@@ -18,6 +18,7 @@ namespace Kickify.Infrastructure.Repositories
             return await _dbSet
                 .AsNoTracking()
                 .Include(v => v.Owner)
+                .Include(v => v.IgnoredHolidays)
                 .Include(v => v.Fields)
                 .Include(v => v.VenueOperatingHours)
                 .Include(v => v.VenuePhotos.OrderByDescending(p => p.DisplayOrder).Take(5))
@@ -133,7 +134,23 @@ namespace Kickify.Infrastructure.Repositories
             CancellationToken cancellationToken = default)
         {
             return await _dbSet
+                .Include(v => v.IgnoredHolidays)
                 .FirstOrDefaultAsync(v => v.VenueId == venueId, cancellationToken);
+        }
+
+        public Task SyncIgnoredHolidaysAsync(
+            Venue venue,
+            IReadOnlyCollection<Holiday> holidays,
+            CancellationToken cancellationToken = default)
+        {
+            venue.IgnoredHolidays.Clear();
+
+            foreach (var holiday in holidays)
+            {
+                venue.IgnoredHolidays.Add(holiday);
+            }
+
+            return Task.CompletedTask;
         }
 
         public async Task<(IEnumerable<Venue> Venues, int Total)> GetVenuesByOwnerPagedAsync(

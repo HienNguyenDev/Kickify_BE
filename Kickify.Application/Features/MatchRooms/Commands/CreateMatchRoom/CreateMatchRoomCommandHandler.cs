@@ -14,6 +14,7 @@ public class CreateMatchRoomCommandHandler : ICommandHandler<CreateMatchRoomComm
 {
     private readonly IMatchRoomRepository _matchRoomRepository;
     private readonly IFieldRepository _fieldRepository;
+    private readonly IHolidayRepository _holidayRepository;
     private readonly IUserRepository _userRepository;
     private readonly IBookingRepository _bookingRepository;
     private readonly IRoomParticipantRepository _roomParticipantRepository;
@@ -23,6 +24,7 @@ public class CreateMatchRoomCommandHandler : ICommandHandler<CreateMatchRoomComm
     public CreateMatchRoomCommandHandler(
         IMatchRoomRepository matchRoomRepository,
         IFieldRepository fieldRepository,
+        IHolidayRepository holidayRepository,
         IUserRepository userRepository,
         IBookingRepository bookingRepository,
         IRoomParticipantRepository roomParticipantRepository,
@@ -31,6 +33,7 @@ public class CreateMatchRoomCommandHandler : ICommandHandler<CreateMatchRoomComm
     {
         _matchRoomRepository = matchRoomRepository;
         _fieldRepository = fieldRepository;
+        _holidayRepository = holidayRepository;
         _userRepository = userRepository;
         _bookingRepository = bookingRepository;
         _roomParticipantRepository = roomParticipantRepository;
@@ -113,7 +116,35 @@ public class CreateMatchRoomCommandHandler : ICommandHandler<CreateMatchRoomComm
         int totalSlots = CalculateTotalSlots(matchFormat);
 
         var durationHours = (decimal)request.DurationMinutes / 60;
-        var totalAmount = field.HourlyRate * durationHours;
+        var holiday = await _holidayRepository.GetByDateAsync(request.MatchDate, cancellationToken);
+
+        var isHoliday = false;
+        var daySurcharge = 0m;
+
+        if (holiday != null)
+        {
+            var isIgnoredHoliday = field.Venue.IgnoredHolidays.Any(h => h.Id == holiday.Id);
+            if (!isIgnoredHoliday)
+            {
+                isHoliday = true;
+                daySurcharge += field.HolidaySurcharge;
+            }
+        }
+
+        if (!isHoliday && (request.MatchDate.DayOfWeek == DayOfWeek.Saturday || request.MatchDate.DayOfWeek == DayOfWeek.Sunday))
+        {
+            daySurcharge += field.WeekendSurcharge;
+        }
+
+        var peakSurcharge = 0m;
+        if (field.PeakStartTime.HasValue && field.PeakEndTime.HasValue &&
+            request.StartTime >= field.PeakStartTime.Value &&
+            request.StartTime <= field.PeakEndTime.Value)
+        {
+            peakSurcharge += field.PeakHourSurcharge;
+        }
+
+        var totalAmount = (field.HourlyRate + daySurcharge + peakSurcharge) * durationHours;
         var depositPerPerson = Math.Round(totalAmount / totalSlots, 0);
 
         var room = new MatchRoom

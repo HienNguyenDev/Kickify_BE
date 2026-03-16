@@ -126,6 +126,10 @@ namespace Kickify.Api.Controllers
                 request.SurfaceType,
                 request.HourlyRate,
                 request.PeakHourSurcharge,
+                request.PeakStartTime,
+                request.PeakEndTime,
+                request.WeekendSurcharge,
+                request.HolidaySurcharge,
                 request.IsActive
             );
 

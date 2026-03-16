@@ -8,6 +8,10 @@ namespace Kickify.Application.Features.Venues.Commands.AddField
         string? SurfaceType,
         decimal HourlyRate,
         decimal PeakHourSurcharge,
+        TimeSpan? PeakStartTime,
+        TimeSpan? PeakEndTime,
+        decimal WeekendSurcharge,
+        decimal HolidaySurcharge,
         DateTime CreatedAt
     );
 }

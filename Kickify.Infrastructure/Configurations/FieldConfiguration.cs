@@ -39,6 +39,20 @@ public class FieldConfiguration : IEntityTypeConfiguration<Field>
             .HasColumnType("decimal(10,2)")
             .HasDefaultValue(0);
 
+        builder.Property(f => f.PeakStartTime)
+            .HasColumnType("time");
+
+        builder.Property(f => f.PeakEndTime)
+            .HasColumnType("time");
+
+        builder.Property(f => f.WeekendSurcharge)
+            .HasColumnType("decimal(10,2)")
+            .HasDefaultValue(0);
+
+        builder.Property(f => f.HolidaySurcharge)
+            .HasColumnType("decimal(10,2)")
+            .HasDefaultValue(0);
+
         builder.Property(f => f.IsActive)
             .HasDefaultValue(true);
 
