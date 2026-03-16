@@ -43,4 +43,28 @@ public class HolidayRepository : GenericRepository<Holiday>, IHolidayRepository
             .AsNoTracking()
             .FirstOrDefaultAsync(h => h.Date == matchDate, cancellationToken);
     }
+
+    public async Task<bool> ExistsByDateAsync(DateTime date, Guid? excludeHolidayId = null, CancellationToken cancellationToken = default)
+    {
+        var matchDate = date.Date;
+
+        var query = _dbSet.AsNoTracking().Where(h => h.Date == matchDate);
+
+        if (excludeHolidayId.HasValue)
+        {
+            query = query.Where(h => h.Id != excludeHolidayId.Value);
+        }
+
+        return await query.AnyAsync(cancellationToken);
+    }
+
+    public async Task<bool> HardDeleteByIdAsync(Guid holidayId, CancellationToken cancellationToken = default)
+    {
+        var affectedRows = await _dbSet
+            .IgnoreQueryFilters()
+            .Where(h => h.Id == holidayId)
+            .ExecuteDeleteAsync(cancellationToken);
+
+        return affectedRows > 0;
+    }
 }
