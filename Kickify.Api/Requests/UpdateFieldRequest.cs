@@ -10,5 +10,9 @@ public sealed record UpdateFieldRequest(
     TimeSpan? PeakEndTime,
     decimal? WeekendSurcharge,
     decimal? HolidaySurcharge,
-    bool? IsActive
+    bool? IsActive,
+    List<Kickify.Domain.Enums.DayOfWeekEnum>? PeakDaysOfWeek,
+    bool? IsPeakHourSurchargePercentage,
+    bool? IsWeekendSurchargePercentage,
+    bool? IsHolidaySurchargePercentage
 );

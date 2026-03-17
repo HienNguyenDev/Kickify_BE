@@ -21,6 +21,10 @@ namespace Kickify.Application.Features.Fields.Queries.GetFieldsByOwner
         decimal WeekendSurcharge,
         decimal HolidaySurcharge,
         bool IsActive,
-        DateTime CreatedAt
+        DateTime CreatedAt,
+        List<Kickify.Domain.Enums.DayOfWeekEnum> PeakDaysOfWeek,
+        bool IsPeakHourSurchargePercentage,
+        bool IsWeekendSurchargePercentage,
+        bool IsHolidaySurchargePercentage
     );
 }

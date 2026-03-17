@@ -49,7 +49,11 @@ namespace Kickify.Application.Features.Fields.Queries.GetFieldById
                 field.HolidaySurcharge,
                 field.IsActive,
                 operatingHours,
-                field.CreatedAt
+                field.CreatedAt,
+                field.PeakDaysOfWeek,
+                field.IsPeakHourSurchargePercentage,
+                field.IsWeekendSurchargePercentage,
+                field.IsHolidaySurchargePercentage
             );
 
             return Result.Success(response);

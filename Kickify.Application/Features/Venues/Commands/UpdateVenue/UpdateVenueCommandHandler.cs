@@ -80,6 +80,21 @@ namespace Kickify.Application.Features.Venues.Commands.UpdateVenue
             if (request.OperatingHours != null && request.OperatingHours.Count > 0)
             {
                 resultHours = await UpdateOperatingHoursAsync(request.VenueId, request.OperatingHours, cancellationToken);
+
+                var newOpenDays = resultHours
+                    .Where(h => !h.IsClosed)
+                    .Select(h => h.DayOfWeek)
+                    .Distinct()
+                    .ToList();
+
+                foreach (var childField in venue.Fields)
+                {
+                    childField.PeakDaysOfWeek = childField.PeakDaysOfWeek
+                        .Intersect(newOpenDays)
+                        .ToList();
+
+                    childField.UpdatedAt = DateTime.UtcNow;
+                }
             }
             else
             {

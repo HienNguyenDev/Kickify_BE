@@ -27,7 +27,7 @@ namespace Kickify.Application.Features.Venues.Commands.AddField
         public async Task<Result<AddFieldResponse>> Handle(AddFieldCommand request, CancellationToken cancellationToken)
         {
             // Verify venue exists
-            var venue = await _venueRepository.GetByIdAsync(request.VenueId);
+            var venue = await _venueRepository.GetVenueWithDetailsAsync(request.VenueId, cancellationToken);
             if (venue == null)
             {
                 return Result.Failure<AddFieldResponse>(VenueErrors.NotFound(request.VenueId));
@@ -38,6 +38,13 @@ namespace Kickify.Application.Features.Venues.Commands.AddField
             {
                 return Result.Failure<AddFieldResponse>(VenueErrors.InvalidFieldType(request.FieldType));
             }
+
+            // Auto-populate PeakDaysOfWeek: lấy các ngày mở cửa từ VenueOperatingHours
+            var peakDaysOfWeek = venue.VenueOperatingHours
+                .Where(h => !h.IsClosed)
+                .Select(h => h.DayOfWeek)
+                .Distinct()
+                .ToList();
 
             // Create new field
             var field = new Field
@@ -53,7 +60,11 @@ namespace Kickify.Application.Features.Venues.Commands.AddField
                 PeakEndTime = request.PeakEndTime,
                 WeekendSurcharge = request.WeekendSurcharge,
                 HolidaySurcharge = request.HolidaySurcharge,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                PeakDaysOfWeek = peakDaysOfWeek,
+                IsPeakHourSurchargePercentage = false,
+                IsWeekendSurchargePercentage = false,
+                IsHolidaySurchargePercentage = false
             };
 
             await _fieldRepository.AddAsync(field);
@@ -71,6 +82,10 @@ namespace Kickify.Application.Features.Venues.Commands.AddField
                 field.PeakEndTime,
                 field.WeekendSurcharge,
                 field.HolidaySurcharge,
+                field.PeakDaysOfWeek,
+                field.IsPeakHourSurchargePercentage,
+                field.IsWeekendSurchargePercentage,
+                field.IsHolidaySurchargePercentage,
                 field.CreatedAt
             ));
         }

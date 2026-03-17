@@ -48,7 +48,11 @@ namespace Kickify.Application.Features.Fields.Queries.GetAllFields
                 f.WeekendSurcharge,
                 f.HolidaySurcharge,
                 f.IsActive,
-                f.CreatedAt
+                f.CreatedAt,
+                f.PeakDaysOfWeek,
+                f.IsPeakHourSurchargePercentage,
+                f.IsWeekendSurchargePercentage,
+                f.IsHolidaySurchargePercentage
             )).ToList();
 
             var response = new GetAllFieldsResponse(

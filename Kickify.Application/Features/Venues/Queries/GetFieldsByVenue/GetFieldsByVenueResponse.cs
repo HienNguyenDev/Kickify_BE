@@ -18,6 +18,10 @@ namespace Kickify.Application.Features.Venues.Queries.GetFieldsByVenue
         decimal WeekendSurcharge,
         decimal HolidaySurcharge,
         bool IsActive,
-        DateTime CreatedAt
+        DateTime CreatedAt,
+        List<Kickify.Domain.Enums.DayOfWeekEnum> PeakDaysOfWeek,
+        bool IsPeakHourSurchargePercentage,
+        bool IsWeekendSurchargePercentage,
+        bool IsHolidaySurchargePercentage
     );
 }

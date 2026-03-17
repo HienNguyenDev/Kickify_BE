@@ -16,7 +16,11 @@ namespace Kickify.Application.Features.Fields.Queries.GetFieldById
         decimal HolidaySurcharge,
         bool IsActive,
         List<OperatingHourDto> OperatingHours,
-        DateTime CreatedAt
+        DateTime CreatedAt,
+        List<Kickify.Domain.Enums.DayOfWeekEnum> PeakDaysOfWeek,
+        bool IsPeakHourSurchargePercentage,
+        bool IsWeekendSurchargePercentage,
+        bool IsHolidaySurchargePercentage
     );
 
     public record OperatingHourDto(
