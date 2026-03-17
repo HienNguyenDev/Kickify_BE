@@ -52,6 +52,17 @@ namespace Kickify.Application.Features.Fields.Commands.UpdateField
             RuleFor(x => x)
                 .Must(x => !x.PeakStartTime.HasValue || !x.PeakEndTime.HasValue || x.PeakStartTime.Value < x.PeakEndTime.Value)
                 .WithMessage("PeakStartTime must be earlier than PeakEndTime");
+
+            When(x => x.PeakDaysOfWeek != null, () =>
+            {
+                RuleFor(x => x.PeakDaysOfWeek)
+                    .Must(days => days != null && days.Distinct().Count() == days.Count)
+                    .WithMessage("PeakDaysOfWeek must not contain duplicate values");
+
+                RuleForEach(x => x.PeakDaysOfWeek!)
+                    .IsInEnum()
+                    .WithMessage("PeakDaysOfWeek contains an invalid day");
+            });
         }
     }
 }

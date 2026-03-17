@@ -7,6 +7,7 @@ using Kickify.Application.Features.Fields.Commands.UpdateField;
 using Kickify.Application.Features.Fields.Queries.GetAllFields;
 using Kickify.Application.Features.Fields.Queries.GetFieldById;
 using Kickify.Application.Features.Fields.Queries.GetFieldsByOwner;
+using Kickify.Application.Features.Fields.Queries.PreviewMatchPrice;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -61,6 +62,28 @@ namespace Kickify.Api.Controllers
 
             var result = await _sender.Send(query, cancellationToken);
 
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Preview match price for a field without creating a match room.
+        /// Returns total price and estimated deposit per player.
+        /// </summary>
+        [HttpGet("{fieldId:guid}/price-preview")]
+        public async Task<IResult> PreviewMatchPrice(
+            [FromRoute] Guid fieldId,
+            [FromQuery] DateTime matchDate,
+            [FromQuery] TimeSpan startTime,
+            [FromQuery] int durationMinutes,
+            CancellationToken cancellationToken)
+        {
+            var query = new PreviewMatchPriceQuery(
+                fieldId,
+                matchDate,
+                startTime,
+                durationMinutes);
+
+            var result = await _sender.Send(query, cancellationToken);
             return result.MatchOk();
         }
 
@@ -130,7 +153,11 @@ namespace Kickify.Api.Controllers
                 request.PeakEndTime,
                 request.WeekendSurcharge,
                 request.HolidaySurcharge,
-                request.IsActive
+                request.IsActive,
+                request.PeakDaysOfWeek,
+                request.IsPeakHourSurchargePercentage,
+                request.IsWeekendSurchargePercentage,
+                request.IsHolidaySurchargePercentage
             );
 
             var result = await _sender.Send(command, cancellationToken);

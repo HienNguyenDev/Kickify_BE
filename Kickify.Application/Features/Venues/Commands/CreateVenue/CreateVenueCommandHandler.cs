@@ -96,6 +96,12 @@ public class CreateVenueCommandHandler : ICommandHandler<CreateVenueCommand, Cre
             }
             walletId = wallet.WalletId;
 
+            var venueOpenDays = request.OperatingHours
+                .Where(h => !h.IsClosed)
+                .Select(h => (DayOfWeekEnum)h.DayOfWeek)
+                .Distinct()
+                .ToList();
+
             foreach (var fieldDto in request.Fields)
             {
                 if (!Enum.TryParse<FieldType>(fieldDto.FieldType, true, out var fieldType))
@@ -116,6 +122,10 @@ public class CreateVenueCommandHandler : ICommandHandler<CreateVenueCommand, Cre
                     PeakEndTime = fieldDto.PeakEndTime,
                     WeekendSurcharge = fieldDto.WeekendSurcharge,
                     HolidaySurcharge = fieldDto.HolidaySurcharge,
+                    PeakDaysOfWeek = venueOpenDays.ToList(),
+                    IsPeakHourSurchargePercentage = false,
+                    IsWeekendSurchargePercentage = false,
+                    IsHolidaySurchargePercentage = false,
                     CreatedAt = DateTime.UtcNow
                 };
 
@@ -131,7 +141,7 @@ public class CreateVenueCommandHandler : ICommandHandler<CreateVenueCommand, Cre
                     DayOfWeek = (DayOfWeekEnum)ohDto.DayOfWeek,
                     OpenTime = ohDto.OpenTime,
                     CloseTime = ohDto.CloseTime,
-                    IsClosed = false
+                    IsClosed = ohDto.IsClosed
                 };
 
                 venue.VenueOperatingHours.Add(operatingHour);
@@ -162,7 +172,11 @@ public class CreateVenueCommandHandler : ICommandHandler<CreateVenueCommand, Cre
                     f.PeakStartTime,
                     f.PeakEndTime,
                     f.WeekendSurcharge,
-                    f.HolidaySurcharge
+                    f.HolidaySurcharge,
+                    f.PeakDaysOfWeek,
+                    f.IsPeakHourSurchargePercentage,
+                    f.IsWeekendSurchargePercentage,
+                    f.IsHolidaySurchargePercentage
                 )).ToList(),
                 venue.CreatedAt
             ));

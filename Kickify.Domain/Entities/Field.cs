@@ -17,6 +17,10 @@ public class Field : BaseEntity
     public decimal WeekendSurcharge { get; set; } = 0;
     public decimal HolidaySurcharge { get; set; } = 0;
     public bool IsActive { get; set; } = true;
+    public List<Kickify.Domain.Enums.DayOfWeekEnum> PeakDaysOfWeek { get; set; } = new(); // EF Core: integer[]
+    public bool IsPeakHourSurchargePercentage { get; set; } = false;
+    public bool IsWeekendSurchargePercentage { get; set; } = false;
+    public bool IsHolidaySurchargePercentage { get; set; } = false;
 
     // Navigation properties
     public Venue Venue { get; set; } = null!;

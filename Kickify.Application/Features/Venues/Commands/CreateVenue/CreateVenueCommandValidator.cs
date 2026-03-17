@@ -61,10 +61,19 @@ namespace Kickify.Application.Features.Venues.Commands.CreateVenue
             RuleFor(x => x.OperatingHours)
                 .NotEmpty().WithMessage("At least one operating hour is required");
 
+            RuleFor(x => x.OperatingHours)
+                .Must(hours => hours.Select(h => h.DayOfWeek).Distinct().Count() == hours.Count)
+                .WithMessage("OperatingHours must not contain duplicate DayOfWeek values");
+
             RuleForEach(x => x.OperatingHours).ChildRules(oh =>
             {
-                oh.RuleFor(o => o.OpenTime)
-                    .LessThan(o => o.CloseTime).WithMessage("OpenTime must be before CloseTime");
+                oh.RuleFor(o => o.DayOfWeek)
+                    .InclusiveBetween(0, 6)
+                    .WithMessage("DayOfWeek must be between 0 and 6");
+
+                oh.RuleFor(o => o)
+                    .Must(o => o.IsClosed || (o.OpenTime.HasValue && o.CloseTime.HasValue && o.OpenTime.Value < o.CloseTime.Value))
+                    .WithMessage("For open day, OpenTime and CloseTime are required and OpenTime must be before CloseTime");
             });
         }
     }

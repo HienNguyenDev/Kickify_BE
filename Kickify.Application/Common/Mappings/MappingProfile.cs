@@ -54,6 +54,10 @@ namespace Kickify.Application.Common.Mappings
                 .ForMember(dest => dest.IsActive, opt => opt.Condition((src, dest, srcMember) => src.IsActive.HasValue))
                 // Special handling for FieldType enum - handled manually in handler
                 .ForMember(dest => dest.FieldType, opt => opt.Ignore())
+                .ForMember(dest => dest.PeakDaysOfWeek, opt => opt.Ignore())
+                .ForMember(dest => dest.IsPeakHourSurchargePercentage, opt => opt.Ignore())
+                .ForMember(dest => dest.IsWeekendSurchargePercentage, opt => opt.Ignore())
+                .ForMember(dest => dest.IsHolidaySurchargePercentage, opt => opt.Ignore())
                 // Ignore properties that should not be mapped
                 .ForMember(dest => dest.FieldId, opt => opt.Ignore())
                 .ForMember(dest => dest.VenueId, opt => opt.Ignore())

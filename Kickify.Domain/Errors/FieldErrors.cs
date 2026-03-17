@@ -28,6 +28,10 @@ namespace Kickify.Domain.Errors
             "Fields.Unauthorized",
             "You are not authorized to perform this action on this field");
 
+        public static readonly Error PeakHourOnClosedVenueDay = Error.Conflict(
+            "Fields.PeakHourOnClosedVenueDay",
+            "Không thể áp dụng giờ cao điểm cho ngày mà khu sân đang đóng cửa.");
+
         public static readonly Error VenueSuspended = Error.Conflict(
             "Fields.VenueSuspended",
             "The venue this field belongs to is currently suspended");
