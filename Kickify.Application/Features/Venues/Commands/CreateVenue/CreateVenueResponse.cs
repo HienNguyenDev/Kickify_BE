@@ -25,6 +25,10 @@ namespace Kickify.Application.Features.Venues.Commands.CreateVenue
         TimeSpan? PeakStartTime,
         TimeSpan? PeakEndTime,
         decimal WeekendSurcharge,
-        decimal HolidaySurcharge
+        decimal HolidaySurcharge,
+        List<Kickify.Domain.Enums.DayOfWeekEnum> PeakDaysOfWeek,
+        bool IsPeakHourSurchargePercentage,
+        bool IsWeekendSurchargePercentage,
+        bool IsHolidaySurchargePercentage
     );
 }

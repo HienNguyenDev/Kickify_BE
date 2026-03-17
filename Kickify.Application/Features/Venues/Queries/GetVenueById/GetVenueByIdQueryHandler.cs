@@ -79,6 +79,10 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenueById
                     f.PeakEndTime,
                     f.WeekendSurcharge,
                     f.HolidaySurcharge,
+                    f.PeakDaysOfWeek,
+                    f.IsPeakHourSurchargePercentage,
+                    f.IsWeekendSurchargePercentage,
+                    f.IsHolidaySurchargePercentage,
                     f.IsActive,
                     f.CreatedAt,
                     f.UpdatedAt

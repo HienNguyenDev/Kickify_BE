@@ -1,0 +1,28 @@
+namespace Kickify.Application.Features.Fields.Queries.PreviewMatchPrice;
+
+public sealed record PreviewMatchPriceResponse(
+    Guid FieldId,
+    string FieldName,
+    Guid VenueId,
+    string VenueName,
+    DateTime MatchDate,
+    TimeSpan StartTime,
+    TimeSpan EndTime,
+    int DurationMinutes,
+    bool IsBookable,
+    string? Message,
+    decimal BaseHourlyRate,
+    decimal DaySurcharge,
+    decimal PeakSurcharge,
+    decimal TotalSurcharge,
+    decimal TotalPrice,
+    int TotalSlots,
+    decimal DepositPerPerson,
+    bool IsHolidayApplied,
+    bool IsWeekendApplied,
+    bool IsPeakApplied,
+    Guid? AppliedHolidayId,
+    string? AppliedHolidayName,
+    bool IsTimeSlotAvailable,
+    bool IsWithinOperatingHours,
+    bool IsVenueClosed);

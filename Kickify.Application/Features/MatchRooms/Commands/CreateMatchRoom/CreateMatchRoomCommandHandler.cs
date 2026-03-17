@@ -2,6 +2,7 @@ using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
+using Kickify.Application.Common.Pricing;
 using Kickify.Domain.Common;
 using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
@@ -71,8 +72,7 @@ public class CreateMatchRoomCommandHandler : ICommandHandler<CreateMatchRoomComm
 
         if (operatingHour == null || operatingHour.IsClosed)
         {
-            return Result.Failure<CreateMatchRoomResponse>(
-                new Error("MatchRoom.VenueClosed", $"Venue is closed on {request.MatchDate:dddd}", ErrorType.Validation));
+            return Result.Failure<CreateMatchRoomResponse>(MatchRoomErrors.VenueClosed(request.MatchDate));
         }
 
         var openTime = operatingHour.OpenTime ?? TimeSpan.Zero;
@@ -81,9 +81,7 @@ public class CreateMatchRoomCommandHandler : ICommandHandler<CreateMatchRoomComm
         if (request.StartTime < openTime || endTime > closeTime)
         {
             return Result.Failure<CreateMatchRoomResponse>(
-                new Error("MatchRoom.OutsideOperatingHours", 
-                    $"Requested time ({request.StartTime:hh\\:mm} - {endTime:hh\\:mm}) is outside operating hours ({openTime:hh\\:mm} - {closeTime:hh\\:mm})", 
-                    ErrorType.Validation));
+                MatchRoomErrors.OutsideOperatingHours(request.StartTime, endTime, openTime, closeTime));
         }
 
         bool isSlotAvailable = await _bookingRepository.IsTimeSlotAvailableAsync(
@@ -96,9 +94,7 @@ public class CreateMatchRoomCommandHandler : ICommandHandler<CreateMatchRoomComm
         if (!isSlotAvailable)
         {
             return Result.Failure<CreateMatchRoomResponse>(
-                new Error("MatchRoom.SlotAlreadyBooked", 
-                    $"Time slot {request.StartTime:hh\\:mm} - {endTime:hh\\:mm} is already booked by another room", 
-                    ErrorType.Conflict));
+                MatchRoomErrors.SlotAlreadyBooked(request.StartTime, endTime));
         }
 
         if (!Enum.TryParse<MatchFormat>(request.MatchFormat, true, out var matchFormat))
@@ -109,42 +105,19 @@ public class CreateMatchRoomCommandHandler : ICommandHandler<CreateMatchRoomComm
         var visibility = Visibility.Public;
         if (!string.IsNullOrEmpty(request.Visibility) && !Enum.TryParse<Visibility>(request.Visibility, true, out visibility))
         {
-            return Result.Failure<CreateMatchRoomResponse>(
-                new Error("MatchRoom.InvalidVisibility", "Visibility must be Public or Private", ErrorType.Validation));
+            return Result.Failure<CreateMatchRoomResponse>(MatchRoomErrors.InvalidVisibility(request.Visibility));
         }
 
         int totalSlots = CalculateTotalSlots(matchFormat);
-
-        var durationHours = (decimal)request.DurationMinutes / 60;
         var holiday = await _holidayRepository.GetByDateAsync(request.MatchDate, cancellationToken);
+        var priceResult = MatchPriceCalculator.CalculateMatchPrice(
+            field,
+            request.MatchDate,
+            request.StartTime,
+            request.DurationMinutes,
+            holiday);
 
-        var isHoliday = false;
-        var daySurcharge = 0m;
-
-        if (holiday != null)
-        {
-            var isIgnoredHoliday = field.Venue.IgnoredHolidays.Any(h => h.Id == holiday.Id);
-            if (!isIgnoredHoliday)
-            {
-                isHoliday = true;
-                daySurcharge += field.HolidaySurcharge;
-            }
-        }
-
-        if (!isHoliday && (request.MatchDate.DayOfWeek == DayOfWeek.Saturday || request.MatchDate.DayOfWeek == DayOfWeek.Sunday))
-        {
-            daySurcharge += field.WeekendSurcharge;
-        }
-
-        var peakSurcharge = 0m;
-        if (field.PeakStartTime.HasValue && field.PeakEndTime.HasValue &&
-            request.StartTime >= field.PeakStartTime.Value &&
-            request.StartTime <= field.PeakEndTime.Value)
-        {
-            peakSurcharge += field.PeakHourSurcharge;
-        }
-
-        var totalAmount = (field.HourlyRate + daySurcharge + peakSurcharge) * durationHours;
+        var totalAmount = priceResult.TotalPrice;
         var depositPerPerson = Math.Round(totalAmount / totalSlots, 0);
 
         var room = new MatchRoom

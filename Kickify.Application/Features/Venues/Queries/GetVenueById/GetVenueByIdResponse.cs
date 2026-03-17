@@ -52,6 +52,10 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenueById
         TimeSpan? PeakEndTime,
         decimal WeekendSurcharge,
         decimal HolidaySurcharge,
+        List<Kickify.Domain.Enums.DayOfWeekEnum> PeakDaysOfWeek,
+        bool IsPeakHourSurchargePercentage,
+        bool IsWeekendSurchargePercentage,
+        bool IsHolidaySurchargePercentage,
         bool IsActive,
         DateTime CreatedAt,
         DateTime UpdatedAt

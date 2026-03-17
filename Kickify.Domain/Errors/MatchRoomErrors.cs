@@ -48,6 +48,10 @@ namespace Kickify.Domain.Errors
             "MatchRoom.InvalidFormat",
             $"Invalid match format: {matchFormat}");
 
+        public static Error InvalidVisibility(string? visibility) => Error.Conflict(
+            "MatchRoom.InvalidVisibility",
+            $"Invalid visibility: {visibility}. Visibility must be Public or Private");
+
         public static readonly Error ConcurrencyConflict = Error.Conflict(
             "MatchRoom.ConcurrencyConflict",
             "Room was modified by another user. Please refresh and try again");

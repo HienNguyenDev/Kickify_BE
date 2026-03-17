@@ -135,6 +135,7 @@ namespace Kickify.Infrastructure.Repositories
         {
             return await _dbSet
                 .Include(v => v.IgnoredHolidays)
+                .Include(v => v.Fields)
                 .FirstOrDefaultAsync(v => v.VenueId == venueId, cancellationToken);
         }
 
