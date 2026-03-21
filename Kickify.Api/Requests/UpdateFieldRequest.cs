@@ -6,5 +6,13 @@ public sealed record UpdateFieldRequest(
     string? SurfaceType,
     decimal? HourlyRate,
     decimal? PeakHourSurcharge,
-    bool? IsActive
+    TimeSpan? PeakStartTime,
+    TimeSpan? PeakEndTime,
+    decimal? WeekendSurcharge,
+    decimal? HolidaySurcharge,
+    bool? IsActive,
+    List<Kickify.Domain.Enums.DayOfWeekEnum>? PeakDaysOfWeek,
+    bool? IsPeakHourSurchargePercentage,
+    bool? IsWeekendSurchargePercentage,
+    bool? IsHolidaySurchargePercentage
 );

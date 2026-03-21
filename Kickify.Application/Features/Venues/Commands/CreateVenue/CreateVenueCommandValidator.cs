@@ -24,9 +24,9 @@ namespace Kickify.Application.Features.Venues.Commands.CreateVenue
                 .MaximumLength(2000).When(x => !string.IsNullOrEmpty(x.Description))
                 .WithMessage("Description must not exceed 2000 characters");
 
-            RuleFor(x => x.Fields)
-                .NotEmpty().WithMessage("At least one field is required")
-                .Must(fields => fields.Count > 0).WithMessage("At least one field is required");
+            RuleFor(x => x.IgnoredHolidayIds)
+                .Must(ids => ids.Distinct().Count() == ids.Count)
+                .WithMessage("IgnoredHolidayIds must not contain duplicate values");
 
             RuleForEach(x => x.Fields).ChildRules(field =>
             {
@@ -39,15 +39,41 @@ namespace Kickify.Application.Features.Venues.Commands.CreateVenue
 
                 field.RuleFor(f => f.HourlyRate)
                     .GreaterThan(0).WithMessage("HourlyRate must be greater than 0");
+
+                field.RuleFor(f => f.PeakHourSurcharge)
+                    .GreaterThanOrEqualTo(0).WithMessage("PeakHourSurcharge must be greater than or equal to 0");
+
+                field.RuleFor(f => f.WeekendSurcharge)
+                    .GreaterThanOrEqualTo(0).WithMessage("WeekendSurcharge must be greater than or equal to 0");
+
+                field.RuleFor(f => f.HolidaySurcharge)
+                    .GreaterThanOrEqualTo(0).WithMessage("HolidaySurcharge must be greater than or equal to 0");
+
+                field.RuleFor(f => f)
+                    .Must(f => f.PeakStartTime.HasValue == f.PeakEndTime.HasValue)
+                    .WithMessage("PeakStartTime and PeakEndTime must either both be provided or both be empty");
+
+                field.RuleFor(f => f)
+                    .Must(f => !f.PeakStartTime.HasValue || !f.PeakEndTime.HasValue || f.PeakStartTime.Value < f.PeakEndTime.Value)
+                    .WithMessage("PeakStartTime must be earlier than PeakEndTime");
             });
 
             RuleFor(x => x.OperatingHours)
                 .NotEmpty().WithMessage("At least one operating hour is required");
 
+            RuleFor(x => x.OperatingHours)
+                .Must(hours => hours.Select(h => h.DayOfWeek).Distinct().Count() == hours.Count)
+                .WithMessage("OperatingHours must not contain duplicate DayOfWeek values");
+
             RuleForEach(x => x.OperatingHours).ChildRules(oh =>
             {
-                oh.RuleFor(o => o.OpenTime)
-                    .LessThan(o => o.CloseTime).WithMessage("OpenTime must be before CloseTime");
+                oh.RuleFor(o => o.DayOfWeek)
+                    .InclusiveBetween(0, 6)
+                    .WithMessage("DayOfWeek must be between 0 and 6");
+
+                oh.RuleFor(o => o)
+                    .Must(o => o.IsClosed || (o.OpenTime.HasValue && o.CloseTime.HasValue && o.OpenTime.Value < o.CloseTime.Value))
+                    .WithMessage("For open day, OpenTime and CloseTime are required and OpenTime must be before CloseTime");
             });
         }
     }

@@ -9,6 +9,14 @@ namespace Kickify.Application.Features.Fields.Commands.UpdateField
         string? SurfaceType,
         decimal? HourlyRate,
         decimal? PeakHourSurcharge,
-        bool? IsActive
+        TimeSpan? PeakStartTime,
+        TimeSpan? PeakEndTime,
+        decimal? WeekendSurcharge,
+        decimal? HolidaySurcharge,
+        bool? IsActive,
+        List<Kickify.Domain.Enums.DayOfWeekEnum>? PeakDaysOfWeek,
+        bool? IsPeakHourSurchargePercentage,
+        bool? IsWeekendSurchargePercentage,
+        bool? IsHolidaySurchargePercentage
     ) : ICommand<UpdateFieldResponse>;
 }

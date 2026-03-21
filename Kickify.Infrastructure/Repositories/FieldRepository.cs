@@ -18,6 +18,8 @@ namespace Kickify.Infrastructure.Repositories
             return await _dbSet
                 .AsNoTracking()
                 .Include(f => f.Venue)
+                    .ThenInclude(v => v.IgnoredHolidays)
+                .Include(f => f.Venue)
                     .ThenInclude(v => v.VenueOperatingHours)
                 .FirstOrDefaultAsync(f => f.FieldId == fieldId, cancellationToken);
         }
@@ -56,6 +58,7 @@ namespace Kickify.Infrastructure.Repositories
         {
             return await _dbSet
                 .Include(f => f.Venue)
+                    .ThenInclude(v => v.VenueOperatingHours)
                 .FirstOrDefaultAsync(f => f.FieldId == fieldId, cancellationToken);
         }
 

@@ -2,23 +2,24 @@ using Kickify.Api.Extensions;
 using Kickify.Api.Requests;
 using Kickify.Application.Abstractions.Services;
 using Kickify.Application.Features.Fields.Commands.BlockFieldSlot;
+using Kickify.Application.Features.VenueEvidences.Commands.DeleteVenueEvidence;
+using Kickify.Application.Features.VenueEvidences.Commands.UploadVenueEvidence;
+using Kickify.Application.Features.VenueEvidences.Queries.GetVenueEvidences;
+using Kickify.Application.Features.VenueReviews.Commands.CreateVenueReview;
 using Kickify.Application.Features.Venues.Commands.AddField;
 using Kickify.Application.Features.Venues.Commands.CreateVenue;
 using Kickify.Application.Features.Venues.Commands.DeleteVenue;
 using Kickify.Application.Features.Venues.Commands.SubmitVenueVerification;
+using Kickify.Application.Features.Venues.Commands.ToggleVenueArchived;
+using Kickify.Application.Features.Venues.Commands.ToggleVenueSuspension;
 using Kickify.Application.Features.Venues.Commands.UpdateOperatingHours;
 using Kickify.Application.Features.Venues.Commands.UpdateVenue;
 using Kickify.Application.Features.Venues.Commands.UpdateVenueStatus;
-using Kickify.Application.Features.Venues.Commands.ToggleVenueArchived;
 using Kickify.Application.Features.Venues.Queries.GetAllVenues;
 using Kickify.Application.Features.Venues.Queries.GetFieldsByVenue;
 using Kickify.Application.Features.Venues.Queries.GetOperatingHours;
 using Kickify.Application.Features.Venues.Queries.GetVenueById;
 using Kickify.Application.Features.Venues.Queries.GetVenuesByOwner;
-using Kickify.Application.Features.VenueEvidences.Commands.DeleteVenueEvidence;
-using Kickify.Application.Features.VenueEvidences.Commands.UploadVenueEvidence;
-using Kickify.Application.Features.VenueEvidences.Queries.GetVenueEvidences;
-using Kickify.Application.Features.VenueReviews.Commands.CreateVenueReview;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -43,27 +44,41 @@ namespace Kickify.Api.Controllers
         [HttpPost]
         public async Task<IResult> CreateVenue([FromBody] CreateVenueRequest request, CancellationToken cancellationToken)
         {
+            var fieldDtos = request.Fields.Select(f => new CreateVenueFieldDto(
+                Name: f.Name,
+                FieldType: f.FieldType,
+                SurfaceType: f.SurfaceType,
+                HourlyRate: f.HourlyRate,
+                PeakHourSurcharge: f.PeakHourSurcharge,
+                PeakStartTime: f.PeakStartTime,
+                PeakEndTime: f.PeakEndTime,
+                WeekendSurcharge: f.WeekendSurcharge,
+                HolidaySurcharge: f.HolidaySurcharge,
+                PeakDaysOfWeek: f.PeakDaysOfWeek,
+                IsPeakHourSurchargePercentage: f.IsPeakHourSurchargePercentage,
+                IsWeekendSurchargePercentage: f.IsWeekendSurchargePercentage,
+                IsHolidaySurchargePercentage: f.IsHolidaySurchargePercentage
+            )).ToList();
+
+            var operatingHourDtos = request.OperatingHours.Select(oh => new CreateVenueOperatingHoursDto(
+                oh.DayOfWeek,
+                oh.OpenTime,
+                oh.CloseTime,
+                oh.IsClosed
+            )).ToList();
+
             var command = new CreateVenueCommand(
-                request.Name,
-                request.Address,
-                request.Latitude,
-                request.Longitude,
-                request.ContactPhone,
-                request.ContactEmail,
-                request.Description,
-                request.Amenities,
-                request.Fields.Select(f => new CreateVenueFieldDto(
-                    f.Name,
-                    f.FieldType,
-                    f.SurfaceType,
-                    f.HourlyRate,
-                    f.PeakHourSurcharge
-                )).ToList(),
-                request.OperatingHours.Select(oh => new CreateVenueOperatingHoursDto(
-                    oh.DayOfWeek,
-                    oh.OpenTime,
-                    oh.CloseTime
-                )).ToList()
+                Name: request.Name,
+                Address: request.Address,
+                Latitude: request.Latitude,
+                Longitude: request.Longitude,
+                ContactPhone: request.ContactPhone,
+                ContactEmail: request.ContactEmail,
+                Description: request.Description,
+                Amenities: request.Amenities,
+                IgnoredHolidayIds: request.IgnoredHolidayIds,
+                Fields: fieldDtos,
+                OperatingHours: operatingHourDtos
             );
 
             var result = await _sender.Send(command, cancellationToken);
@@ -129,12 +144,20 @@ namespace Kickify.Api.Controllers
             CancellationToken cancellationToken)
         {
             var command = new AddFieldCommand(
-                venueId,
-                request.Name,
-                request.FieldType,
-                request.SurfaceType,
-                request.HourlyRate,
-                request.PeakHourSurcharge
+                VenueId: venueId,
+                Name: request.Name,
+                FieldType: request.FieldType,
+                SurfaceType: request.SurfaceType,
+                HourlyRate: request.HourlyRate,
+                PeakHourSurcharge: request.PeakHourSurcharge,
+                PeakStartTime: request.PeakStartTime,
+                PeakEndTime: request.PeakEndTime,
+                WeekendSurcharge: request.WeekendSurcharge,
+                HolidaySurcharge: request.HolidaySurcharge,
+                PeakDaysOfWeek: request.PeakDaysOfWeek,
+                IsPeakHourSurchargePercentage: request.IsPeakHourSurchargePercentage,
+                IsWeekendSurchargePercentage: request.IsWeekendSurchargePercentage,
+                IsHolidaySurchargePercentage: request.IsHolidaySurchargePercentage
             );
 
             var result = await _sender.Send(command, cancellationToken);
@@ -225,21 +248,24 @@ namespace Kickify.Api.Controllers
             [FromBody] UpdateVenueRequest request,
             CancellationToken cancellationToken)
         {
+            var operatingHourDtos = request.OperatingHours?.Select(oh => new UpdateVenueOperatingHourItemDto(
+                oh.DayOfWeek,
+                oh.OpenTime,
+                oh.CloseTime
+            )).ToList();
+
             var command = new UpdateVenueCommand(
-                venueId,
-                request.Name,
-                request.Address,
-                request.Latitude,
-                request.Longitude,
-                request.ContactPhone,
-                request.ContactEmail,
-                request.Description,
-                request.Amenities,
-                request.OperatingHours?.Select(oh => new UpdateVenueOperatingHourItemDto(
-                    oh.DayOfWeek,
-                    oh.OpenTime,
-                    oh.CloseTime
-                )).ToList()
+                VenueId: venueId,
+                Name: request.Name,
+                Address: request.Address,
+                Latitude: request.Latitude,
+                Longitude: request.Longitude,
+                ContactPhone: request.ContactPhone,
+                ContactEmail: request.ContactEmail,
+                Description: request.Description,
+                Amenities: request.Amenities,
+                IgnoredHolidayIds: request.IgnoredHolidayIds,
+                OperatingHours: operatingHourDtos
             );
 
             var result = await _sender.Send(command, cancellationToken);
@@ -309,9 +335,11 @@ namespace Kickify.Api.Controllers
             return result.MatchOk();
         }
 
+        
+
         /// <summary>
-        /// [Admin] Toggle venue archived.
-        /// Approved → Archived, Archived → Approved.
+        /// Toggle venue suspension (VenueOwner only).
+        /// Approved → Archived (close venue), Archived → Approved (reopen venue).
         /// </summary>
         [Authorize(Roles = "VenueOwner")]
         [HttpPatch("{venueId:guid}/toggle-archived")]
@@ -344,6 +372,7 @@ namespace Kickify.Api.Controllers
 
             return result.MatchOk();
         }
+
 
         /// <summary>
         /// Upload evidence files (images, PDF, DOCX) for a venue. [VenueOwner]
@@ -418,6 +447,5 @@ namespace Kickify.Api.Controllers
 
             return result.MatchOk();
         }
-
-            }
-        }
+    }
+}

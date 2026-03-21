@@ -31,8 +31,16 @@ namespace Kickify.Application.Features.Fields.Queries.GetFieldsByOwner
                 f.SurfaceType,
                 f.HourlyRate,
                 f.PeakHourSurcharge,
+                f.PeakStartTime,
+                f.PeakEndTime,
+                f.WeekendSurcharge,
+                f.HolidaySurcharge,
                 f.IsActive,
-                f.CreatedAt
+                f.CreatedAt,
+                f.PeakDaysOfWeek,
+                f.IsPeakHourSurchargePercentage,
+                f.IsWeekendSurchargePercentage,
+                f.IsHolidaySurchargePercentage
             )).ToList();
 
             var response = new GetFieldsByOwnerResponse(

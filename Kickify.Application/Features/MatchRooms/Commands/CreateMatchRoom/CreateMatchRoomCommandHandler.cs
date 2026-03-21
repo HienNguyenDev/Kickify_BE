@@ -2,6 +2,7 @@ using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
+using Kickify.Application.Common.Pricing;
 using Kickify.Domain.Common;
 using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
@@ -14,6 +15,7 @@ public class CreateMatchRoomCommandHandler : ICommandHandler<CreateMatchRoomComm
 {
     private readonly IMatchRoomRepository _matchRoomRepository;
     private readonly IFieldRepository _fieldRepository;
+    private readonly IHolidayRepository _holidayRepository;
     private readonly IUserRepository _userRepository;
     private readonly IBookingRepository _bookingRepository;
     private readonly IRoomParticipantRepository _roomParticipantRepository;
@@ -23,6 +25,7 @@ public class CreateMatchRoomCommandHandler : ICommandHandler<CreateMatchRoomComm
     public CreateMatchRoomCommandHandler(
         IMatchRoomRepository matchRoomRepository,
         IFieldRepository fieldRepository,
+        IHolidayRepository holidayRepository,
         IUserRepository userRepository,
         IBookingRepository bookingRepository,
         IRoomParticipantRepository roomParticipantRepository,
@@ -31,6 +34,7 @@ public class CreateMatchRoomCommandHandler : ICommandHandler<CreateMatchRoomComm
     {
         _matchRoomRepository = matchRoomRepository;
         _fieldRepository = fieldRepository;
+        _holidayRepository = holidayRepository;
         _userRepository = userRepository;
         _bookingRepository = bookingRepository;
         _roomParticipantRepository = roomParticipantRepository;
@@ -68,8 +72,7 @@ public class CreateMatchRoomCommandHandler : ICommandHandler<CreateMatchRoomComm
 
         if (operatingHour == null || operatingHour.IsClosed)
         {
-            return Result.Failure<CreateMatchRoomResponse>(
-                new Error("MatchRoom.VenueClosed", $"Venue is closed on {request.MatchDate:dddd}", ErrorType.Validation));
+            return Result.Failure<CreateMatchRoomResponse>(MatchRoomErrors.VenueClosed(request.MatchDate));
         }
 
         var openTime = operatingHour.OpenTime ?? TimeSpan.Zero;
@@ -78,9 +81,7 @@ public class CreateMatchRoomCommandHandler : ICommandHandler<CreateMatchRoomComm
         if (request.StartTime < openTime || endTime > closeTime)
         {
             return Result.Failure<CreateMatchRoomResponse>(
-                new Error("MatchRoom.OutsideOperatingHours", 
-                    $"Requested time ({request.StartTime:hh\\:mm} - {endTime:hh\\:mm}) is outside operating hours ({openTime:hh\\:mm} - {closeTime:hh\\:mm})", 
-                    ErrorType.Validation));
+                MatchRoomErrors.OutsideOperatingHours(request.StartTime, endTime, openTime, closeTime));
         }
 
         bool isSlotAvailable = await _bookingRepository.IsTimeSlotAvailableAsync(
@@ -93,9 +94,7 @@ public class CreateMatchRoomCommandHandler : ICommandHandler<CreateMatchRoomComm
         if (!isSlotAvailable)
         {
             return Result.Failure<CreateMatchRoomResponse>(
-                new Error("MatchRoom.SlotAlreadyBooked", 
-                    $"Time slot {request.StartTime:hh\\:mm} - {endTime:hh\\:mm} is already booked by another room", 
-                    ErrorType.Conflict));
+                MatchRoomErrors.SlotAlreadyBooked(request.StartTime, endTime));
         }
 
         if (!Enum.TryParse<MatchFormat>(request.MatchFormat, true, out var matchFormat))
@@ -106,14 +105,19 @@ public class CreateMatchRoomCommandHandler : ICommandHandler<CreateMatchRoomComm
         var visibility = Visibility.Public;
         if (!string.IsNullOrEmpty(request.Visibility) && !Enum.TryParse<Visibility>(request.Visibility, true, out visibility))
         {
-            return Result.Failure<CreateMatchRoomResponse>(
-                new Error("MatchRoom.InvalidVisibility", "Visibility must be Public or Private", ErrorType.Validation));
+            return Result.Failure<CreateMatchRoomResponse>(MatchRoomErrors.InvalidVisibility(request.Visibility));
         }
 
         int totalSlots = CalculateTotalSlots(matchFormat);
+        var holiday = await _holidayRepository.GetByDateAsync(request.MatchDate, cancellationToken);
+        var priceResult = MatchPriceCalculator.CalculateMatchPrice(
+            field,
+            request.MatchDate,
+            request.StartTime,
+            request.DurationMinutes,
+            holiday);
 
-        var durationHours = (decimal)request.DurationMinutes / 60;
-        var totalAmount = field.HourlyRate * durationHours;
+        var totalAmount = priceResult.TotalPrice;
         var depositPerPerson = Math.Round(totalAmount / totalSlots, 0);
 
         var room = new MatchRoom

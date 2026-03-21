@@ -9,6 +9,7 @@ public sealed record UpdateVenueRequest(
     string? ContactEmail,
     string? Description,
     string? Amenities,
+    List<Guid>? IgnoredHolidayIds,
     List<UpdateVenueOperatingHourDto>? OperatingHours
 );
 

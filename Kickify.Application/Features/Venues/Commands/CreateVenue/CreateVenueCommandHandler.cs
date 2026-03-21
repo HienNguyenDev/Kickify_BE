@@ -13,6 +13,7 @@ namespace Kickify.Application.Features.Venues.Commands.CreateVenue;
 public class CreateVenueCommandHandler : ICommandHandler<CreateVenueCommand, CreateVenueResponse>
 {
     private readonly IVenueRepository _venueRepository;
+    private readonly IHolidayRepository _holidayRepository;
     private readonly IWalletRepository _walletRepository;
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -21,6 +22,7 @@ public class CreateVenueCommandHandler : ICommandHandler<CreateVenueCommand, Cre
 
     public CreateVenueCommandHandler(
         IVenueRepository venueRepository,
+        IHolidayRepository holidayRepository,
         IWalletRepository walletRepository,
         IUserRepository userRepository,
         IUnitOfWork unitOfWork,
@@ -28,6 +30,7 @@ public class CreateVenueCommandHandler : ICommandHandler<CreateVenueCommand, Cre
         ILogger<CreateVenueCommandHandler> logger)
     {
         _venueRepository = venueRepository;
+        _holidayRepository = holidayRepository;
         _walletRepository = walletRepository;
         _userRepository = userRepository;
         _unitOfWork = unitOfWork;
@@ -63,6 +66,19 @@ public class CreateVenueCommandHandler : ICommandHandler<CreateVenueCommand, Cre
                 CreatedAt = DateTime.UtcNow
             };
 
+            var ignoredHolidayIds = request.IgnoredHolidayIds.Distinct().ToList();
+            if (ignoredHolidayIds.Count > 0)
+            {
+                var holidays = await _holidayRepository.GetByIdsAsync(ignoredHolidayIds, cancellationToken);
+                if (holidays.Count != ignoredHolidayIds.Count)
+                {
+                    var missingHolidayIds = ignoredHolidayIds.Except(holidays.Select(h => h.Id)).ToList();
+                    return Result.Failure<CreateVenueResponse>(HolidayErrors.InvalidIds(missingHolidayIds));
+                }
+
+                await _venueRepository.SyncIgnoredHolidaysAsync(venue, holidays, cancellationToken);
+            }
+
             await _venueRepository.AddAsync(venue);
 
             var wallet = await _walletRepository.GetByUserIdAsync(ownerId, cancellationToken);
@@ -80,6 +96,12 @@ public class CreateVenueCommandHandler : ICommandHandler<CreateVenueCommand, Cre
             }
             walletId = wallet.WalletId;
 
+            var venueOpenDays = request.OperatingHours
+                .Where(h => !h.IsClosed)
+                .Select(h => (DayOfWeekEnum)h.DayOfWeek)
+                .Distinct()
+                .ToList();
+
             foreach (var fieldDto in request.Fields)
             {
                 if (!Enum.TryParse<FieldType>(fieldDto.FieldType, true, out var fieldType))
@@ -96,6 +118,14 @@ public class CreateVenueCommandHandler : ICommandHandler<CreateVenueCommand, Cre
                     SurfaceType = fieldDto.SurfaceType,
                     HourlyRate = fieldDto.HourlyRate,
                     PeakHourSurcharge = fieldDto.PeakHourSurcharge,
+                    PeakStartTime = fieldDto.PeakStartTime,
+                    PeakEndTime = fieldDto.PeakEndTime,
+                    WeekendSurcharge = fieldDto.WeekendSurcharge,
+                    HolidaySurcharge = fieldDto.HolidaySurcharge,
+                    PeakDaysOfWeek = venueOpenDays.ToList(),
+                    IsPeakHourSurchargePercentage = false,
+                    IsWeekendSurchargePercentage = false,
+                    IsHolidaySurchargePercentage = false,
                     CreatedAt = DateTime.UtcNow
                 };
 
@@ -111,7 +141,7 @@ public class CreateVenueCommandHandler : ICommandHandler<CreateVenueCommand, Cre
                     DayOfWeek = (DayOfWeekEnum)ohDto.DayOfWeek,
                     OpenTime = ohDto.OpenTime,
                     CloseTime = ohDto.CloseTime,
-                    IsClosed = false
+                    IsClosed = ohDto.IsClosed
                 };
 
                 venue.VenueOperatingHours.Add(operatingHour);
@@ -138,7 +168,15 @@ public class CreateVenueCommandHandler : ICommandHandler<CreateVenueCommand, Cre
                     f.FieldType.ToString(),
                     f.SurfaceType,
                     f.HourlyRate,
-                    f.PeakHourSurcharge
+                    f.PeakHourSurcharge,
+                    f.PeakStartTime,
+                    f.PeakEndTime,
+                    f.WeekendSurcharge,
+                    f.HolidaySurcharge,
+                    f.PeakDaysOfWeek,
+                    f.IsPeakHourSurchargePercentage,
+                    f.IsWeekendSurchargePercentage,
+                    f.IsHolidaySurchargePercentage
                 )).ToList(),
                 venue.CreatedAt
             ));

@@ -27,4 +27,5 @@ public class Venue : BaseEntity
     public ICollection<Field> Fields { get; set; } = new List<Field>();
     public ICollection<VenueReview> VenueReviews { get; set; } = new List<VenueReview>();
     public ICollection<VenueEvidence> VenueEvidences { get; set; } = new List<VenueEvidence>();
+    public ICollection<Holiday> IgnoredHolidays { get; set; } = new List<Holiday>();
 }

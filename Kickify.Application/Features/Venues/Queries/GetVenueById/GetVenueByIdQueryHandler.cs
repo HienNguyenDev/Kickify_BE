@@ -61,6 +61,13 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenueById
                     venue.Owner.PreferredFoot,
                     venue.Owner.IsActive
                 ),
+                venue.IgnoredHolidays
+                    .OrderBy(h => h.Date)
+                    .Select(h => new IgnoredHolidayDto(
+                        h.Id,
+                        h.Name,
+                        h.Date
+                    )).ToList(),
                 venue.Fields.Select(f => new VenueFieldDto(
                     f.FieldId,
                     f.FieldName,
@@ -68,6 +75,14 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenueById
                     f.SurfaceType,
                     f.HourlyRate,
                     f.PeakHourSurcharge,
+                    f.PeakStartTime,
+                    f.PeakEndTime,
+                    f.WeekendSurcharge,
+                    f.HolidaySurcharge,
+                    f.PeakDaysOfWeek,
+                    f.IsPeakHourSurchargePercentage,
+                    f.IsWeekendSurchargePercentage,
+                    f.IsHolidaySurchargePercentage,
                     f.IsActive,
                     f.CreatedAt,
                     f.UpdatedAt

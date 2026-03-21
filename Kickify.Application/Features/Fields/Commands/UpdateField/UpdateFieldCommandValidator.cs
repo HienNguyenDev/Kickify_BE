@@ -30,6 +30,39 @@ namespace Kickify.Application.Features.Fields.Commands.UpdateField
                     .GreaterThanOrEqualTo(0)
                     .WithMessage("PeakHourSurcharge must be greater than or equal to 0");
             });
+
+            When(x => x.WeekendSurcharge.HasValue, () =>
+            {
+                RuleFor(x => x.WeekendSurcharge)
+                    .GreaterThanOrEqualTo(0)
+                    .WithMessage("WeekendSurcharge must be greater than or equal to 0");
+            });
+
+            When(x => x.HolidaySurcharge.HasValue, () =>
+            {
+                RuleFor(x => x.HolidaySurcharge)
+                    .GreaterThanOrEqualTo(0)
+                    .WithMessage("HolidaySurcharge must be greater than or equal to 0");
+            });
+
+            RuleFor(x => x)
+                .Must(x => x.PeakStartTime.HasValue == x.PeakEndTime.HasValue || (!x.PeakStartTime.HasValue && !x.PeakEndTime.HasValue))
+                .WithMessage("PeakStartTime and PeakEndTime must either both be provided or both be empty");
+
+            RuleFor(x => x)
+                .Must(x => !x.PeakStartTime.HasValue || !x.PeakEndTime.HasValue || x.PeakStartTime.Value < x.PeakEndTime.Value)
+                .WithMessage("PeakStartTime must be earlier than PeakEndTime");
+
+            When(x => x.PeakDaysOfWeek != null, () =>
+            {
+                RuleFor(x => x.PeakDaysOfWeek)
+                    .Must(days => days != null && days.Distinct().Count() == days.Count)
+                    .WithMessage("PeakDaysOfWeek must not contain duplicate values");
+
+                RuleForEach(x => x.PeakDaysOfWeek!)
+                    .IsInEnum()
+                    .WithMessage("PeakDaysOfWeek contains an invalid day");
+            });
         }
     }
 }

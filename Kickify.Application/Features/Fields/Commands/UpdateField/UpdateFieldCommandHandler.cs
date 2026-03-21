@@ -46,6 +46,23 @@ namespace Kickify.Application.Features.Fields.Commands.UpdateField
                 return Result.Failure<UpdateFieldResponse>(FieldErrors.Unauthorized);
             }
 
+            if (request.PeakDaysOfWeek != null)
+            {
+                var venueOpenDays = field.Venue.VenueOperatingHours
+                    .Where(h => !h.IsClosed)
+                    .Select(h => h.DayOfWeek)
+                    .Distinct()
+                    .ToList();
+
+                var hasInvalidPeakDay = request.PeakDaysOfWeek.Any(day => !venueOpenDays.Contains(day));
+                if (hasInvalidPeakDay)
+                {
+                    return Result.Failure<UpdateFieldResponse>(FieldErrors.PeakHourOnClosedVenueDay);
+                }
+
+                field.PeakDaysOfWeek = request.PeakDaysOfWeek.Distinct().ToList();
+            }
+
             // Map properties from command to entity
             // Rule: null = keep old value, non-null (including empty string) = update
             _mapper.Map(request, field);
@@ -57,6 +74,21 @@ namespace Kickify.Application.Features.Fields.Commands.UpdateField
                 {
                     field.FieldType = fieldType;
                 }
+            }
+
+            if (request.IsPeakHourSurchargePercentage.HasValue)
+            {
+                field.IsPeakHourSurchargePercentage = request.IsPeakHourSurchargePercentage.Value;
+            }
+
+            if (request.IsWeekendSurchargePercentage.HasValue)
+            {
+                field.IsWeekendSurchargePercentage = request.IsWeekendSurchargePercentage.Value;
+            }
+
+            if (request.IsHolidaySurchargePercentage.HasValue)
+            {
+                field.IsHolidaySurchargePercentage = request.IsHolidaySurchargePercentage.Value;
             }
 
             field.UpdatedAt = DateTime.UtcNow;
@@ -72,6 +104,14 @@ namespace Kickify.Application.Features.Fields.Commands.UpdateField
                 field.SurfaceType,
                 field.HourlyRate,
                 field.PeakHourSurcharge,
+                field.PeakStartTime,
+                field.PeakEndTime,
+                field.WeekendSurcharge,
+                field.HolidaySurcharge,
+                field.PeakDaysOfWeek,
+                field.IsPeakHourSurchargePercentage,
+                field.IsWeekendSurchargePercentage,
+                field.IsHolidaySurchargePercentage,
                 field.IsActive,
                 field.UpdatedAt
             ));
