@@ -35,6 +35,7 @@ public interface IApplicationDbContext
     DbSet<Comment> Comments { get; set; }
     DbSet<CommentLike> CommentLikes { get; set; }
     DbSet<Friendship> Friendships { get; set; }
+    DbSet<ContentReport> ContentReports { get; set; }
 
     // Evaluation Schema
     DbSet<MatchFeedback> MatchFeedbacks { get; set; }

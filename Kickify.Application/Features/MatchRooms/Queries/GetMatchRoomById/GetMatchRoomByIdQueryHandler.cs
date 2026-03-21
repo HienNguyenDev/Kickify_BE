@@ -11,13 +11,16 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById
     {
         private readonly IMatchRoomRepository _matchRoomRepository;
         private readonly IMatchFormationRepository _matchFormationRepository;
+        private readonly IMatchFeedbackRepository _matchFeedbackRepository;
 
         public GetMatchRoomByIdQueryHandler(
             IMatchRoomRepository matchRoomRepository,
-            IMatchFormationRepository matchFormationRepository)
+            IMatchFormationRepository matchFormationRepository,
+            IMatchFeedbackRepository matchFeedbackRepository)
         {
             _matchRoomRepository = matchRoomRepository;
             _matchFormationRepository = matchFormationRepository;
+            _matchFeedbackRepository = matchFeedbackRepository;
         }
 
         public async Task<Result<GetMatchRoomByIdResponse>> Handle(GetMatchRoomByIdQuery request, CancellationToken cancellationToken)
@@ -59,6 +62,10 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById
                 );
             }
 
+            // Fetch feedback state
+            var roomFeedbacks = await _matchFeedbackRepository.GetFeedbacksByMatchAsync(request.RoomId, cancellationToken);
+            var usersWhoLeftFeedback = roomFeedbacks.Select(f => f.ReviewerId).ToHashSet();
+
             // Map Participants and group by TeamAssignment
             var allParticipants = room.RoomParticipants.Select(p => new RoomParticipantDto(
                 p.ParticipantId,
@@ -71,7 +78,8 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById
                 p.CheckedIn,
                 p.CheckInTime,
                 p.IsCaptain,
-                p.JoinDate
+                p.JoinDate,
+                usersWhoLeftFeedback.Contains(p.UserId)
             )).ToList();
 
             // RULE: Calculate totalDepositCollected from participants with depositPaid = true

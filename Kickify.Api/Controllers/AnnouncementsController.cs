@@ -27,6 +27,7 @@ public class AnnouncementsController : ControllerBase
     /// Get announcements with optional filters
     /// </summary>
     [HttpGet]
+    [Authorize]
     public async Task<IResult> GetAnnouncements(
         [FromQuery] AnnouncementType? announcementType = null,
         [FromQuery] bool? isActive = null,
