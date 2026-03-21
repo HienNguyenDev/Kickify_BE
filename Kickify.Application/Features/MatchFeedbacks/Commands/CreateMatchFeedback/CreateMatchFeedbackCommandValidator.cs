@@ -10,9 +10,9 @@ public class CreateMatchFeedbackCommandValidator : AbstractValidator<CreateMatch
             .NotEmpty()
             .WithMessage("MatchId is required");
 
-        RuleFor(x => x.RevieweeId)
+        RuleFor(x => x.ReviewerId)
             .NotEmpty()
-            .WithMessage("RevieweeId is required");
+            .WithMessage("ReviewerId is required");
 
         RuleFor(x => x.Feedbacks)
             .NotEmpty()
@@ -20,9 +20,9 @@ public class CreateMatchFeedbackCommandValidator : AbstractValidator<CreateMatch
 
         RuleForEach(x => x.Feedbacks).ChildRules(feedback =>
         {
-            feedback.RuleFor(f => f.ReviewerId)
+            feedback.RuleFor(f => f.RevieweeId)
                 .NotEmpty()
-                .WithMessage("ReviewerId is required");
+                .WithMessage("RevieweeId is required");
 
             feedback.RuleFor(f => f.Rating)
                 .InclusiveBetween(1, 5)
