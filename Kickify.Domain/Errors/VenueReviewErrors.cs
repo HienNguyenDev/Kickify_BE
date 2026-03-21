@@ -1,4 +1,4 @@
-using Kickify.Domain.Common;
+﻿using Kickify.Domain.Common;
 
 namespace Kickify.Domain.Errors
 {
@@ -35,5 +35,8 @@ namespace Kickify.Domain.Errors
         public static readonly Error InvalidRating = Error.Conflict(
             "VenueReviews.InvalidRating",
             "Rating must be between 1 and 5");
+        public static readonly Error NotEligible = Error.Conflict(
+            "VenueReviews.NotEligible",
+            "You are not eligible to review this venue. You must have a completed match that hasn't been reviewed yet.");
     }
 }

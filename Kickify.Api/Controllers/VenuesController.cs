@@ -363,7 +363,7 @@ namespace Kickify.Api.Controllers
             CancellationToken cancellationToken)
         {
             var command = new CreateVenueReviewCommand(
-                request.BookingId,
+                request.VenueId,
                 request.Rating,
                 request.Comment
             );
