@@ -24,4 +24,13 @@ public class MatchFeedbackRepository : GenericRepository<MatchFeedback>, IMatchF
     {
         return await _dbSet.Where(f => f.MatchId == matchId).ToListAsync(cancellationToken);
     }
+
+    public async Task<List<Guid>> GetMatchesReviewedByUserAsync(Guid userId, List<Guid> matchIds, CancellationToken cancellationToken = default)
+    {
+        return await _dbSet
+            .Where(f => f.ReviewerId == userId && matchIds.Contains(f.MatchId))
+            .Select(f => f.MatchId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+    }
 }

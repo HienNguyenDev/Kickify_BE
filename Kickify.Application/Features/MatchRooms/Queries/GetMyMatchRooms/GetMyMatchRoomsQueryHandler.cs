@@ -8,13 +8,16 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMyMatchRooms
     public class GetMyMatchRoomsQueryHandler : IQueryHandler<GetMyMatchRoomsQuery, GetMyMatchRoomsResponse>
     {
         private readonly IMatchRoomRepository _matchRoomRepository;
+        private readonly IMatchFeedbackRepository _matchFeedbackRepository;
         private readonly IUserContext _userContext;
 
         public GetMyMatchRoomsQueryHandler(
             IMatchRoomRepository matchRoomRepository,
+            IMatchFeedbackRepository matchFeedbackRepository,
             IUserContext userContext)
         {
             _matchRoomRepository = matchRoomRepository;
+            _matchFeedbackRepository = matchFeedbackRepository;
             _userContext = userContext;
         }
 
@@ -28,6 +31,11 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMyMatchRooms
                 request.PageSize,
                 cancellationToken
             );
+
+            var matchIds = rooms.Select(r => r.RoomId).ToList();
+            var reviewedMatchIds = matchIds.Any()
+                ? await _matchFeedbackRepository.GetMatchesReviewedByUserAsync(userId, matchIds, cancellationToken)
+                : new List<Guid>();
 
             var roomItems = rooms.Select(room =>
             {
@@ -86,7 +94,8 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMyMatchRooms
                     room.Visibility.ToString(),
                     room.Visibility == Domain.Enums.Visibility.Private,
                     room.Status.ToString(),
-                    room.CreatedAt
+                    room.CreatedAt,
+                    reviewedMatchIds.Contains(room.RoomId)
                 );
             }).ToList();
 

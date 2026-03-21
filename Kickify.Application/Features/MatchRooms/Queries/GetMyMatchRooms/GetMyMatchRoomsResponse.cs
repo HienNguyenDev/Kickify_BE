@@ -29,7 +29,8 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMyMatchRooms
         string Visibility,
         bool IsPrivate,
         string Status,
-        DateTime CreatedAt
+        DateTime CreatedAt,
+        bool HasLeftFeedback
     );
 
     public record MyRoomHostDto(

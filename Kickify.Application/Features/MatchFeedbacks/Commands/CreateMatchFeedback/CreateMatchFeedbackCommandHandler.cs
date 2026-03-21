@@ -36,22 +36,22 @@ public class CreateMatchFeedbackCommandHandler : ICommandHandler<CreateMatchFeed
         if (matchRoom.Status != RoomStatus.Reviewing)
             return Result.Failure<CreateMatchFeedbackCommandResponse>(MatchFeedbackErrors.MatchNotReviewing);
 
-        var isRevieweeInMatch = await _roomParticipantRepository.IsUserInRoomAsync(request.MatchId, request.RevieweeId, cancellationToken);
-        if (!isRevieweeInMatch)
-            return Result.Failure<CreateMatchFeedbackCommandResponse>(MatchFeedbackErrors.RevieweeNotInMatch);
+        var isReviewerInMatch = await _roomParticipantRepository.IsUserInRoomAsync(request.MatchId, request.ReviewerId, cancellationToken);
+        if (!isReviewerInMatch)
+            return Result.Failure<CreateMatchFeedbackCommandResponse>(MatchFeedbackErrors.ReviewerNotInMatch);
 
         var createdFeedbacks = new List<MatchFeedback>();
 
         foreach (var item in request.Feedbacks)
         {
-            if (item.ReviewerId == request.RevieweeId)
+            if (item.RevieweeId == request.ReviewerId)
                 return Result.Failure<CreateMatchFeedbackCommandResponse>(MatchFeedbackErrors.CannotReviewYourself);
 
-            var isReviewerInMatch = await _roomParticipantRepository.IsUserInRoomAsync(request.MatchId, item.ReviewerId, cancellationToken);
-            if (!isReviewerInMatch)
-                return Result.Failure<CreateMatchFeedbackCommandResponse>(MatchFeedbackErrors.ReviewerNotInMatch);
+            var isRevieweeInMatch = await _roomParticipantRepository.IsUserInRoomAsync(request.MatchId, item.RevieweeId, cancellationToken);
+            if (!isRevieweeInMatch)
+                return Result.Failure<CreateMatchFeedbackCommandResponse>(MatchFeedbackErrors.RevieweeNotInMatch);
 
-            var alreadyReviewed = await _matchFeedbackRepository.HasUserReviewedAsync(request.MatchId, item.ReviewerId, request.RevieweeId, cancellationToken);
+            var alreadyReviewed = await _matchFeedbackRepository.HasUserReviewedAsync(request.MatchId, request.ReviewerId, item.RevieweeId, cancellationToken);
             if (alreadyReviewed)
                 return Result.Failure<CreateMatchFeedbackCommandResponse>(MatchFeedbackErrors.AlreadyReviewed);
 
@@ -59,8 +59,8 @@ public class CreateMatchFeedbackCommandHandler : ICommandHandler<CreateMatchFeed
             {
                 FeedbackId = item.FeedbackId ?? Guid.NewGuid(),
                 MatchId = request.MatchId,
-                ReviewerId = item.ReviewerId,
-                RevieweeId = request.RevieweeId,
+                ReviewerId = request.ReviewerId,
+                RevieweeId = item.RevieweeId,
                 Rating = item.Rating,
                 Comment = item.Comment ?? string.Empty,
                 CreatedAt = DateTime.UtcNow
@@ -75,11 +75,11 @@ public class CreateMatchFeedbackCommandHandler : ICommandHandler<CreateMatchFeed
         return Result.Success(new CreateMatchFeedbackCommandResponse
         {
             MatchId = request.MatchId,
-            RevieweeId = request.RevieweeId,
+            ReviewerId = request.ReviewerId,
             Feedbacks = createdFeedbacks.Select(f => new FeedbackResultItemDto
             {
                 FeedbackId = f.FeedbackId,
-                ReviewerId = f.ReviewerId,
+                RevieweeId = f.RevieweeId,
                 Rating = f.Rating,
                 Comment = f.Comment,
                 CreatedAt = f.CreatedAt
