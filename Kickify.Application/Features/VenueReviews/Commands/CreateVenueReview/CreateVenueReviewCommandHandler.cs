@@ -36,54 +36,25 @@ public class CreateVenueReviewCommandHandler : ICommandHandler<CreateVenueReview
     {
         var userId = _userContext.UserId;
 
-        // Get booking with Field → Venue, MatchRoom → RoomParticipants
-        var booking = await _bookingRepository.GetBookingForReviewValidationAsync(request.BookingId, cancellationToken);
-        if (booking is null)
+        // 1. TÌM BOOKING HỢP LỆ (Lọc 1 phát ra luôn kết quả)
+        var eligibleBooking = await _bookingRepository.GetEligibleBookingForVenueReviewAsync(request.VenueId, userId, cancellationToken);
+
+        if (eligibleBooking == null)
         {
-            return Result.Failure<CreateVenueReviewResponse>(VenueReviewErrors.BookingNotFound(request.BookingId));
+            // Trả về chung 1 lỗi tổng quát: User chưa đá ở đây bao giờ, hoặc chưa đá xong, hoặc đã review hết các trận rồi.
+            return Result.Failure<CreateVenueReviewResponse>(VenueReviewErrors.NotEligible);
         }
 
-        // Validation 1: Participation check - user must be a participant in the match room
-        var isParticipant = booking.MatchRoom?.RoomParticipants?.Any(rp => rp.UserId == userId) ?? false;
-        if (!isParticipant)
-        {
-            return Result.Failure<CreateVenueReviewResponse>(VenueReviewErrors.NotParticipant);
-        }
+        // Lấy Venue Name từ Include
+        var venueName = eligibleBooking.Field.Venue?.VenueName ?? string.Empty;
 
-        // Validation 2: Time check - match must have ended (current time > BookingDate + EndTime)
-        var matchEndDateTime = booking.BookingDate.Date + booking.EndTime;
-        if (DateTime.UtcNow <= matchEndDateTime)
-        {
-            return Result.Failure<CreateVenueReviewResponse>(VenueReviewErrors.MatchNotEnded);
-        }
-
-        // Validation 3: Status check - Booking must be Confirmed/Completed AND MatchRoom must be Completed
-        var isBookingValid = booking.Status == BookingStatus.Confirmed || booking.Status == BookingStatus.Completed;
-        //var isRoomCompleted = booking.MatchRoom?.Status == RoomStatus.Completed;
-        if (!isBookingValid)
-            //|| !isRoomCompleted)
-        {
-            return Result.Failure<CreateVenueReviewResponse>(VenueReviewErrors.BookingNotCompleted);
-        }
-
-        // Validation 4: Anti-spam - user must not have already reviewed this booking
-        var hasReviewed = await _venueReviewRepository.HasUserReviewedBookingAsync(userId, request.BookingId, cancellationToken);
-        if (hasReviewed)
-        {
-            return Result.Failure<CreateVenueReviewResponse>(VenueReviewErrors.AlreadyReviewed);
-        }
-
-        // Derive VenueId from Booking → Field → Venue
-        var venueId = booking.Field.VenueId;
-        var venueName = booking.Field.Venue?.VenueName ?? string.Empty;
-
-        // Create the review
+        // 2. TẠO REVIEW GẮN VỚI BOOKING VỪA TÌM ĐƯỢC
         var review = new VenueReview
         {
             ReviewId = Guid.NewGuid(),
-            VenueId = venueId,
+            VenueId = request.VenueId,
             UserId = userId,
-            BookingId = request.BookingId,
+            BookingId = eligibleBooking.BookingId, // Lấy BookingId hợp lệ móc ra từ DB
             Rating = request.Rating,
             Comment = request.Comment,
             CreatedAt = DateTime.UtcNow
@@ -93,17 +64,19 @@ public class CreateVenueReviewCommandHandler : ICommandHandler<CreateVenueReview
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation(
-            "User {UserId} created review {ReviewId} for venue {VenueId} via booking {BookingId} with rating {Rating}",
-            userId, review.ReviewId, venueId, request.BookingId, request.Rating);
+            "User {UserId} created review {ReviewId} for venue {VenueId} linked to auto-detected booking {BookingId} with rating {Rating}",
+            userId, review.ReviewId, request.VenueId, eligibleBooking.BookingId, request.Rating);
 
         return Result.Success(new CreateVenueReviewResponse(
             review.ReviewId,
-            venueId,
+            request.VenueId,
             venueName,
-            request.BookingId,
+            eligibleBooking.BookingId, // Trả về cho FE biết nó đang review trận nào
             review.Rating,
             review.Comment,
             review.CreatedAt
         ));
     }
 }
+
+
