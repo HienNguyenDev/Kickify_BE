@@ -8,5 +8,6 @@ public record GetVenueDashboardQuery(
     string? Timezone = null,
     Guid? VenueId = null,
     int UpcomingBookingsPageSize = 10,
-    int RecentReviewsPageSize = 10
+    int RecentReviewsPageSize = 10,
+    bool IsAdmin = false
 ) : IQuery<GetVenueDashboardResponse>;

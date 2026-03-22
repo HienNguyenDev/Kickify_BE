@@ -260,8 +260,10 @@ public class GetAdminDashboardQueryHandler
     };
 
     private static DateTime ToUtc(DateTime localDate, TimeZoneInfo tz)
-        => TimeZoneInfo.ConvertTimeToUtc(
+    {
+        return TimeZoneInfo.ConvertTimeToUtc(
             DateTime.SpecifyKind(localDate, DateTimeKind.Unspecified), tz);
+    }
 
     private static TimeZoneInfo ResolveTimezone(string? timezone)
     {
