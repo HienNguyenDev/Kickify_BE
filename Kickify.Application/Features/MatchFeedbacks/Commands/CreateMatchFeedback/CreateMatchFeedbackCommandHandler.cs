@@ -55,9 +55,11 @@ public class CreateMatchFeedbackCommandHandler : ICommandHandler<CreateMatchFeed
             if (alreadyReviewed)
                 return Result.Failure<CreateMatchFeedbackCommandResponse>(MatchFeedbackErrors.AlreadyReviewed);
 
+            // Server-generated PK only: client-supplied FeedbackId caused EF tracking conflicts when
+            // duplicate IDs appeared in one request or collided with tracked entities.
             var feedback = new MatchFeedback
             {
-                FeedbackId = item.FeedbackId ?? Guid.NewGuid(),
+                FeedbackId = Guid.NewGuid(),
                 MatchId = request.MatchId,
                 ReviewerId = request.ReviewerId,
                 RevieweeId = item.RevieweeId,
