@@ -1,5 +1,6 @@
-using Kickify.Application.Abstractions.Repositories;
+﻿using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Entities;
+using Kickify.Domain.Enums;
 using Kickify.Infrastructure.Database;
 using Kickify.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -170,6 +171,23 @@ namespace Kickify.Infrastructure.Repositories
                 .ToListAsync(cancellationToken);
 
             return (bookings, total);
+        }
+
+        public async Task<Booking?> GetEligibleBookingForVenueReviewAsync(Guid venueId, Guid userId, CancellationToken cancellationToken = default)
+        {
+            var now = DateTime.UtcNow;
+
+            return await _dbSet
+                .Include(b => b.Field)
+                    .ThenInclude(f => f.Venue)
+                .Where(b => b.Field.VenueId == venueId) // 1. Thuộc Venue này
+                .Where(b => b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.Completed) // 2. Trạng thái hợp lệ
+                .Where(b => b.BookingDate.Date + b.EndTime <= now) // 3. Đã đá xong
+                .Where(b => b.MatchRoom.RoomParticipants.Any(rp => rp.UserId == userId)) // 4. User có tham gia phòng này
+                .Where(b => !_context.Set<VenueReview>().Any(vr => vr.BookingId == b.BookingId && vr.UserId == userId)) // 5. Chưa từng review trận này
+                .OrderByDescending(b => b.BookingDate) // Ưu tiên lấy trận gần nhất
+                .ThenByDescending(b => b.EndTime)
+                .FirstOrDefaultAsync(cancellationToken);
         }
     }
 }

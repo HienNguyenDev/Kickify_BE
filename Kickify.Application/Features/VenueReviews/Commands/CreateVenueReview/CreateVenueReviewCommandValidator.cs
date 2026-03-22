@@ -6,8 +6,8 @@ public class CreateVenueReviewCommandValidator : AbstractValidator<CreateVenueRe
 {
     public CreateVenueReviewCommandValidator()
     {
-        RuleFor(x => x.BookingId)
-            .NotEmpty().WithMessage("BookingId is required");
+        RuleFor(x => x.VenueId)
+            .NotEmpty().WithMessage("VenueId is required");
 
         RuleFor(x => x.Rating)
             .InclusiveBetween(1, 5).WithMessage("Rating must be between 1 and 5");
