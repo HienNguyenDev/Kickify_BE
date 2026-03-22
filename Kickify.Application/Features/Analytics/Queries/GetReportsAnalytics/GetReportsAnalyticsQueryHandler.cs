@@ -85,7 +85,7 @@ public class GetReportsAnalyticsQueryHandler
         var totalBookingsPrev = await _db.Bookings
             .CountAsync(b => b.BookingDate >= prevFromUtc && b.BookingDate < prevToUtcExclusive,
                 cancellationToken);
-        var totalBookingsChangePct = CalcChangePct(totalBookings, totalBookingsPrev);
+        var totalBookingsChangePct = CalcChangePctOrZero(totalBookings, totalBookingsPrev);
 
         // ════════════════════════════════════════════
         // Summary: Monthly Revenue
@@ -157,7 +157,7 @@ public class GetReportsAnalyticsQueryHandler
 
         var userDistribution = new List<UserDistributionDto>
         {
-            new("Customers", playerCount),
+            new("Player", playerCount),
             new("Venue Owners", venueOwnerCount)
         };
 
@@ -270,9 +270,18 @@ public class GetReportsAnalyticsQueryHandler
     private static double? CalcChangePct(int current, int previous)
         => CalcChangePct((decimal)current, (decimal)previous);
 
+    /// <summary>Like <see cref="CalcChangePct"/> but returns 0 when previous is 0 (API contract: non-null).</summary>
+    private static double CalcChangePctOrZero(int current, int previous)
+    {
+        if (previous == 0) return 0;
+        return Math.Round((double)(current - previous) / previous * 100, 1);
+    }
+
     private static DateTime ToUtc(DateTime localDate, TimeZoneInfo tz)
-        => TimeZoneInfo.ConvertTimeToUtc(
+    {
+        return TimeZoneInfo.ConvertTimeToUtc(
             DateTime.SpecifyKind(localDate, DateTimeKind.Unspecified), tz);
+    }
 
     private static TimeZoneInfo ResolveTimezone(string? timezone)
     {

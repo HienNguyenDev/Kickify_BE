@@ -34,9 +34,11 @@ public class AnalyticsController : ControllerBase
         [FromQuery] int recentReviewsPageSize = 10,
         CancellationToken cancellationToken = default)
     {
+        var isAdmin = User.IsInRole("Admin");
         var query = new GetVenueDashboardQuery(
             fromDate, toDate, timezone, venueId,
-            upcomingBookingsPageSize, recentReviewsPageSize);
+            upcomingBookingsPageSize, recentReviewsPageSize,
+            isAdmin);
         var result = await _sender.Send(query, cancellationToken);
         return result.MatchOk();
     }

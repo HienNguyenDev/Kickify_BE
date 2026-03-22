@@ -1,7 +1,9 @@
+using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Domain.Common;
 using Kickify.Domain.Enums;
+using Kickify.Domain.Errors;
 using Microsoft.EntityFrameworkCore;
 
 namespace Kickify.Application.Features.Analytics.Queries.GetVenueDashboard;
@@ -10,11 +12,13 @@ public class GetVenueDashboardQueryHandler
     : IQueryHandler<GetVenueDashboardQuery, GetVenueDashboardResponse>
 {
     private readonly IApplicationDbContext _db;
+    private readonly IUserContext _userContext;
     private const string DefaultTimezone = "Asia/Ho_Chi_Minh";
 
-    public GetVenueDashboardQueryHandler(IApplicationDbContext db)
+    public GetVenueDashboardQueryHandler(IApplicationDbContext db, IUserContext userContext)
     {
         _db = db;
+        _userContext = userContext;
     }
 
     public async Task<Result<GetVenueDashboardResponse>> Handle(
@@ -23,16 +27,28 @@ public class GetVenueDashboardQueryHandler
         // ── 1. Resolve timezone ──
         var tz = ResolveTimezone(request.Timezone);
 
-        // ── 2. Compute UTC boundaries ──
+        // ── 2. Venue scope: Admin = all (optional venueId); VenueOwner = only owned venues ──
+        List<Guid> ownedVenueIds = new();
+        if (!request.IsAdmin)
+        {
+            ownedVenueIds = await _db.Venues
+                .AsNoTracking()
+                .Where(v => v.OwnerId == _userContext.UserId)
+                .Select(v => v.VenueId)
+                .ToListAsync(cancellationToken);
+
+            if (request.VenueId.HasValue && !ownedVenueIds.Contains(request.VenueId.Value))
+                return Result.Failure<GetVenueDashboardResponse>(VenueErrors.Unauthorized);
+        }
+
+        // ── 3. Compute UTC boundaries (Npgsql-safe for timestamp without time zone) ──
         var fromLocal = request.FromDate.Date;
         var toLocalNextDay = request.ToDate.Date.AddDays(1);
 
-        var fromUtc = TimeZoneInfo.ConvertTimeToUtc(
-            DateTime.SpecifyKind(fromLocal, DateTimeKind.Unspecified), tz);
-        var toUtcExclusive = TimeZoneInfo.ConvertTimeToUtc(
-            DateTime.SpecifyKind(toLocalNextDay, DateTimeKind.Unspecified), tz);
+        var fromUtc = ToUtcBoundary(fromLocal, tz);
+        var toUtcExclusive = ToUtcBoundary(toLocalNextDay, tz);
 
-        // ── 3. Base booking query (venue-scoped) ──
+        // ── 4. Base booking query (venue-scoped) ──
         var bookingsQuery = _db.Bookings
             .Include(b => b.Field)
                 .ThenInclude(f => f.Venue)
@@ -41,18 +57,26 @@ public class GetVenueDashboardQueryHandler
             .AsNoTracking()
             .Where(b => b.BookingDate >= fromUtc && b.BookingDate < toUtcExclusive);
 
-        if (request.VenueId.HasValue)
+        if (request.IsAdmin)
         {
-            bookingsQuery = bookingsQuery.Where(b => b.Field.VenueId == request.VenueId.Value);
+            if (request.VenueId.HasValue)
+                bookingsQuery = bookingsQuery.Where(b => b.Field.VenueId == request.VenueId.Value);
+        }
+        else
+        {
+            if (!ownedVenueIds.Any())
+                bookingsQuery = bookingsQuery.Where(_ => false);
+            else if (request.VenueId.HasValue)
+                bookingsQuery = bookingsQuery.Where(b => b.Field.VenueId == request.VenueId.Value);
+            else
+                bookingsQuery = bookingsQuery.Where(b => ownedVenueIds.Contains(b.Field.VenueId));
         }
 
         var bookings = await bookingsQuery.ToListAsync(cancellationToken);
 
-        // ── 4. Revenue from wallet transactions ──
-        var venueFieldIds = bookings.Select(b => b.FieldId).Distinct().ToList();
+        // ── 5. Revenue from wallet transactions ──
         var venueIds = bookings.Select(b => b.Field.VenueId).Distinct().ToList();
 
-        // Get wallet ids for venue owners
         var venueOwnerIds = await _db.Venues
             .Where(v => venueIds.Contains(v.VenueId))
             .Select(v => v.OwnerId)
@@ -81,36 +105,44 @@ public class GetVenueDashboardQueryHandler
 
         var totalRevenue = paidAmount - refundedAmount;
 
-        // ── 5. Summary ──
+        // ── 6. Summary ──
         var totalBookings = bookings.Count;
 
-        // Avg rating from reviews within scope
         var reviewsQuery = _db.VenueReviews
             .AsNoTracking()
             .Where(r => r.CreatedAt >= fromUtc && r.CreatedAt < toUtcExclusive);
 
-        if (request.VenueId.HasValue)
-            reviewsQuery = reviewsQuery.Where(r => r.VenueId == request.VenueId.Value);
-        else if (venueIds.Any())
-            reviewsQuery = reviewsQuery.Where(r => venueIds.Contains(r.VenueId));
+        if (request.IsAdmin)
+        {
+            if (request.VenueId.HasValue)
+                reviewsQuery = reviewsQuery.Where(r => r.VenueId == request.VenueId.Value);
+            else if (venueIds.Any())
+                reviewsQuery = reviewsQuery.Where(r => venueIds.Contains(r.VenueId));
+        }
+        else
+        {
+            if (request.VenueId.HasValue)
+                reviewsQuery = reviewsQuery.Where(r => r.VenueId == request.VenueId.Value);
+            else if (ownedVenueIds.Any())
+                reviewsQuery = reviewsQuery.Where(r => ownedVenueIds.Contains(r.VenueId));
+            else
+                reviewsQuery = reviewsQuery.Where(_ => false);
+        }
 
         var avgRating = await reviewsQuery.AnyAsync(cancellationToken)
             ? Math.Round((decimal)await reviewsQuery.AverageAsync(r => r.Rating, cancellationToken), 1)
             : (decimal?)null;
 
-        // Active venues: venues with >= 1 booking in period
         var activeVenuesCount = bookings.Select(b => b.Field.VenueId).Distinct().Count();
 
         var summary = new VenueDashboardSummaryDto(totalRevenue, totalBookings, avgRating, activeVenuesCount);
 
-        // ── 6. Revenue series (day buckets) ──
+        // ── 7. Revenue series (day buckets) ──
         var revenueSeries = new List<RevenueSeriesItemDto>();
         for (var day = fromLocal; day <= request.ToDate.Date; day = day.AddDays(1))
         {
-            var dayStart = TimeZoneInfo.ConvertTimeToUtc(
-                DateTime.SpecifyKind(day, DateTimeKind.Unspecified), tz);
-            var dayEnd = TimeZoneInfo.ConvertTimeToUtc(
-                DateTime.SpecifyKind(day.AddDays(1), DateTimeKind.Unspecified), tz);
+            var dayStart = ToUtcBoundary(day, tz);
+            var dayEnd = ToUtcBoundary(day.AddDays(1), tz);
 
             var dayPaid = transactions
                 .Where(t => t.TransactionType == TransactionType.BookingIncome
@@ -126,14 +158,12 @@ public class GetVenueDashboardQueryHandler
                 dayPaid - dayRefund));
         }
 
-        // ── 7. Bookings series (day buckets) ──
+        // ── 8. Bookings series (day buckets) ──
         var bookingsSeries = new List<BookingsSeriesItemDto>();
         for (var day = fromLocal; day <= request.ToDate.Date; day = day.AddDays(1))
         {
-            var dayStart = TimeZoneInfo.ConvertTimeToUtc(
-                DateTime.SpecifyKind(day, DateTimeKind.Unspecified), tz);
-            var dayEnd = TimeZoneInfo.ConvertTimeToUtc(
-                DateTime.SpecifyKind(day.AddDays(1), DateTimeKind.Unspecified), tz);
+            var dayStart = ToUtcBoundary(day, tz);
+            var dayEnd = ToUtcBoundary(day.AddDays(1), tz);
 
             var dayBookings = bookings
                 .Where(b => b.BookingDate >= dayStart && b.BookingDate < dayEnd)
@@ -142,30 +172,20 @@ public class GetVenueDashboardQueryHandler
             var confirmed = dayBookings.Count(b =>
                 b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.Completed);
 
-            // Pending = bookings whose related payment is pending
-            // Since we don't have a direct payment status on Booking, we count bookings that are Confirmed 
-            // but we derive pending from PaymentRequests
-            var dayBookingIds = dayBookings.Select(b => b.BookingId).ToList();
-            var pendingPaymentBookingIds = await _db.PaymentRequests
-                .Where(pr => pr.Status == PaymentStatus.Pending
-                    && dayBookingIds.Any())
-                .Select(pr => pr.PaymentRequestId)
-                .CountAsync(cancellationToken);
-
             var cancelled = dayBookings.Count(b => b.Status == BookingStatus.Cancelled);
 
-            // For pending, we use 0 as default since booking status doesn't have Pending
             bookingsSeries.Add(new BookingsSeriesItemDto(
                 day.ToString("yyyy-MM-dd"),
                 dayBookings.Count,
                 confirmed,
-                0, // Pending - no direct pending booking status in enum
+                0,
                 cancelled));
         }
 
-        // ── 8. Upcoming bookings ──
-        var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
-        var nowUtc = DateTime.UtcNow;
+        // ── 9. Upcoming bookings ──
+        // timestamptz columns require DateTimeKind.Utc (Npgsql); do not use Unspecified.
+        var utcNow = DateTime.UtcNow;
+        var todayUtcMidnight = new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, 0, 0, 0, DateTimeKind.Utc);
 
         var upcomingQuery = _db.Bookings
             .Include(b => b.Field)
@@ -173,11 +193,23 @@ public class GetVenueDashboardQueryHandler
             .Include(b => b.MatchRoom)
                 .ThenInclude(mr => mr.Host)
             .AsNoTracking()
-            .Where(b => b.BookingDate >= nowUtc.Date
+            .Where(b => b.BookingDate >= todayUtcMidnight
                 && b.Status == BookingStatus.Confirmed);
 
-        if (request.VenueId.HasValue)
-            upcomingQuery = upcomingQuery.Where(b => b.Field.VenueId == request.VenueId.Value);
+        if (request.IsAdmin)
+        {
+            if (request.VenueId.HasValue)
+                upcomingQuery = upcomingQuery.Where(b => b.Field.VenueId == request.VenueId.Value);
+        }
+        else
+        {
+            if (!ownedVenueIds.Any())
+                upcomingQuery = upcomingQuery.Where(_ => false);
+            else if (request.VenueId.HasValue)
+                upcomingQuery = upcomingQuery.Where(b => b.Field.VenueId == request.VenueId.Value);
+            else
+                upcomingQuery = upcomingQuery.Where(b => ownedVenueIds.Contains(b.Field.VenueId));
+        }
 
         var upcomingEntities = await upcomingQuery
             .OrderBy(b => b.BookingDate)
@@ -196,13 +228,25 @@ public class GetVenueDashboardQueryHandler
             b.TotalAmount
         )).ToList();
 
-        // ── 9. Recent reviews ──
+        // ── 10. Recent reviews ──
         var recentReviewsQuery = _db.VenueReviews
             .Include(r => r.Venue)
             .AsNoTracking();
 
-        if (request.VenueId.HasValue)
-            recentReviewsQuery = recentReviewsQuery.Where(r => r.VenueId == request.VenueId.Value);
+        if (request.IsAdmin)
+        {
+            if (request.VenueId.HasValue)
+                recentReviewsQuery = recentReviewsQuery.Where(r => r.VenueId == request.VenueId.Value);
+        }
+        else
+        {
+            if (!ownedVenueIds.Any())
+                recentReviewsQuery = recentReviewsQuery.Where(_ => false);
+            else if (request.VenueId.HasValue)
+                recentReviewsQuery = recentReviewsQuery.Where(r => r.VenueId == request.VenueId.Value);
+            else
+                recentReviewsQuery = recentReviewsQuery.Where(r => ownedVenueIds.Contains(r.VenueId));
+        }
 
         var recentReviewEntities = await recentReviewsQuery
             .OrderByDescending(r => r.CreatedAt)
@@ -226,6 +270,12 @@ public class GetVenueDashboardQueryHandler
             upcomingBookings,
             recentReviews
         ));
+    }
+
+    private static DateTime ToUtcBoundary(DateTime localDate, TimeZoneInfo tz)
+    {
+        return TimeZoneInfo.ConvertTimeToUtc(
+            DateTime.SpecifyKind(localDate, DateTimeKind.Unspecified), tz);
     }
 
     private static TimeZoneInfo ResolveTimezone(string? timezone)
