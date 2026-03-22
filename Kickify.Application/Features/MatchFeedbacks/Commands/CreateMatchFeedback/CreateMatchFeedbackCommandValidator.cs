@@ -18,6 +18,10 @@ public class CreateMatchFeedbackCommandValidator : AbstractValidator<CreateMatch
             .NotEmpty()
             .WithMessage("Feedbacks list must not be empty");
 
+        RuleFor(x => x.Feedbacks)
+            .Must(items => items.Select(f => f.RevieweeId).Distinct().Count() == items.Count)
+            .WithMessage("Each reviewee may only appear once in the feedbacks list");
+
         RuleForEach(x => x.Feedbacks).ChildRules(feedback =>
         {
             feedback.RuleFor(f => f.RevieweeId)
