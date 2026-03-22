@@ -181,9 +181,10 @@ namespace Kickify.Infrastructure.Repositories
                 .Include(b => b.Field)
                     .ThenInclude(f => f.Venue)
                 .Where(b => b.Field.VenueId == venueId) // 1. Thuộc Venue này
-                .Where(b => b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.Completed) // 2. Trạng thái hợp lệ
+                .Where(b => b.Status == BookingStatus.Confirmed// 2. Trạng thái hợp lệ
                 .Where(b => b.BookingDate.Date + b.EndTime <= now) // 3. Đã đá xong
                 .Where(b => b.MatchRoom.RoomParticipants.Any(rp => rp.UserId == userId)) // 4. User có tham gia phòng này
+                .Where(b => b.MatchRoom.Status == RoomStatus.Reviewing) // 4.1 Phòng đã kết thúc
                 .Where(b => !_context.Set<VenueReview>().Any(vr => vr.BookingId == b.BookingId && vr.UserId == userId)) // 5. Chưa từng review trận này
                 .OrderByDescending(b => b.BookingDate) // Ưu tiên lấy trận gần nhất
                 .ThenByDescending(b => b.EndTime)
