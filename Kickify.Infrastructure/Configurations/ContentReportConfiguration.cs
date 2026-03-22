@@ -37,10 +37,10 @@ public class ContentReportConfiguration : IEntityTypeConfiguration<ContentReport
             .HasColumnType("text");
 
         builder.Property(cr => cr.ResolvedAt)
-            .HasColumnType("timestamp");
+            .HasColumnType("timestamp with time zone");
 
         builder.Property(cr => cr.CreatedAt)
-            .HasColumnType("timestamp");
+            .HasColumnType("timestamp with time zone");
 
         builder.HasOne(cr => cr.Reporter)
             .WithMany()

@@ -7,7 +7,7 @@ public record ReportsAnalyticsSummaryDto(
     int ActiveUsers30d,
     double? ActiveUsers30dChangePct,
     int TotalBookings,
-    double? TotalBookingsChangePct,
+    double TotalBookingsChangePct,
     decimal MonthlyRevenue,
     double? MonthlyRevenueChangePct
 );
