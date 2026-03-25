@@ -10,6 +10,7 @@ using Kickify.Application.Features.MatchRooms.Commands.LeaveRoom;
 using Kickify.Application.Features.MatchRooms.Commands.RenameTeam;
 using Kickify.Application.Features.MatchRooms.Commands.UpdateFormation;
 using Kickify.Application.Features.MatchRooms.Commands.UpdateParticipant;
+using Kickify.Application.Features.MatchRooms.Commands.UpdateRoomInfo;
 using Kickify.Application.Features.MatchRooms.Commands.UpdateRoomPrivacy;
 using Kickify.Application.Features.MatchRooms.Commands.VoteMatchResult;
 using Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById;
@@ -196,6 +197,29 @@ namespace Kickify.Api.Controllers
                 id,
                 request.Visibility,
                 request.Password
+            );
+
+            var result = await _sender.Send(command, cancellationToken);
+
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Update room basic information (Host only)
+        /// </summary>
+        /// <param name="id">Room ID</param>
+        /// <param name="request">Room info to update</param>
+        [HttpPatch("{id}/info")]
+        public async Task<IResult> UpdateRoomInfo(
+            Guid id,
+            [FromBody] UpdateRoomInfoRequest request,
+            CancellationToken cancellationToken)
+        {
+            var command = new UpdateRoomInfoCommand(
+                id,
+                request.RoomName,
+                request.Description,
+                request.Rules
             );
 
             var result = await _sender.Send(command, cancellationToken);
