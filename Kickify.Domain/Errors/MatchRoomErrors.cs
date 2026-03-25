@@ -102,6 +102,10 @@ namespace Kickify.Domain.Errors
             "MatchRoom.OnlyHostCanUpdatePrivacy",
             "Only the host can update room privacy settings");
 
+        public static readonly Error OnlyHostCanUpdateRoomInfo = Error.Failure(
+            "MatchRoom.OnlyHostCanUpdateRoomInfo",
+            "Only the host can update room name, description, and rules");
+
         // Formation Errors
         public static readonly Error NotCaptain = Error.Failure(
             "MatchRoom.NotCaptain",
