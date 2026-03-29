@@ -134,6 +134,34 @@ namespace Kickify.Infrastructure.Repositories
             return room.RoomParticipants.Where(p => p.DepositPaid).Sum(p => p.DepositAmount ?? 0);
         }
 
+        public async Task<(IEnumerable<MatchRoom> Rooms, int Total)> GetMatchHistoryByUserAsync(
+            Guid userId,
+            int page,
+            int pageSize,
+            CancellationToken cancellationToken = default)
+        {
+            var query = _dbSet
+                .AsNoTracking()
+                .Include(r => r.Host)
+                .Include(r => r.Field)
+                    .ThenInclude(f => f!.Venue)
+                .Include(r => r.RoomParticipants)
+                .Where(r => r.RoomParticipants.Any(p => p.UserId == userId))
+                .Where(r => r.Status == Kickify.Domain.Enums.RoomStatus.Reviewing || r.Status == Kickify.Domain.Enums.RoomStatus.Completed);
+                //.Where(r => r.Visibility == Kickify.Domain.Enums.Visibility.Public);
+
+            var total = await query.CountAsync(cancellationToken);
+
+            var rooms = await query
+                .OrderByDescending(r => r.MatchDate)
+                .ThenByDescending(r => r.StartTime)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+
+            return (rooms, total);
+        }
+
         public async Task<(IEnumerable<MatchRoom> Rooms, int Total)> GetRoomsByUserAsync(
             Guid userId,
             int page,
