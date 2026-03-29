@@ -1,4 +1,4 @@
-using Kickify.Api.Extensions;
+﻿using Kickify.Api.Extensions;
 using Kickify.Api.Infrastructure;
 using Kickify.Api.Requests;
 using Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom;
@@ -16,6 +16,7 @@ using Kickify.Application.Features.MatchRooms.Commands.VoteMatchResult;
 using Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById;
 using Kickify.Application.Features.MatchRooms.Queries.GetMatchRooms;
 using Kickify.Application.Features.MatchRooms.Queries.GetMyMatchRooms;
+using Kickify.Application.Features.MatchRooms.Queries.GetPlayerMatchHistory;
 using Kickify.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -347,6 +348,23 @@ namespace Kickify.Api.Controllers
             var command = new InviteFriendToRoomCommand(id, request.FriendUserId);
 
             var result = await _sender.Send(command, cancellationToken);
+
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Get public match history of another player (Reviewing and Completed statuses only)
+        /// </summary>
+        [HttpGet("player/{userId}")]
+        public async Task<IResult> GetPlayerMatchHistory(
+            Guid userId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
+            CancellationToken cancellationToken = default)
+        {
+            var query = new GetPlayerMatchHistoryQuery(userId, page, pageSize);
+
+            var result = await _sender.Send(query, cancellationToken);
 
             return result.MatchOk();
         }
