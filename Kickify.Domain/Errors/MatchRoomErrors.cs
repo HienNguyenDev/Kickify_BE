@@ -200,5 +200,9 @@ namespace Kickify.Domain.Errors
         public static readonly Error VenueArchived = Error.Problem(
             "MatchRoom.VenueArchived",
             "Cannot create a match room because the venue is currently archived");
+
+        public static Error TimeConflict(string? roomName) => Error.Conflict(
+             "MatchRoom.TimeConflict",
+             $"You cannot join because you already have a scheduled match in '{roomName ?? "another room"}' that conflicts with this time slot.");
     }
 }
