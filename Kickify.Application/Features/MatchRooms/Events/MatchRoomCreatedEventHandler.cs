@@ -1,22 +1,22 @@
-using Kickify.Application.Abstractions.Jobs;
 using Kickify.Domain.Event;
 using MediatR;
+using Microsoft.Extensions.Logging;
 
 namespace Kickify.Application.Features.MatchRooms.Events;
 
 public class MatchRoomCreatedEventHandler : INotificationHandler<MatchRoomCreatedDomainEvent>
 {
-    private readonly IRoomAutoCloseService _roomAutoCloseService;
-    private static readonly TimeSpan AutoCloseDelay = TimeSpan.FromMinutes(20);
+    private readonly ILogger<MatchRoomCreatedEventHandler> _logger;
 
-    public MatchRoomCreatedEventHandler(IRoomAutoCloseService roomAutoCloseService)
+    public MatchRoomCreatedEventHandler(ILogger<MatchRoomCreatedEventHandler> logger)
     {
-        _roomAutoCloseService = roomAutoCloseService;
+        _logger = logger;
     }
 
     public Task Handle(MatchRoomCreatedDomainEvent notification, CancellationToken cancellationToken)
     {
-        _roomAutoCloseService.ScheduleAutoClose(notification.RoomId, AutoCloseDelay);
+        _logger.LogInformation("MatchRoom {RoomId} created.", notification.RoomId);
+        // Note: AutoClose is now handled directly by CreateMatchRoomCommandHandler
         return Task.CompletedTask;
     }
 }

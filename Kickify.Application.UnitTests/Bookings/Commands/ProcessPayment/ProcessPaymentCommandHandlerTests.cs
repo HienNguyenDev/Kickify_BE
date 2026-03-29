@@ -30,6 +30,7 @@ public class ProcessPaymentCommandHandlerTests
     private readonly Mock<IUserRepository> _userRepositoryMock = new();
     private readonly Mock<IMatchRoomHubService> _matchRoomHubServiceMock = new();
     private readonly Mock<IMatchLifecycleService> _matchLifecycleServiceMock = new();
+    private readonly Mock<IRoomAutoCloseService> _roomAutoCloseServiceMock = new();
     private readonly Mock<IUserContext> _userContextMock = new();
     private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
     private readonly Mock<IServiceScopeFactory> _serviceScopeFactoryMock = new();
@@ -50,6 +51,7 @@ public class ProcessPaymentCommandHandlerTests
             _userRepositoryMock.Object,
             _matchRoomHubServiceMock.Object,
             _matchLifecycleServiceMock.Object,
+            _roomAutoCloseServiceMock.Object,
             _userContextMock.Object,
             _unitOfWorkMock.Object,
             _serviceScopeFactoryMock.Object,
