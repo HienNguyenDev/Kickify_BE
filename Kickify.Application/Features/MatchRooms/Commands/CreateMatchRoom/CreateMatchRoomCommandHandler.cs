@@ -2,6 +2,7 @@ using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
+using Kickify.Application.Abstractions.Jobs;
 using Kickify.Application.Common.Pricing;
 using Kickify.Domain.Common;
 using Kickify.Domain.Entities;
@@ -19,6 +20,7 @@ public class CreateMatchRoomCommandHandler : ICommandHandler<CreateMatchRoomComm
     private readonly IUserRepository _userRepository;
     private readonly IBookingRepository _bookingRepository;
     private readonly IRoomParticipantRepository _roomParticipantRepository;
+    private readonly IRoomAutoCloseService _roomAutoCloseService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IUserContext _userContext;
 
@@ -29,6 +31,7 @@ public class CreateMatchRoomCommandHandler : ICommandHandler<CreateMatchRoomComm
         IUserRepository userRepository,
         IBookingRepository bookingRepository,
         IRoomParticipantRepository roomParticipantRepository,
+        IRoomAutoCloseService roomAutoCloseService,
         IUnitOfWork unitOfWork,
         IUserContext userContext)
     {
@@ -38,6 +41,7 @@ public class CreateMatchRoomCommandHandler : ICommandHandler<CreateMatchRoomComm
         _userRepository = userRepository;
         _bookingRepository = bookingRepository;
         _roomParticipantRepository = roomParticipantRepository;
+        _roomAutoCloseService = roomAutoCloseService;
         _unitOfWork = unitOfWork;
         _userContext = userContext;
     }
@@ -142,7 +146,19 @@ public class CreateMatchRoomCommandHandler : ICommandHandler<CreateMatchRoomComm
             CreatedAt = DateTime.UtcNow
         };
 
-        room.Raise(new MatchRoomCreatedDomainEvent(room.RoomId));
+        var booking = new Booking
+        {
+            BookingId = Guid.NewGuid(),
+            FieldId = request.FieldId,
+            RoomId = room.RoomId,
+            BookingDate = request.MatchDate,
+            StartTime = request.StartTime,
+            EndTime = endTime,
+            TotalAmount = totalAmount,
+            Status = BookingStatus.Pending,
+            CreatedAt = DateTime.UtcNow
+        };
+        await _bookingRepository.AddAsync(booking);
 
         await _matchRoomRepository.AddAsync(room);
 
@@ -160,6 +176,20 @@ public class CreateMatchRoomCommandHandler : ICommandHandler<CreateMatchRoomComm
         await _roomParticipantRepository.AddAsync(hostParticipant);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var now = DateTime.UtcNow;
+        // Make sure it handles correctly based on standard DateTime comparisons
+        var matchStartDateTime = request.MatchDate.Date.Add(request.StartTime);
+        var timeToMatchStartMinus2h = matchStartDateTime.AddHours(-2) - now;
+        var timeTo24h = TimeSpan.FromHours(24);
+
+        var calculatedDelay = timeToMatchStartMinus2h < timeTo24h ? timeToMatchStartMinus2h : timeTo24h;
+        if (calculatedDelay <= TimeSpan.Zero) 
+        {
+            calculatedDelay = TimeSpan.FromMinutes(15);
+        }
+
+        _roomAutoCloseService.ScheduleAutoClose(room.RoomId, calculatedDelay);
 
         return Result.Success(new CreateMatchRoomResponse(
             room.RoomId,
