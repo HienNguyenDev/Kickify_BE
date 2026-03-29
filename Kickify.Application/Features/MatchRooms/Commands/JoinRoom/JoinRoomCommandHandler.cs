@@ -89,6 +89,30 @@ namespace Kickify.Application.Features.MatchRooms.Commands.JoinRoom
                 return Result.Failure<JoinRoomResponse>(MatchRoomErrors.NotOpen);
             }
 
+            var targetEndTime = room.StartTime.Add(TimeSpan.FromMinutes(room.DurationMinutes));
+
+            // This query: Get all MatchRoomParticipent of User (Participant) + came along with MatchDate + Status is Open/Locked/InProgress
+            var userActiveRooms = await _matchRoomRepository.GetActiveRoomsForUserByDateAsync(userId, room.MatchDate, cancellationToken);
+
+            foreach (var activeRoom in userActiveRooms)
+            {
+                // Bo qua chinh cái phong dang dinh join (phong ho case logic bi lap)
+                if (activeRoom.RoomId == room.RoomId) continue;
+
+                var activeEndTime = activeRoom.StartTime.Add(TimeSpan.FromMinutes(activeRoom.DurationMinutes));
+
+                // Thuat toan kiem tra 2 khoang thoi gian co giao nhau khong (Overlapping)
+                bool isOverlapping = room.StartTime < activeEndTime && targetEndTime > activeRoom.StartTime;
+
+                if (isOverlapping)
+                {
+                    _logger.LogWarning("User {UserId} attempted to join room {RoomId} but has a time conflict with room {ActiveRoomId}",
+                        userId, room.RoomId, activeRoom.RoomId);
+
+                    return Result.Failure<JoinRoomResponse>(MatchRoomErrors.TimeConflict(activeRoom.RoomName));
+                }
+            }
+
             // RULE: Validate password for private rooms
             if (room.Visibility == Visibility.Private)
             {
