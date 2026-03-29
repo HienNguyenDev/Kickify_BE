@@ -26,6 +26,7 @@ public class ProcessPaymentCommandHandler : ICommandHandler<ProcessPaymentComman
     private readonly IUserRepository _userRepository;
     private readonly IMatchRoomHubService _matchRoomHubService;
     private readonly IMatchLifecycleService _matchLifecycleService;
+    private readonly IRoomAutoCloseService _roomAutoCloseService;
     private readonly IUserContext _userContext;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IServiceScopeFactory _serviceScopeFactory;
@@ -42,6 +43,7 @@ public class ProcessPaymentCommandHandler : ICommandHandler<ProcessPaymentComman
         IUserRepository userRepository,
         IMatchRoomHubService matchRoomHubService,
         IMatchLifecycleService matchLifecycleService,
+        IRoomAutoCloseService roomAutoCloseService,
         IUserContext userContext,
         IUnitOfWork unitOfWork,
         IServiceScopeFactory serviceScopeFactory,
@@ -57,6 +59,7 @@ public class ProcessPaymentCommandHandler : ICommandHandler<ProcessPaymentComman
         _userRepository = userRepository;
         _matchRoomHubService = matchRoomHubService;
         _matchLifecycleService = matchLifecycleService;
+        _roomAutoCloseService = roomAutoCloseService;
         _userContext = userContext;
         _unitOfWork = unitOfWork;
         _serviceScopeFactory = serviceScopeFactory;
@@ -148,20 +151,10 @@ public class ProcessPaymentCommandHandler : ICommandHandler<ProcessPaymentComman
                 return Result.Failure<ProcessPaymentResponse>(FieldErrors.NotFound(room.FieldId));
             }
 
-            // Pre-check availability at application level before attempting DB save
-            var endTime = room.StartTime.Add(TimeSpan.FromMinutes(room.DurationMinutes));
-            var isSlotAvailable = await _bookingRepository.IsTimeSlotAvailableAsync(
-                room.FieldId.Value, room.MatchDate, room.StartTime, endTime, cancellationToken);
-
-            if (!isSlotAvailable)
+            var booking = await _bookingRepository.GetBookingByRoomAsync(request.RoomId, cancellationToken);
+            if (booking == null)
             {
-                _logger.LogWarning("Slot not available for room {RoomId}. Refunding current participant...", request.RoomId);
-
-                // Refund current participant (their changes are still in-memory, not saved yet)
-                // We DON'T save the current participant's payment — just refund previous participants
-                await RefundAllPaidParticipantsAsync(request.RoomId, room.RoomName, cancellationToken);
-
-                return Result.Failure<ProcessPaymentResponse>(BookingErrors.DoubleBooking);
+                return Result.Failure<ProcessPaymentResponse>(BookingErrors.NotFound(request.RoomId));
             }
 
             // Calculate total amount
@@ -169,20 +162,9 @@ public class ProcessPaymentCommandHandler : ICommandHandler<ProcessPaymentComman
 
             try
             {
-                // Create booking
-                var booking = new Booking
-                {
-                    BookingId = Guid.NewGuid(),
-                    FieldId = room.FieldId.Value,
-                    RoomId = request.RoomId,
-                    BookingDate = room.MatchDate,
-                    StartTime = room.StartTime,
-                    EndTime = endTime,
-                    TotalAmount = totalAmount,
-                    CreatedAt = DateTime.UtcNow
-                };
-
-                await _bookingRepository.AddAsync(booking);
+                // Update booking status
+                booking.Status = BookingStatus.Confirmed;
+                _bookingRepository.Update(booking);
 
                 // Transfer payment to venue owner's wallet
                 var venue = await _venueRepository.GetByIdAsync(field.VenueId);
@@ -213,10 +195,13 @@ public class ProcessPaymentCommandHandler : ICommandHandler<ProcessPaymentComman
                 room.Status = RoomStatus.Locked;
                 _matchRoomRepository.Update(room);
 
-                // Save all changes atomically — exclusion constraint checked here
+                // Cancel the auto-close job since the room is now fully paid and locked
+                _roomAutoCloseService.CancelAutoClose(room.AutoCloseJobId);
+
+                // Save all changes atomically
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                _logger.LogInformation("Booking {BookingId} created successfully for room {RoomId}. Room status changed to Locked.",
+                _logger.LogInformation("Booking {BookingId} confirmed successfully for room {RoomId}. Room status changed to Locked.",
                     booking.BookingId, request.RoomId);
 
                 // Schedule match start via Hangfire (will auto-transition to InProgress at match time)
@@ -245,34 +230,18 @@ public class ProcessPaymentCommandHandler : ICommandHandler<ProcessPaymentComman
                     cancellationToken);
 
                 await _matchRoomHubService.NotifyRoomStatusChangedAsync(
-                request.RoomId,
-                room.Status.ToString(), // Sẽ truyền đi chuỗi "Locked"
-                cancellationToken);
+                    request.RoomId,
+                    room.Status.ToString(),
+                    cancellationToken);
 
                 return Result.Success(new ProcessPaymentResponse(
                     true,
-                    "Payment processed successfully. Booking created.",
+                    "Payment processed successfully. Booking confirmed.",
                     booking.BookingId,
                     booking.BookingDate,
                     booking.StartTime,
                     booking.EndTime
                 ));
-            }
-            catch (DbUpdateException ex) when (IsExclusionConstraintViolation(ex))
-            {
-                // RACE CONDITION DETECTED: Another room booked this slot first
-                // The current SaveChangesAsync failed → all changes in THIS transaction are rolled back
-                // (current participant's payment, booking, venue wallet, room status)
-                // BUT previous participants' payments were saved in earlier separate requests — need to refund them
-                _logger.LogWarning(
-                    "Race condition detected for room {RoomId}. Field {FieldId} already booked for {Date} {StartTime}-{EndTime}. Refunding all participants...",
-                    request.RoomId, room.FieldId, room.MatchDate, room.StartTime, endTime);
-
-                // Refund all participants who paid in previous requests using a NEW scope
-                // (current DbContext is in a dirty state after failed SaveChanges)
-                await RefundAllPaidParticipantsAsync(request.RoomId, room.RoomName, cancellationToken);
-
-                return Result.Failure<ProcessPaymentResponse>(BookingErrors.DoubleBooking);
             }
             catch (Exception ex)
             {
@@ -306,108 +275,5 @@ public class ProcessPaymentCommandHandler : ICommandHandler<ProcessPaymentComman
                 null
             ));
         }
-    }
-
-    /// <summary>
-    /// Refund all participants who have already paid for this room.
-    /// Uses a NEW service scope because the current DbContext may be dirty after a failed SaveChanges.
-    /// </summary>
-    private async Task RefundAllPaidParticipantsAsync(Guid roomId, string? roomName, CancellationToken cancellationToken)
-    {
-        try
-        {
-            using var scope = _serviceScopeFactory.CreateScope();
-            var participantRepo = scope.ServiceProvider.GetRequiredService<IRoomParticipantRepository>();
-            var walletRepo = scope.ServiceProvider.GetRequiredService<IWalletRepository>();
-            var walletTransactionRepo = scope.ServiceProvider.GetRequiredService<IWalletTransactionRepository>();
-            var matchRoomRepo = scope.ServiceProvider.GetRequiredService<IMatchRoomRepository>();
-            var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-
-            // Get all participants who have paid
-            var participants = await participantRepo.GetParticipantsByRoomAsync(roomId, cancellationToken);
-            var paidParticipants = participants.Where(p => p.DepositPaid).ToList();
-
-            if (paidParticipants.Count == 0)
-            {
-                _logger.LogInformation("No paid participants to refund for room {RoomId}", roomId);
-                return;
-            }
-
-            decimal totalRefunded = 0;
-
-            foreach (var paidParticipant in paidParticipants)
-            {
-                var refundAmount = paidParticipant.DepositAmount ?? 0;
-                if (refundAmount <= 0) continue;
-
-                // Restore wallet balance
-                var wallet = await walletRepo.GetByUserIdAsync(paidParticipant.UserId, cancellationToken);
-                if (wallet != null)
-                {
-                    wallet.Balance += refundAmount;
-                    walletRepo.Update(wallet);
-
-                    // Create refund transaction record
-                    var refundTransaction = new WalletTransaction
-                    {
-                        TransactionId = Guid.NewGuid(),
-                        WalletId = wallet.WalletId,
-                        TransactionType = TransactionType.Refund,
-                        Amount = refundAmount,
-                        BalanceAfter = wallet.Balance,
-                        ReferenceId = roomId,
-                        Description = $"Refund for room {roomName ?? roomId.ToString()} - slot no longer available",
-                        CreatedAt = DateTime.UtcNow
-                    };
-                    await walletTransactionRepo.AddAsync(refundTransaction);
-
-                    totalRefunded += refundAmount;
-                    _logger.LogInformation("Refunded {Amount} to user {UserId} for room {RoomId}",
-                        refundAmount, paidParticipant.UserId, roomId);
-                }
-
-                // Reset participant payment status
-                paidParticipant.DepositPaid = false;
-                paidParticipant.CheckedIn = false;
-                paidParticipant.CheckInTime = null;
-                paidParticipant.DepositAmount = null;
-                participantRepo.Update(paidParticipant);
-            }
-
-            // Reset room's total deposit collected and cancel the room
-            var room = await matchRoomRepo.GetByIdAsync(roomId);
-            if (room != null)
-            {
-                room.TotalDepositCollected = 0;
-                room.Status = RoomStatus.Cancelled;
-                matchRoomRepo.Update(room);
-            }
-
-            await unitOfWork.SaveChangesAsync(cancellationToken);
-
-            _logger.LogInformation(
-                "Refund completed for room {RoomId}. Total refunded: {TotalRefunded} to {Count} participants",
-                roomId, totalRefunded, paidParticipants.Count);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "CRITICAL: Failed to refund participants for room {RoomId}. Manual intervention required!", roomId);
-            // Don't rethrow — the caller already returns a failure result.
-            // This error should be monitored and resolved manually.
-        }
-    }
-
-    private bool IsExclusionConstraintViolation(DbUpdateException ex)
-    {
-        // Check if the exception is caused by PostgreSQL exclusion constraint violation
-        // Error code 23P01 = exclusion_violation
-        var innerException = ex.InnerException;
-        if (innerException != null)
-        {
-            var message = innerException.Message;
-            return message.Contains("23P01") || message.Contains("no_overlap_booking") || message.Contains("exclusion_violation");
-        }
-
-        return false;
     }
 }

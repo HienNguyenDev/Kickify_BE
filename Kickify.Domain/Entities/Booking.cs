@@ -14,7 +14,7 @@ public class Booking : BaseEntity
     public decimal TotalAmount { get; set; }
     public decimal PlatformFee { get; set; }
     public decimal VenueAmount { get; set; }
-    public BookingStatus Status { get; set; } = BookingStatus.Confirmed;
+    public BookingStatus Status { get; set; } = BookingStatus.Pending;
     public string? PaymentMethod { get; set; }
     public string? TransactionReference { get; set; }
 

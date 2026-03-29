@@ -41,7 +41,7 @@ namespace Kickify.Infrastructure.Repositories
         {
             return await _dbSet
                 .AsNoTracking()
-                .Where(b => b.FieldId == fieldId && b.BookingDate == date)
+                .Where(b => b.FieldId == fieldId && b.BookingDate == date && b.Status != Domain.Enums.BookingStatus.Cancelled)
                 .Select(b => new ValueTuple<TimeSpan, TimeSpan>(b.StartTime, b.EndTime))
                 .ToListAsync(cancellationToken);
         }
@@ -59,11 +59,13 @@ namespace Kickify.Infrastructure.Repositories
         {
             // Check for any overlapping bookings
             // Two time slots overlap if: startTime1 < endTime2 AND endTime1 > startTime2
+            // Exclude Cancelled bookings
             var hasOverlap = await _dbSet
                 .AsNoTracking()
-                .AnyAsync(b => 
-                    b.FieldId == fieldId && 
+                .AnyAsync(b =>
+                    b.FieldId == fieldId &&
                     b.BookingDate == date &&
+                    b.Status != Domain.Enums.BookingStatus.Cancelled &&
                     b.StartTime < endTime &&
                     b.EndTime > startTime,
                     cancellationToken);
