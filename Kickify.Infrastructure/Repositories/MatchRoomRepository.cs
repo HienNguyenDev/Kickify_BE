@@ -1,5 +1,6 @@
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Entities;
+using Kickify.Domain.Enums;
 using Kickify.Infrastructure.Database;
 using Kickify.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -157,6 +158,16 @@ namespace Kickify.Infrastructure.Repositories
                 .ToListAsync(cancellationToken);
 
             return (rooms, total);
+        }
+
+        public async Task<List<MatchRoom>> GetActiveRoomsForUserByDateAsync(Guid userId, DateTime matchDate, CancellationToken cancellationToken)
+        {
+            return await _dbSet
+                .AsNoTracking()
+                .Where(r => r.MatchDate == matchDate
+                         && (r.Status == RoomStatus.Open || r.Status == RoomStatus.Locked || r.Status == RoomStatus.InProgress)
+                         && r.RoomParticipants.Any(p => p.UserId == userId))
+                .ToListAsync(cancellationToken);
         }
     }
 }
