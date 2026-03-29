@@ -20,6 +20,12 @@ namespace Kickify.Application.Abstractions.Repositories
             CancellationToken cancellationToken = default);
         Task<bool> AreAllParticipantsPaidAsync(Guid roomId, CancellationToken cancellationToken = default);
         Task<decimal> GetTotalPaidAmountAsync(Guid roomId, CancellationToken cancellationToken = default);
+        Task<(IEnumerable<MatchRoom> Rooms, int Total)> GetMatchHistoryByUserAsync(
+            Guid userId,
+            int page,
+            int pageSize,
+            CancellationToken cancellationToken = default);
+
         Task<(IEnumerable<MatchRoom> Rooms, int Total)> GetRoomsByUserAsync(
             Guid userId,
             int page,
