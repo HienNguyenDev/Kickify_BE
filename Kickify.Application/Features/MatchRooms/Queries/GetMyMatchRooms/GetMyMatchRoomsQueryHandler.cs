@@ -27,6 +27,7 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMyMatchRooms
 
             var (rooms, total) = await _matchRoomRepository.GetRoomsByUserAsync(
                 userId,
+                request.AvailableOnly,
                 request.Page,
                 request.PageSize,
                 cancellationToken

@@ -28,6 +28,7 @@ namespace Kickify.Application.Abstractions.Repositories
 
         Task<(IEnumerable<MatchRoom> Rooms, int Total)> GetRoomsByUserAsync(
             Guid userId,
+            bool? availableOnly,
             int page,
             int pageSize,
             CancellationToken cancellationToken = default);
