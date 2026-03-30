@@ -83,11 +83,12 @@ namespace Kickify.Api.Controllers
         /// </summary>
         [HttpGet("mine")]
         public async Task<IResult> GetMyRooms(
+            [FromQuery] bool? availableOnly,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10,
             CancellationToken cancellationToken = default)
         {
-            var query = new GetMyMatchRoomsQuery(page, pageSize);
+            var query = new GetMyMatchRoomsQuery(availableOnly, page, pageSize);
 
             var result = await _sender.Send(query, cancellationToken);
 
