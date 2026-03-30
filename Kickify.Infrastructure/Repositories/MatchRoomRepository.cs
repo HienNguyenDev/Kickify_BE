@@ -164,6 +164,7 @@ namespace Kickify.Infrastructure.Repositories
 
         public async Task<(IEnumerable<MatchRoom> Rooms, int Total)> GetRoomsByUserAsync(
             Guid userId,
+            bool? availableOnly,
             int page,
             int pageSize,
             CancellationToken cancellationToken = default)
@@ -176,6 +177,12 @@ namespace Kickify.Infrastructure.Repositories
                     .ThenInclude(f => f!.Venue)
                 .Include(r => r.RoomParticipants)
                 .Where(r => r.RoomParticipants.Any(p => p.UserId == userId));
+
+            // Filter out only Open rooms if explicitly requested
+            if (availableOnly.HasValue && availableOnly.Value)
+            {
+                query = query.Where(r => r.Status == Kickify.Domain.Enums.RoomStatus.Open);
+            }
 
             var total = await query.CountAsync(cancellationToken);
 
