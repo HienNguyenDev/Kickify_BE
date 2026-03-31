@@ -27,5 +27,8 @@ public class NotificationPreferenceConfiguration : IEntityTypeConfiguration<Noti
 
         builder.Property(n => n.Post)
             .HasDefaultValue(true);
+
+        builder.Property(n => n.Chat)
+            .HasDefaultValue(true);
     }
 }

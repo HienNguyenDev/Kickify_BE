@@ -1,10 +1,12 @@
-﻿using Hangfire;
+using Hangfire;
 using Kickify.Application.Abstractions.Jobs;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Application.Abstractions.Services;
 using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
+using Kickify.Domain.Event;
+using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -99,6 +101,41 @@ public class MatchLifecycleService : IMatchLifecycleService
             roomId, processTime, jobId);
     }
 
+    public void SchedulePreMatchReminders(Guid roomId, DateTime matchStartTime)
+    {
+        var now = DateTime.UtcNow;
+        var fire60 = matchStartTime.AddMinutes(-60);
+        var fire30 = matchStartTime.AddMinutes(-30);
+
+        if (fire60 > now)
+        {
+            var delay = fire60 - now;
+            _backgroundJobClient.Schedule(() => PreMatchReminderAsync(roomId, 60), delay);
+            _logger.LogInformation("Scheduled 60m pre-match reminder for room {RoomId} in {Delay}", roomId, delay);
+        }
+
+        if (fire30 > now)
+        {
+            var delay = fire30 - now;
+            _backgroundJobClient.Schedule(() => PreMatchReminderAsync(roomId, 30), delay);
+            _logger.LogInformation("Scheduled 30m pre-match reminder for room {RoomId} in {Delay}", roomId, delay);
+        }
+    }
+
+    public async Task PreMatchReminderAsync(Guid roomId, int minutesBefore)
+    {
+        using var scope = _serviceScopeFactory.CreateScope();
+        var publisher = scope.ServiceProvider.GetRequiredService<IPublisher>();
+        await publisher.Publish(new PreMatchReminderRequestedDomainEvent(roomId, minutesBefore), CancellationToken.None);
+    }
+
+    public async Task PostMatchVoteFeedbackReminderAsync(Guid roomId, int attempt)
+    {
+        using var scope = _serviceScopeFactory.CreateScope();
+        var publisher = scope.ServiceProvider.GetRequiredService<IPublisher>();
+        await publisher.Publish(new PostMatchVoteFeedbackReminderRequestedDomainEvent(roomId, attempt), CancellationToken.None);
+    }
+
     public void CancelAllJobs(string? startJobId, string? endJobId, string? finalizeJobId)
     {
         if (!string.IsNullOrEmpty(startJobId))
@@ -171,6 +208,10 @@ public class MatchLifecycleService : IMatchLifecycleService
         // Schedule đóng reviewing period sau 22 tiếng
         var closeTime = DateTime.UtcNow.Add(ReviewingPeriod);
         ScheduleReviewingPeriodEnd(roomId, closeTime);
+
+        _backgroundJobClient.Schedule(() => PostMatchVoteFeedbackReminderAsync(roomId, 1), TimeSpan.FromMinutes(15));
+        _backgroundJobClient.Schedule(() => PostMatchVoteFeedbackReminderAsync(roomId, 2), TimeSpan.FromMinutes(30));
+        _logger.LogInformation("Scheduled vote/feedback reminders (+15m, +30m) for room {RoomId}", roomId);
     }
 
     /// <summary>

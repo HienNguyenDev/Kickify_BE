@@ -6,6 +6,8 @@ using Kickify.Application.Abstractions.Services;
 using Kickify.Domain.Common;
 using Kickify.Domain.Enums;
 using Kickify.Domain.Errors;
+using Kickify.Domain.Event;
+using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace Kickify.Application.Features.MatchRooms.Commands.KickPlayer
@@ -17,6 +19,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.KickPlayer
         private readonly IMatchRoomHubService _matchRoomHubService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IUserContext _userContext;
+        private readonly IPublisher _publisher;
         private readonly ILogger<KickPlayerCommandHandler> _logger;
 
         public KickPlayerCommandHandler(
@@ -25,6 +28,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.KickPlayer
             IMatchRoomHubService matchRoomHubService,
             IUnitOfWork unitOfWork,
             IUserContext userContext,
+            IPublisher publisher,
             ILogger<KickPlayerCommandHandler> logger)
         {
             _matchRoomRepository = matchRoomRepository;
@@ -32,6 +36,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.KickPlayer
             _matchRoomHubService = matchRoomHubService;
             _unitOfWork = unitOfWork;
             _userContext = userContext;
+            _publisher = publisher;
             _logger = logger;
         }
 
@@ -110,6 +115,14 @@ namespace Kickify.Application.Features.MatchRooms.Commands.KickPlayer
 
                 _logger.LogInformation("User {TargetUserId} was kicked from room {RoomId} by host {HostId}",
                     request.TargetUserId, request.RoomId, hostId);
+
+                await _publisher.Publish(
+                    new PlayerKickedFromMatchRoomDomainEvent(
+                        request.RoomId,
+                        request.TargetUserId,
+                        room.RoomName,
+                        null),
+                    cancellationToken);
 
                 // 10. Send real-time notifications
                 await _matchRoomHubService.NotifyUserKickedAsync(

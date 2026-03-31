@@ -5,6 +5,8 @@ using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
 using Kickify.Domain.Entities;
 using Kickify.Domain.Errors;
+using Kickify.Domain.Event;
+using MediatR;
 
 namespace Kickify.Application.Features.Comments.Commands.LikeComment;
 
@@ -12,15 +14,25 @@ public class LikeCommentCommandHandler : ICommandHandler<LikeCommentCommand, Lik
 {
     private readonly ICommentRepository _commentRepository;
     private readonly ICommentLikeRepository _commentLikeRepository;
+    private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IUserContext _userContext;
+    private readonly IPublisher _publisher;
 
-    public LikeCommentCommandHandler(ICommentRepository commentRepository, ICommentLikeRepository commentLikeRepository, IUnitOfWork unitOfWork, IUserContext userContext)
+    public LikeCommentCommandHandler(
+        ICommentRepository commentRepository,
+        ICommentLikeRepository commentLikeRepository,
+        IUserRepository userRepository,
+        IUnitOfWork unitOfWork,
+        IUserContext userContext,
+        IPublisher publisher)
     {
         _commentRepository = commentRepository;
         _commentLikeRepository = commentLikeRepository;
+        _userRepository = userRepository;
         _unitOfWork = unitOfWork;
         _userContext = userContext;
+        _publisher = publisher;
     }
 
     public async Task<Result<LikeCommentCommandResponse>> Handle(LikeCommentCommand request, CancellationToken cancellationToken)
@@ -58,6 +70,22 @@ public class LikeCommentCommandHandler : ICommandHandler<LikeCommentCommand, Lik
 
         _commentRepository.Update(comment);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        if (isLiked && comment.UserId != _userContext.UserId)
+        {
+            var actor = await _userRepository.GetByIdAsync(_userContext.UserId);
+            if (actor is not null)
+            {
+                await _publisher.Publish(
+                    new CommentLikedDomainEvent(
+                        comment.PostId,
+                        comment.CommentId,
+                        comment.UserId,
+                        _userContext.UserId,
+                        actor.FullName ?? actor.Email),
+                    cancellationToken);
+            }
+        }
 
         var response = new LikeCommentCommandResponse
         {
