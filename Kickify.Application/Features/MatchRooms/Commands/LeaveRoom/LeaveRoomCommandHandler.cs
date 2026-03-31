@@ -7,6 +7,8 @@ using Kickify.Domain.Common;
 using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
 using Kickify.Domain.Errors;
+using Kickify.Domain.Event;
+using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace Kickify.Application.Features.MatchRooms.Commands.LeaveRoom
@@ -20,6 +22,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.LeaveRoom
         private readonly IMatchRoomHubService _matchRoomHubService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IUserContext _userContext;
+        private readonly IPublisher _publisher;
         private readonly ILogger<LeaveRoomCommandHandler> _logger;
 
         public LeaveRoomCommandHandler(
@@ -30,6 +33,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.LeaveRoom
             IMatchRoomHubService matchRoomHubService,
             IUnitOfWork unitOfWork,
             IUserContext userContext,
+            IPublisher publisher,
             ILogger<LeaveRoomCommandHandler> logger)
         {
             _matchRoomRepository = matchRoomRepository;
@@ -39,6 +43,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.LeaveRoom
             _matchRoomHubService = matchRoomHubService;
             _unitOfWork = unitOfWork;
             _userContext = userContext;
+            _publisher = publisher;
             _logger = logger;
         }
 
@@ -178,6 +183,17 @@ namespace Kickify.Application.Features.MatchRooms.Commands.LeaveRoom
                 }
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                if (!isRoomDeleted)
+                {
+                    await _publisher.Publish(
+                        new MatchRoomPlayerLeftHostNotifyDomainEvent(
+                            room.RoomId,
+                            room.HostId,
+                            user.FullName ?? user.Email,
+                            room.RoomName),
+                        cancellationToken);
+                }
 
                 // Send real-time notification to all room participants
                 await _matchRoomHubService.NotifyUserLeftAsync(

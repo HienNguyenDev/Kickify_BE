@@ -9,6 +9,7 @@ using Kickify.Domain.Common;
 using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
 using Kickify.Domain.Errors;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -23,6 +24,7 @@ public class JoinRoomCommandHandlerTests
     private readonly Mock<IMatchRoomHubService> _matchRoomHubServiceMock = new();
     private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
     private readonly Mock<IUserContext> _userContextMock = new();
+    private readonly Mock<IPublisher> _publisherMock = new();
     private readonly Mock<ILogger<JoinRoomCommandHandler>> _loggerMock = new();
 
     private readonly JoinRoomCommandHandler _sut;
@@ -36,6 +38,7 @@ public class JoinRoomCommandHandlerTests
             _matchRoomHubServiceMock.Object,
             _unitOfWorkMock.Object,
             _userContextMock.Object,
+            _publisherMock.Object,
             _loggerMock.Object);
     }
 

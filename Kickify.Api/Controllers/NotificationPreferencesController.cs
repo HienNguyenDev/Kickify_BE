@@ -44,7 +44,8 @@ public class NotificationPreferencesController : ControllerBase
         {
             MatchRoom = request.MatchRoom,
             Friendship = request.Friendship,
-            Post = request.Post
+            Post = request.Post,
+            Chat = request.Chat
         };
 
         Result<UpdateNotificationPreferenceCommandResponse> result = await _mediator.Send(command, cancellationToken);

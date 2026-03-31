@@ -33,6 +33,7 @@ public class GetMyNotificationPreferencesQueryHandler : IQueryHandler<GetMyNotif
             preference.PreferenceId,
             preference.MatchRoom,
             preference.Friendship,
-            preference.Post));
+            preference.Post,
+            preference.Chat));
     }
 }

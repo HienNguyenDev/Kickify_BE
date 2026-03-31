@@ -4,4 +4,5 @@ public record GetMyNotificationPreferencesResponse(
     Guid PreferenceId,
     bool MatchRoom,
     bool Friendship,
-    bool Post);
+    bool Post,
+    bool Chat);
