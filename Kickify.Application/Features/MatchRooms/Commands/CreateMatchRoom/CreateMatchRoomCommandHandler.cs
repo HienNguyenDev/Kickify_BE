@@ -21,6 +21,7 @@ public class CreateMatchRoomCommandHandler : ICommandHandler<CreateMatchRoomComm
     private readonly IBookingRepository _bookingRepository;
     private readonly IRoomParticipantRepository _roomParticipantRepository;
     private readonly IRoomAutoCloseService _roomAutoCloseService;
+    private readonly IMatchLifecycleService _matchLifecycleService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IUserContext _userContext;
 
@@ -32,6 +33,7 @@ public class CreateMatchRoomCommandHandler : ICommandHandler<CreateMatchRoomComm
         IBookingRepository bookingRepository,
         IRoomParticipantRepository roomParticipantRepository,
         IRoomAutoCloseService roomAutoCloseService,
+        IMatchLifecycleService matchLifecycleService,
         IUnitOfWork unitOfWork,
         IUserContext userContext)
     {
@@ -42,6 +44,7 @@ public class CreateMatchRoomCommandHandler : ICommandHandler<CreateMatchRoomComm
         _bookingRepository = bookingRepository;
         _roomParticipantRepository = roomParticipantRepository;
         _roomAutoCloseService = roomAutoCloseService;
+        _matchLifecycleService = matchLifecycleService;
         _unitOfWork = unitOfWork;
         _userContext = userContext;
     }
@@ -190,6 +193,9 @@ public class CreateMatchRoomCommandHandler : ICommandHandler<CreateMatchRoomComm
         }
 
         _roomAutoCloseService.ScheduleAutoClose(room.RoomId, calculatedDelay);
+
+        var matchStartTime = room.MatchDate.Add(room.StartTime);
+        _matchLifecycleService.SchedulePreMatchReminders(room.RoomId, matchStartTime);
 
         return Result.Success(new CreateMatchRoomResponse(
             room.RoomId,

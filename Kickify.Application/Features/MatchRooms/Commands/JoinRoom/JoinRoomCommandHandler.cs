@@ -8,6 +8,7 @@ using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
 using Kickify.Domain.Errors;
 using Kickify.Domain.Event;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -21,6 +22,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.JoinRoom
         private readonly IMatchRoomHubService _matchRoomHubService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IUserContext _userContext;
+        private readonly IPublisher _publisher;
         private readonly ILogger<JoinRoomCommandHandler> _logger;
 
         public JoinRoomCommandHandler(
@@ -30,6 +32,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.JoinRoom
             IMatchRoomHubService matchRoomHubService,
             IUnitOfWork unitOfWork,
             IUserContext userContext,
+            IPublisher publisher,
             ILogger<JoinRoomCommandHandler> logger)
         {
             _matchRoomRepository = matchRoomRepository;
@@ -38,6 +41,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.JoinRoom
             _matchRoomHubService = matchRoomHubService;
             _unitOfWork = unitOfWork;
             _userContext = userContext;
+            _publisher = publisher;
             _logger = logger;
         }
 
@@ -96,7 +100,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.JoinRoom
 
             foreach (var activeRoom in userActiveRooms)
             {
-                // Bo qua chinh cái phong dang dinh join (phong ho case logic bi lap)
+                // Bo qua chinh cï¿½i phong dang dinh join (phong ho case logic bi lap)
                 if (activeRoom.RoomId == room.RoomId) continue;
 
                 var activeEndTime = activeRoom.StartTime.Add(TimeSpan.FromMinutes(activeRoom.DurationMinutes));
@@ -162,6 +166,17 @@ namespace Kickify.Application.Features.MatchRooms.Commands.JoinRoom
 
                 _logger.LogInformation("User {UserId} joined room {RoomId}. Filled: {FilledSlots}/{TotalSlots}",
                     userId, request.RoomId, room.FilledSlots, room.TotalSlots);
+
+                if (userId != room.HostId)
+                {
+                    await _publisher.Publish(
+                        new MatchRoomPlayerJoinedHostNotifyDomainEvent(
+                            room.RoomId,
+                            room.HostId,
+                            user.FullName ?? user.Email,
+                            room.RoomName),
+                        cancellationToken);
+                }
 
                 // Send real-time notification to all room participants
                 await _matchRoomHubService.NotifyUserJoinedAsync(

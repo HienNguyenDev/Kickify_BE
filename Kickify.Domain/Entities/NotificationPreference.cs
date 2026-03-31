@@ -9,6 +9,7 @@ public class NotificationPreference : BaseEntity
     public bool MatchRoom { get; set; } = true;
     public bool Friendship { get; set; } = true;
     public bool Post { get; set; } = true;
+    public bool Chat { get; set; } = true;
 
     // Navigation properties
     public User User { get; set; } = null!;

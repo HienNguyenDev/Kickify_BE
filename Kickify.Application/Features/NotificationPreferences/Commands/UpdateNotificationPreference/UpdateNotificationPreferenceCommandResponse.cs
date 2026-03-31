@@ -7,5 +7,6 @@ public class UpdateNotificationPreferenceCommandResponse
     public bool MatchRoom { get; set; }
     public bool Friendship { get; set; }
     public bool Post { get; set; }
+    public bool Chat { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

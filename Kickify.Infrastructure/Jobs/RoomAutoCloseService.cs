@@ -5,6 +5,8 @@ using Kickify.Application.Abstractions.Repositories;
 using Kickify.Application.Abstractions.Services;
 using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
+using Kickify.Domain.Event;
+using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -89,6 +91,7 @@ public class RoomAutoCloseService : IRoomAutoCloseService
 
             // 3. Refund players
             var participants = await participantRepo.GetParticipantsByRoomAsync(roomId, CancellationToken.None);
+            var notifyUserIds = participants.Select(p => p.UserId).Distinct().ToList();
             var paidParticipants = participants.Where(p => p.DepositPaid).ToList();
 
             foreach (var p in paidParticipants)
@@ -129,6 +132,14 @@ public class RoomAutoCloseService : IRoomAutoCloseService
             room.TotalDepositCollected = 0;
 
             await unitOfWork.SaveChangesAsync(CancellationToken.None);
+
+            if (notifyUserIds.Count > 0)
+            {
+                var publisher = scope.ServiceProvider.GetRequiredService<IPublisher>();
+                await publisher.Publish(
+                    new MatchRoomCancelledNotifyParticipantsDomainEvent(roomId, room.RoomName, notifyUserIds),
+                    CancellationToken.None);
+            }
 
             // 4. Notify via SignalR
             await matchRoomHubService.NotifyRoomStatusChangedAsync(

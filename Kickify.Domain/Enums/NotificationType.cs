@@ -5,5 +5,6 @@ public enum NotificationType
     MatchRoom,
     Friendship,
     Post,
-    Announcement
+    Announcement,
+    Chat
 }
