@@ -1,4 +1,4 @@
-﻿using Kickify.Api.Extensions;
+using Kickify.Api.Extensions;
 using Kickify.Api.Infrastructure;
 using Kickify.Api.Requests;
 using Kickify.Application.Features.MatchRooms.Commands.CreateMatchRoom;
@@ -367,6 +367,22 @@ namespace Kickify.Api.Controllers
 
             var result = await _sender.Send(query, cancellationToken);
 
+            return result.MatchOk();
+        }
+        /// <summary>
+        /// Cancel a match room manually as the host. Follows the < 4h, 4-24h penalty rules.
+        /// </summary>
+        [HttpDelete("{id}/cancel")]
+        public async Task<IResult> CancelMatchRoom(
+            Guid id,
+            [FromQuery] string reason,
+            CancellationToken cancellationToken)
+        {
+            var command = new Kickify.Application.Features.MatchRooms.Commands.CancelMatchRoom.CancelMatchRoomCommand(
+                id,
+                reason);
+
+            var result = await _sender.Send(command, cancellationToken);
             return result.MatchOk();
         }
     }
