@@ -208,4 +208,86 @@ public class CancelMatchRoomCommandHandlerTests
         // Verify Db Save
         _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    [Fact]
+    public async Task Handle_InPenaltyZone_WithSufficientFunds_ChargesPenaltyAndCompensatesOwner()
+    {
+        // Arrange
+        var hostId = Guid.NewGuid();
+        var playerId = Guid.NewGuid();
+        var ownerId = Guid.NewGuid();
+        var roomId = Guid.NewGuid();
+        var fieldId = Guid.NewGuid();
+
+        _userContextMock.Setup(x => x.UserId).Returns(hostId);
+
+        // Giả lập trận đấu diễn ra sau 10 tiếng (Nằm trong Vùng Phạt 4h - 24h)
+        var matchTime = DateTime.UtcNow.AddHours(10);
+
+        var room = new MatchRoom
+        {
+            RoomId = roomId,
+            HostId = hostId,
+            Status = RoomStatus.Locked,
+            MatchDate = matchTime.Date,
+            StartTime = matchTime.TimeOfDay,
+            TotalDepositCollected = 100000,
+            FieldId = fieldId,
+            RoomParticipants = new List<RoomParticipant>
+            {
+                new() { UserId = hostId, DepositPaid = true, DepositAmount = 50000 },
+                new() { UserId = playerId, DepositPaid = true, DepositAmount = 50000 }
+            }
+        };
+
+        _matchRoomRepoMock.Setup(x => x.GetRoomWithParticipantsForUpdateAsync(roomId, It.IsAny<CancellationToken>())).ReturnsAsync(room);
+
+        // Mock Field & Venue để lấy OwnerId
+        _fieldRepoMock.Setup(x => x.GetFieldWithVenueAsync(fieldId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Field { Venue = new Venue { OwnerId = ownerId } });
+
+        // Mock Booking
+        var booking = new Booking { BookingId = Guid.NewGuid(), RoomId = roomId, Status = BookingStatus.Confirmed };
+        _bookingRepoMock.Setup(x => x.GetBookingByRoomAsync(roomId, It.IsAny<CancellationToken>())).ReturnsAsync(booking);
+
+        // Mock Wallets cho cả 3 người (Host, Player thường, và Venue Owner)
+        var hostWallet = new Wallet { WalletId = Guid.NewGuid(), UserId = hostId, Balance = 10000 };
+        var playerWallet = new Wallet { WalletId = Guid.NewGuid(), UserId = playerId, Balance = 5000 };
+        var ownerWallet = new Wallet { WalletId = Guid.NewGuid(), UserId = ownerId, Balance = 0 };
+
+        _walletRepoMock.Setup(x => x.GetByUserIdAsync(hostId, It.IsAny<CancellationToken>())).ReturnsAsync(hostWallet);
+        _walletRepoMock.Setup(x => x.GetByUserIdAsync(playerId, It.IsAny<CancellationToken>())).ReturnsAsync(playerWallet);
+        _walletRepoMock.Setup(x => x.GetByUserIdAsync(ownerId, It.IsAny<CancellationToken>())).ReturnsAsync(ownerWallet);
+
+        // Act
+        var result = await _sut.Handle(new CancelMatchRoomCommand(roomId, "Hủy trong vùng phạt"), CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+
+        // 1. Kiểm tra Response trả về có đúng số liệu không
+        result.Value.PenaltyAmount.Should().Be(25000); // Phạt 25% của 100k
+        result.Value.RefundedAmount.Should().Be(100000); // 2 người đều được Refund đủ
+
+        // 2. Kiểm tra Số dư Ví cuối cùng (Khớp hoàn toàn với bài toán kế toán)
+        hostWallet.Balance.Should().Be(35000); // 10k gốc + 50k refund cọc - 25k phạt = 35k
+        ownerWallet.Balance.Should().Be(25000); // 0 gốc + 25k đền bù = 25k
+
+        // 3. Kiểm tra DB có tạo record WalletTransaction lưu vết dòng tiền này không
+        // Xác nhận Host bị ghi log Trừ tiền phạt
+        _walletTxRepoMock.Verify(x => x.AddAsync(It.Is<WalletTransaction>(tx =>
+            tx.WalletId == hostWallet.WalletId &&
+            tx.TransactionType == TransactionType.Penalty &&
+            tx.Amount == -25000)), Times.Once);
+
+        // Xác nhận Chủ sân được ghi log Nhận tiền đền bù
+        _walletTxRepoMock.Verify(x => x.AddAsync(It.Is<WalletTransaction>(tx =>
+            tx.WalletId == ownerWallet.WalletId &&
+            tx.TransactionType == TransactionType.Compensation &&
+            tx.Amount == 25000)), Times.Once);
+
+        // 4. Kiểm tra trạng thái râu ria
+        room.Status.Should().Be(RoomStatus.Cancelled);
+        booking.Status.Should().Be(BookingStatus.Cancelled);
+    }
 }
