@@ -205,16 +205,21 @@ namespace Kickify.Domain.Errors
              "MatchRoom.TimeConflict",
              $"You cannot join because you already have a scheduled match in '{roomName ?? "another room"}' that conflicts with this time slot.");
 
-        public static readonly Error OnlyHostCanCancel = Error.Problem(
+        public static readonly Error OnlyHostCanCancel = Error.Conflict(
             "MatchRoom.OnlyHostCanCancel",
             "Only the room host can cancel the match room manually.");
 
-        public static readonly Error CannotCancelWithin4Hours = Error.Problem(
+        public static readonly Error CannotCancelWithin4Hours = Error.Conflict(
             "MatchRoom.CannotCancelWithin4Hours",
             "Match rooms cannot be cancelled within 4 hours of the start time.");
 
-        public static readonly Error InvalidStateForCancel = Error.Problem(
+        public static readonly Error InvalidStateForCancel = Error.Conflict(
             "MatchRoom.InvalidStateForCancel",
-            "Match room is not in a valid state to be cancelled.");
+            "Match room is not in a valid state to be cancelled. Only when it Open or Locked");
+
+        public static readonly Error LeaveNotAllowed = Error.Conflict(
+            "MatchRoom.LeaveNotAllowed",
+            "You cannot leave the room while the lineup is LOCKED or a match is in progress. Absence will result in losing your DEPOSIT and affecting your REPUTATION points.");
+
     }
 }
