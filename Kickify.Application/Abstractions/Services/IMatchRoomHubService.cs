@@ -1,4 +1,4 @@
-namespace Kickify.Application.Abstractions.Services;
+﻿namespace Kickify.Application.Abstractions.Services;
 
 /// <summary>
 /// Service for sending real-time notifications to match room participants
@@ -160,5 +160,10 @@ public interface IMatchRoomHubService
         Guid roomId,
         string finalResult,
         int voteCount,
+        CancellationToken cancellationToken = default);
+
+    Task NotifyRoomCancelledAsync(
+        Guid roomId,
+        string reason,
         CancellationToken cancellationToken = default);
 }

@@ -167,29 +167,29 @@ public class ProcessPaymentCommandHandler : ICommandHandler<ProcessPaymentComman
                 _bookingRepository.Update(booking);
 
                 // Transfer payment to venue owner's wallet
-                var venue = await _venueRepository.GetByIdAsync(field.VenueId);
-                if (venue != null)
-                {
-                    var wallet = await _walletRepository.GetByUserIdAsync(venue.OwnerId, cancellationToken);
-                    if (wallet != null)
-                    {
-                        wallet.Balance += totalAmount;
-                        _walletRepository.Update(wallet);
+                //var venue = await _venueRepository.GetByIdAsync(field.VenueId);
+                //if (venue != null)
+                //{
+                //    var wallet = await _walletRepository.GetByUserIdAsync(venue.OwnerId, cancellationToken);
+                //    if (wallet != null)
+                //    {
+                //        wallet.Balance += totalAmount;
+                //        _walletRepository.Update(wallet);
 
-                        var transaction = new WalletTransaction
-                        {
-                            TransactionId = Guid.NewGuid(),
-                            WalletId = wallet.WalletId,
-                            TransactionType = TransactionType.BookingIncome,
-                            Amount = totalAmount,
-                            BalanceAfter = wallet.Balance,
-                            ReferenceId = booking.BookingId,
-                            Description = $"Booking income from room {room.RoomName ?? room.RoomId.ToString()}",
-                            CreatedAt = DateTime.UtcNow
-                        };
-                        await _walletTransactionRepository.AddAsync(transaction);
-                    }
-                }
+                //        var transaction = new WalletTransaction
+                //        {
+                //            TransactionId = Guid.NewGuid(),
+                //            WalletId = wallet.WalletId,
+                //            TransactionType = TransactionType.BookingIncome,
+                //            Amount = totalAmount,
+                //            BalanceAfter = wallet.Balance,
+                //            ReferenceId = booking.BookingId,
+                //            Description = $"Booking income from room {room.RoomName ?? room.RoomId.ToString()}",
+                //            CreatedAt = DateTime.UtcNow
+                //        };
+                //        await _walletTransactionRepository.AddAsync(transaction);
+                //    }
+                //}
 
                 // Transition room status to Locked
                 room.Status = RoomStatus.Locked;
