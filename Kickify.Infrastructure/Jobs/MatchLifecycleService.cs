@@ -166,13 +166,18 @@ public class MatchLifecycleService : IMatchLifecycleService
             return;
         }
 
+        // ==========================================
+        // ESCROW RELEASE: Chuyển tiền cho Venue Owner khi trận đấu chính thức bắt đầu
+        // ==========================================
+        await TransferFundsToVenueOwnerAsync(room, scope.ServiceProvider);
+        // ==========================================
+
         room.Status = RoomStatus.InProgress;
         room.StartMatchJobId = null;
         matchRoomRepository.Update(room);
         await unitOfWork.SaveChangesAsync(CancellationToken.None);
 
-        _logger.LogInformation("Match started for room {RoomId}", roomId);
-
+        _logger.LogInformation("Match started for room {RoomId}. Funds transferred to Venue Owner.", roomId);
         // Schedule match end
         var matchEndTime = room.MatchDate.Add(room.StartTime).AddMinutes(room.DurationMinutes);
         ScheduleMatchEnd(roomId, matchEndTime);
@@ -469,6 +474,68 @@ public class MatchLifecycleService : IMatchLifecycleService
             updateAction(room);
             matchRoomRepository.Update(room);
             unitOfWork.SaveChangesAsync(CancellationToken.None).GetAwaiter().GetResult();
+        }
+    }
+
+    /// <summary>
+    /// Giải ngân tiền cọc cho Chủ sân (Venue Owner) khi trận đấu bắt đầu.
+    /// Hệ thống hoạt động theo mô hình Escrow: Giữ tiền hộ đến khi dịch vụ thực sự diễn ra.
+    /// </summary>
+    private async Task TransferFundsToVenueOwnerAsync(MatchRoom room, IServiceProvider serviceProvider)
+    {
+        if (!room.FieldId.HasValue || room.TotalDepositCollected <= 0)
+        {
+            return; // Không có sân hoặc không có tiền để chuyển
+        }
+
+        var fieldRepository = serviceProvider.GetRequiredService<IFieldRepository>();
+        var venueRepository = serviceProvider.GetRequiredService<IVenueRepository>();
+        var walletRepository = serviceProvider.GetRequiredService<IWalletRepository>();
+        var walletTransactionRepository = serviceProvider.GetRequiredService<IWalletTransactionRepository>();
+
+        try
+        {
+            // 1. Lấy thông tin Sân -> Chủ sân
+            var field = await fieldRepository.GetFieldWithVenueAsync(room.FieldId.Value, CancellationToken.None);
+            if (field == null) return;
+
+            var venue = await venueRepository.GetByIdAsync(field.VenueId);
+            if (venue == null) return;
+
+            // 2. Lấy Ví của Chủ sân
+            var ownerWallet = await walletRepository.GetByUserIdAsync(venue.OwnerId, CancellationToken.None);
+            if (ownerWallet == null)
+            {
+                _logger.LogError("CRITICAL: Wallet not found for VenueOwner {OwnerId}. Cannot transfer funds for Room {RoomId}", venue.OwnerId, room.RoomId);
+                return;
+            }
+
+            // 3. Thực hiện cộng tiền
+            var transferAmount = room.TotalDepositCollected;
+            ownerWallet.Balance += transferAmount;
+            walletRepository.Update(ownerWallet);
+
+            // 4. Ghi log lịch sử giao dịch (Biến TransactionType.BookingIncome nhớ đảm bảo đã có trong Enum của bạn)
+            var transaction = new WalletTransaction
+            {
+                TransactionId = Guid.NewGuid(),
+                WalletId = ownerWallet.WalletId,
+                TransactionType = TransactionType.BookingIncome,
+                Amount = transferAmount,
+                BalanceAfter = ownerWallet.Balance,
+                ReferenceId = room.RoomId, // Có thể link tới BookingId nếu bạn include Booking vào Room
+                Description = $"Booking income from room {room.RoomName ?? room.RoomId.ToString()} (Match Started)",
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await walletTransactionRepository.AddAsync(transaction);
+
+            _logger.LogInformation("Prepared Escrow Release of {Amount} to VenueOwner {OwnerId} for Room {RoomId}", transferAmount, venue.OwnerId, room.RoomId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to prepare fund transfer for VenueOwner. RoomId: {RoomId}", room.RoomId);
+            throw; // Ném lỗi ra ngoài để UnitOfWork không Commit Db, đảm bảo an toàn giao dịch
         }
     }
 }

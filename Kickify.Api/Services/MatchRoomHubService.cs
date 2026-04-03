@@ -399,4 +399,9 @@ public class MatchRoomHubService : IMatchRoomHubService
             .Group($"room_{roomId}")
             .SendAsync("MatchResultFinalized", payload, cancellationToken);
     }
+    public async Task NotifyRoomCancelledAsync(Guid roomId, string reason, CancellationToken cancellationToken = default)
+    {
+        await _hubContext.Clients.Group($"room_{roomId}")
+            .SendAsync("RoomCancelled", new { RoomId = roomId, Reason = reason, CancelledAt = DateTime.UtcNow }, cancellationToken);
+    }
 }

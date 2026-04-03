@@ -18,4 +18,5 @@ public static class WalletErrors
     public static readonly Error WithdrawalNotPending = Error.Conflict("Wallet.WithdrawalNotPending", "Only pending withdrawals can be processed");
     public static readonly Error WithdrawalNotCancellable = Error.Conflict("Wallet.WithdrawalNotCancellable", "Only pending withdrawals can be cancelled");
     public static readonly Error NotWithdrawalOwner = Error.Conflict("Wallet.NotWithdrawalOwner", "You are not the owner of this withdrawal request");
+    public static readonly Error InsufficientBalanceForPenalty = Error.Problem("Wallet.InsufficientBalanceForPenalty", "Insufficient balance to cover the cancellation penalty. Please top up your wallet.");
 }
