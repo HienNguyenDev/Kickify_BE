@@ -89,7 +89,7 @@ public class CancelMatchRoomCommandHandler : ICommandHandler<CancelMatchRoomComm
             venueOwnerId = field?.Venue?.OwnerId;
         }
 
-        if (isPenaltyZone && room.TotalDepositCollected > 0 && venueOwnerId.HasValue)
+        if (isPenaltyZone && room.Status == RoomStatus.Locked && room.TotalDepositCollected > 0 && venueOwnerId.HasValue)
         {
             penaltyAmount = room.TotalDepositCollected * 0.25m;
         }
