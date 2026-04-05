@@ -4,11 +4,14 @@ namespace Kickify.Application.Features.MatchPresets.Commands.UpdateMatchPreset
 {
     public record UpdateMatchPresetCommand(
         Guid PresetId,
-        string? PresetRoomName,
+        Guid? FieldId,
+        string? RoomName,
         string? MatchFormat,
         string? Visibility,
+        TimeSpan? StartTime,
         int? DurationMinutes,
-        string? RoomPassword,
+        string? Rules,
+        string? Password,
         string? Description
     ) : ICommand<UpdateMatchPresetResponse>;
 }

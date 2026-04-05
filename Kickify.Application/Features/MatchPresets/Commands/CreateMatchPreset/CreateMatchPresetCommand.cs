@@ -3,11 +3,14 @@ using Kickify.Application.Abstractions.Messaging;
 namespace Kickify.Application.Features.MatchPresets.Commands.CreateMatchPreset
 {
     public record CreateMatchPresetCommand(
-        string PresetRoomName,
+        Guid FieldId,
+        string RoomName,
         string MatchFormat,
         string? Visibility,
+        TimeSpan StartTime,
         int DurationMinutes,
-        string? RoomPassword,
+        string? Rules,
+        string? Password,
         string? Description
     ) : ICommand<CreateMatchPresetResponse>;
 }
