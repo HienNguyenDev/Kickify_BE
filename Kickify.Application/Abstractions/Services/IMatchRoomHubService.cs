@@ -166,4 +166,22 @@ public interface IMatchRoomHubService
         Guid roomId,
         string reason,
         CancellationToken cancellationToken = default);
+
+    Task NotifyHostTransferRequestedAsync(
+        Guid roomId,
+        Guid targetUserId,
+        string hostName,
+        CancellationToken cancellationToken = default);
+
+    Task NotifyHostTransferRejectedAsync(
+        Guid roomId,
+        Guid oldHostId,
+        string targetUserName,
+        CancellationToken cancellationToken = default);
+
+    Task NotifyHostTransferredAsync(
+        Guid roomId,
+        Guid newHostId,
+        string newHostName,
+        CancellationToken cancellationToken = default);
 }
