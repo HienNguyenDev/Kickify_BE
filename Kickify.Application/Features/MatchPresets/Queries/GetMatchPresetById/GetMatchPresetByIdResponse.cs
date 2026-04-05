@@ -4,26 +4,12 @@ namespace Kickify.Application.Features.MatchPresets.Queries.GetMatchPresetById
         Guid PresetId,
         Guid UserId,
         string UserName,
-        string PresetName,
-        Guid? FieldId,
-        PresetFieldDto? Field,
-        string? CustomLocation,
+        string PresetRoomName,
         string MatchFormat,
+        string Visibility,
+        string? RoomPassword,
         int DurationMinutes,
         string? Description,
         DateTime CreatedAt
-    );
-
-    public record PresetFieldDto(
-        Guid FieldId,
-        string FieldName,
-        string FieldType,
-        PresetVenueDto Venue
-    );
-
-    public record PresetVenueDto(
-        Guid VenueId,
-        string VenueName,
-        string Address
     );
 }

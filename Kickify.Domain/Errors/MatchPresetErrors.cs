@@ -16,12 +16,16 @@ namespace Kickify.Domain.Errors
             "MatchPreset.InvalidFormat",
             $"Invalid match format: {matchFormat}");
 
+        public static Error InvalidVisibility(string? visibility) => Error.Conflict(
+            "MatchPreset.InvalidVisibility",
+            $"Invalid visibility: {visibility}");
+
         public static readonly Error InvalidDuration = Error.Conflict(
             "MatchPreset.InvalidDuration",
             "Duration must be greater than 0 minutes");
 
-        public static readonly Error PresetNameRequired = Error.Conflict(
-            "MatchPreset.PresetNameRequired",
-            "Preset name is required");
+        public static readonly Error PresetRoomNameRequired = Error.Conflict(
+            "MatchPreset.PresetRoomNameRequired",
+            "Preset room name is required");
     }
 }
