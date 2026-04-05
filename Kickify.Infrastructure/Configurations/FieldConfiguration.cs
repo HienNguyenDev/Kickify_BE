@@ -93,11 +93,6 @@ public class FieldConfiguration : IEntityTypeConfiguration<Field>
             .HasForeignKey(mr => mr.FieldId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasMany(f => f.MatchPresets)
-            .WithOne(mp => mp.Field)
-            .HasForeignKey(mp => mp.FieldId)
-            .OnDelete(DeleteBehavior.Restrict);
-
         builder.HasMany(f => f.Bookings)
             .WithOne(b => b.Field)
             .HasForeignKey(b => b.FieldId)

@@ -25,6 +25,5 @@ public class Field : BaseEntity
     // Navigation properties
     public Venue Venue { get; set; } = null!;
     public ICollection<MatchRoom> MatchRooms { get; set; } = new List<MatchRoom>();
-    public ICollection<MatchPreset> MatchPresets { get; set; } = new List<MatchPreset>();
     public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
 }

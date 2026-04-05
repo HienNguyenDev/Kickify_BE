@@ -12,20 +12,17 @@ namespace Kickify.Application.Features.MatchPresets.Commands.CreateMatchPreset
     public class CreateMatchPresetCommandHandler : ICommandHandler<CreateMatchPresetCommand, CreateMatchPresetResponse>
     {
         private readonly IMatchPresetRepository _matchPresetRepository;
-        private readonly IFieldRepository _fieldRepository;
         private readonly IUserRepository _userRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IUserContext _userContext;
 
         public CreateMatchPresetCommandHandler(
             IMatchPresetRepository matchPresetRepository,
-            IFieldRepository fieldRepository,
             IUserRepository userRepository,
             IUnitOfWork unitOfWork,
             IUserContext userContext)
         {
             _matchPresetRepository = matchPresetRepository;
-            _fieldRepository = fieldRepository;
             _userRepository = userRepository;
             _unitOfWork = unitOfWork;
             _userContext = userContext;
@@ -48,16 +45,13 @@ namespace Kickify.Application.Features.MatchPresets.Commands.CreateMatchPreset
                 return Result.Failure<CreateMatchPresetResponse>(MatchPresetErrors.InvalidFormat(request.MatchFormat));
             }
 
-            // Verify field exists if provided
-            string? fieldName = null;
-            if (request.FieldId.HasValue)
+            var visibilityInput = string.IsNullOrWhiteSpace(request.Visibility)
+                ? Visibility.Public.ToString()
+                : request.Visibility;
+
+            if (!Enum.TryParse<Visibility>(visibilityInput, true, out var visibility))
             {
-                var field = await _fieldRepository.GetByIdAsync(request.FieldId.Value);
-                if (field == null)
-                {
-                    return Result.Failure<CreateMatchPresetResponse>(FieldErrors.NotFound(request.FieldId.Value));
-                }
-                fieldName = field.FieldName;
+                return Result.Failure<CreateMatchPresetResponse>(MatchPresetErrors.InvalidVisibility(request.Visibility));
             }
 
             // Create preset
@@ -65,10 +59,12 @@ namespace Kickify.Application.Features.MatchPresets.Commands.CreateMatchPreset
             {
                 PresetId = Guid.NewGuid(),
                 UserId = userId,
-                PresetName = request.PresetName,
-                FieldId = request.FieldId,
-                CustomLocation = request.CustomLocation,
+                PresetRoomName = request.PresetRoomName,
                 MatchFormat = matchFormat,
+                Visibility = visibility,
+                RoomPassword = visibility == Visibility.Private
+                    ? (string.IsNullOrWhiteSpace(request.RoomPassword) ? null : request.RoomPassword)
+                    : null,
                 DurationMinutes = request.DurationMinutes,
                 Description = request.Description,
                 CreatedAt = DateTime.UtcNow
@@ -80,11 +76,10 @@ namespace Kickify.Application.Features.MatchPresets.Commands.CreateMatchPreset
             return Result.Success(new CreateMatchPresetResponse(
                 preset.PresetId,
                 preset.UserId,
-                preset.PresetName,
-                preset.FieldId,
-                fieldName,
-                preset.CustomLocation,
+                preset.PresetRoomName,
                 preset.MatchFormat.ToString(),
+                preset.Visibility.ToString(),
+                preset.RoomPassword,
                 preset.DurationMinutes,
                 preset.Description,
                 preset.CreatedAt
