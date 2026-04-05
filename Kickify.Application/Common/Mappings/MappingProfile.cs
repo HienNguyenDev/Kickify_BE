@@ -63,6 +63,7 @@ namespace Kickify.Application.Common.Mappings
                 .ForMember(dest => dest.VenueId, opt => opt.Ignore())
                 .ForMember(dest => dest.Venue, opt => opt.Ignore())
                 .ForMember(dest => dest.MatchRooms, opt => opt.Ignore())
+                .ForMember(dest => dest.MatchPresets, opt => opt.Ignore())
                 .ForMember(dest => dest.Bookings, opt => opt.Ignore())
                 .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
                 .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore());

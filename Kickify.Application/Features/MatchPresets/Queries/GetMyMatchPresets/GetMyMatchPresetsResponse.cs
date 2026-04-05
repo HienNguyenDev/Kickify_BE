@@ -10,10 +10,13 @@ namespace Kickify.Application.Features.MatchPresets.Queries.GetMyMatchPresets
 
     public record MyMatchPresetItemDto(
         Guid PresetId,
-        string PresetRoomName,
+        Guid? FieldId,
+        string RoomName,
         string MatchFormat,
         string Visibility,
-        string? RoomPassword,
+        string? Password,
+        TimeSpan StartTime,
+        string? Rules,
         int DurationMinutes,
         string? Description,
         DateTime CreatedAt

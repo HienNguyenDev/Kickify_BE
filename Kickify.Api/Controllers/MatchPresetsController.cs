@@ -31,11 +31,14 @@ namespace Kickify.Api.Controllers
         public async Task<IResult> CreatePreset([FromBody] CreateMatchPresetRequest request, CancellationToken cancellationToken)
         {
             var command = new CreateMatchPresetCommand(
-                request.PresetRoomName,
+                request.FieldId,
+                request.RoomName,
                 request.MatchFormat,
                 request.Visibility,
+                request.StartTime,
                 request.DurationMinutes,
-                request.RoomPassword,
+                request.Rules,
+                request.Password,
                 request.Description
             );
 
@@ -92,11 +95,14 @@ namespace Kickify.Api.Controllers
         {
             var command = new UpdateMatchPresetCommand(
                 id,
-                request.PresetRoomName,
+                request.FieldId,
+                request.RoomName,
                 request.MatchFormat,
                 request.Visibility,
+                request.StartTime,
                 request.DurationMinutes,
-                request.RoomPassword,
+                request.Rules,
+                request.Password,
                 request.Description
             );
 

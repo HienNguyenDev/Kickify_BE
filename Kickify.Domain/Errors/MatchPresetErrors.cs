@@ -24,8 +24,8 @@ namespace Kickify.Domain.Errors
             "MatchPreset.InvalidDuration",
             "Duration must be greater than 0 minutes");
 
-        public static readonly Error PresetRoomNameRequired = Error.Conflict(
-            "MatchPreset.PresetRoomNameRequired",
-            "Preset room name is required");
+        public static readonly Error RoomNameRequired = Error.Conflict(
+            "MatchPreset.RoomNameRequired",
+            "Room name is required");
     }
 }
