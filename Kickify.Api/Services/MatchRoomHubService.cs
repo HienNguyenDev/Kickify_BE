@@ -404,4 +404,90 @@ public class MatchRoomHubService : IMatchRoomHubService
         await _hubContext.Clients.Group($"room_{roomId}")
             .SendAsync("RoomCancelled", new { RoomId = roomId, Reason = reason, CancelledAt = DateTime.UtcNow }, cancellationToken);
     }
+
+    public async Task NotifyHostTransferRequestedAsync(Guid roomId, Guid targetUserId, string hostName, CancellationToken cancellationToken = default)
+    {
+        var connectionIds = _connectionMapping.GetConnections(targetUserId).ToList();
+
+        _logger.LogInformation(
+            "[SignalR Debug] NotifyHostTransferRequestedAsync invoked | RoomId: {RoomId} | TargetUserId: {TargetUserId} | ConnectionCount: {ConnectionCount}",
+            roomId,
+            targetUserId,
+            connectionIds.Count);
+
+        if (connectionIds.Any())
+        {
+            var payload = new
+            {
+                RoomId = roomId,
+                HostName = hostName,
+                TargetUserId = targetUserId,
+                RequestedAt = DateTime.UtcNow
+            };
+
+            LogOutboundEvent("HostTransferRequested", $"User: {targetUserId} (Connections: {connectionIds.Count})", payload);
+
+            await _hubContext.Clients
+                .Clients(connectionIds)
+                .SendAsync("HostTransferRequested", payload, cancellationToken);
+        }
+        else
+        {
+            _logger.LogWarning(
+                "[SignalR Debug] HostTransferRequested skipped because target user has no active SignalR connections | RoomId: {RoomId} | TargetUserId: {TargetUserId}",
+                roomId,
+                targetUserId);
+        }
+    }
+
+    public async Task NotifyHostTransferRejectedAsync(Guid roomId, Guid oldHostId, string targetUserName, CancellationToken cancellationToken = default)
+    {
+        var connectionIds = _connectionMapping.GetConnections(oldHostId).ToList();
+
+        _logger.LogInformation(
+            "[SignalR Debug] NotifyHostTransferRejectedAsync invoked | RoomId: {RoomId} | OldHostId: {OldHostId} | ConnectionCount: {ConnectionCount}",
+            roomId,
+            oldHostId,
+            connectionIds.Count);
+
+        if (connectionIds.Any())
+        {
+            var payload = new
+            {
+                RoomId = roomId,
+                TargetUserName = targetUserName,
+                RejectedAt = DateTime.UtcNow
+            };
+
+            LogOutboundEvent("HostTransferRejected", $"User: {oldHostId} (Connections: {connectionIds.Count})", payload);
+
+            await _hubContext.Clients
+                .Clients(connectionIds)
+                .SendAsync("HostTransferRejected", payload, cancellationToken);
+        }
+        else
+        {
+            _logger.LogWarning(
+                "[SignalR Debug] HostTransferRejected skipped because old host has no active SignalR connections | RoomId: {RoomId} | OldHostId: {OldHostId}",
+                roomId,
+                oldHostId);
+        }
+    }
+
+    public async Task NotifyHostTransferredAsync(Guid roomId, Guid newHostId, string newHostName, CancellationToken cancellationToken = default)
+    {
+        var payload = new
+        {
+            RoomId = roomId,
+            NewHostId = newHostId,
+            NewHostName = newHostName,
+            TransferredAt = DateTime.UtcNow
+        };
+
+        LogOutboundEvent("HostTransferred", $"Group: room_{roomId}", payload);
+
+        await _hubContext.Clients
+            .Group($"room_{roomId}")
+            .SendAsync("HostTransferred", payload, cancellationToken);
+    }
 }
