@@ -5,7 +5,6 @@ using Kickify.Application.Features.MatchPresets.Commands.CreateMatchPreset;
 using Kickify.Application.Features.MatchPresets.Commands.DeleteMatchPreset;
 using Kickify.Application.Features.MatchPresets.Commands.UpdateMatchPreset;
 using Kickify.Application.Features.MatchPresets.Queries.GetMatchPresetById;
-using Kickify.Application.Features.MatchPresets.Queries.GetMatchPresets;
 using Kickify.Application.Features.MatchPresets.Queries.GetMyMatchPresets;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -32,11 +31,11 @@ namespace Kickify.Api.Controllers
         public async Task<IResult> CreatePreset([FromBody] CreateMatchPresetRequest request, CancellationToken cancellationToken)
         {
             var command = new CreateMatchPresetCommand(
-                request.PresetName,
-                request.FieldId,
-                request.CustomLocation,
+                request.PresetRoomName,
                 request.MatchFormat,
+                request.Visibility,
                 request.DurationMinutes,
+                request.RoomPassword,
                 request.Description
             );
 
@@ -48,23 +47,6 @@ namespace Kickify.Api.Controllers
             }
 
             return CustomResults.Problem(result);
-        }
-
-        /// <summary>
-        /// Get all match presets (public, no role required)
-        /// </summary>
-        [HttpGet]
-        [AllowAnonymous]
-        public async Task<IResult> GetAllPresets(
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 10,
-            CancellationToken cancellationToken = default)
-        {
-            var query = new GetMatchPresetsQuery(page, pageSize);
-
-            var result = await _sender.Send(query, cancellationToken);
-
-            return result.MatchOk();
         }
 
         /// <summary>
@@ -110,11 +92,11 @@ namespace Kickify.Api.Controllers
         {
             var command = new UpdateMatchPresetCommand(
                 id,
-                request.PresetName,
-                request.FieldId,
-                request.CustomLocation,
+                request.PresetRoomName,
                 request.MatchFormat,
+                request.Visibility,
                 request.DurationMinutes,
+                request.RoomPassword,
                 request.Description
             );
 

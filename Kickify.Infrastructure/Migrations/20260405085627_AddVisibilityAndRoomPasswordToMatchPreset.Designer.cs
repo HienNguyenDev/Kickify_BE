@@ -3,6 +3,7 @@ using System;
 using Kickify.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Kickify.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260405085627_AddVisibilityAndRoomPasswordToMatchPreset")]
+    partial class AddVisibilityAndRoomPasswordToMatchPreset
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -810,11 +813,17 @@ namespace Kickify.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("CustomLocation")
+                        .HasColumnType("text");
+
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
                     b.Property<int>("DurationMinutes")
                         .HasColumnType("integer");
+
+                    b.Property<Guid?>("FieldId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("MatchFormat")
                         .IsRequired()
@@ -839,6 +848,8 @@ namespace Kickify.Infrastructure.Migrations
                         .HasDefaultValue("Public");
 
                     b.HasKey("PresetId");
+
+                    b.HasIndex("FieldId");
 
                     b.HasIndex("UserId");
 
@@ -2447,11 +2458,18 @@ namespace Kickify.Infrastructure.Migrations
 
             modelBuilder.Entity("Kickify.Domain.Entities.MatchPreset", b =>
                 {
+                    b.HasOne("Kickify.Domain.Entities.Field", "Field")
+                        .WithMany("MatchPresets")
+                        .HasForeignKey("FieldId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Kickify.Domain.Entities.User", "User")
                         .WithMany("MatchPresets")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Field");
 
                     b.Navigation("User");
                 });
@@ -2859,6 +2877,8 @@ namespace Kickify.Infrastructure.Migrations
             modelBuilder.Entity("Kickify.Domain.Entities.Field", b =>
                 {
                     b.Navigation("Bookings");
+
+                    b.Navigation("MatchPresets");
 
                     b.Navigation("MatchRooms");
                 });
