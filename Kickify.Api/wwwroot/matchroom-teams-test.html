@@ -85,6 +85,35 @@
         .host-badge { position: absolute; top: -6px; left: -6px; background: #ff6b6b; color: #fff; font-size: 9px; padding: 2px 6px; border-radius: 8px; font-weight: bold; }
         .kick-btn { background: #ff4757; color: #fff; font-size: 10px; padding: 4px 8px; border-radius: 4px; font-weight: bold; cursor: pointer; border: none; margin-left: auto; flex-shrink: 0; }
         .kick-btn:hover { background: #ff2f3f; transform: scale(1.05); }
+        .transfer-btn { background: #6fb5ff; color: #fff; font-size: 10px; padding: 4px 8px; border-radius: 4px; font-weight: bold; cursor: pointer; border: none; margin-left: 6px; flex-shrink: 0; }
+        .transfer-btn:hover { background: #4d9bf0; transform: scale(1.05); }
+        .player-actions { display: flex; align-items: center; margin-left: auto; }
+
+        /* Transfer Host Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            padding: 20px;
+        }
+        .modal-overlay.show { display: flex; }
+        .transfer-modal {
+            width: min(460px, 100%);
+            background: linear-gradient(145deg, #2a3545, #1a2434);
+            border: 1px solid #3a4555;
+            border-radius: 12px;
+            padding: 18px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+        }
+        .transfer-modal h3 { margin: 0 0 8px 0; color: #7fff6f; }
+        .transfer-modal p { margin: 6px 0; color: #c8d2df; font-size: 13px; line-height: 1.4; }
+        .transfer-modal .meta { color: #8fa1b6; font-size: 12px; margin-top: 6px; }
+        .transfer-modal-actions { display: flex; gap: 10px; margin-top: 14px; }
+        .transfer-modal-actions button { flex: 1; }
         
         @keyframes slideIn { 
             0% { transform: translateX(-20px); opacity: 0; } 
@@ -274,6 +303,18 @@
         </div>
     </div>
 
+    <div id="transferRequestModal" class="modal-overlay">
+        <div class="transfer-modal">
+            <h3>Transfer Host Request</h3>
+            <p id="transferRequestMessage">Host wants to transfer room ownership to you.</p>
+            <p class="meta" id="transferRequestMeta"></p>
+            <div class="transfer-modal-actions">
+                <button class="danger" onclick="respondTransferHost(false)">Reject</button>
+                <button onclick="respondTransferHost(true)">Accept</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let connection = null;
         let accessToken = '';
@@ -281,6 +322,7 @@
         let currentUserId = null;
         let roomData = null;
         let hostId = null;
+        let pendingTransferRequest = null;
 
         // ============ Utility Functions ============
         
@@ -319,6 +361,26 @@
             ['loadBtn', 'refreshBtn', 'joinBtn', 'leaveBtn', 'selectUnassigned', 'selectTeamA', 'selectTeamB', 'updatePositionBtn'].forEach(id => {
                 document.getElementById(id).disabled = !connected;
             });
+
+            if (!connected) {
+                hideTransferRequestModal();
+                pendingTransferRequest = null;
+            }
+        }
+
+        function escapeAttr(value) {
+            return (value || '').replace(/'/g, "\\'");
+        }
+
+        function showTransferRequestModal(hostName, roomId) {
+            pendingTransferRequest = { hostName, roomId };
+            document.getElementById('transferRequestMessage').textContent = `${hostName || 'Host'} wants to transfer host role to you.`;
+            document.getElementById('transferRequestMeta').textContent = `Room: ${roomId}`;
+            document.getElementById('transferRequestModal').classList.add('show');
+        }
+
+        function hideTransferRequestModal() {
+            document.getElementById('transferRequestModal').classList.remove('show');
         }
 
         // ============ Player Card Rendering ============
@@ -327,6 +389,7 @@
             const isYou = (player.userId || player.UserId) === currentUserId;
             const imHost = currentUserId === hostId;
             const canKick = imHost && !isHost && !isYou; // I'm host, and this player is not host and not me
+            const canTransferRole = imHost && !isHost && !isYou;
             
             // Handle both PascalCase and camelCase from API
             const userId = player.userId || player.UserId;
@@ -360,7 +423,12 @@
                         <div class="player-role">${isHost ? '👑 Host' : '👤 Player'}</div>
                         ${position ? `<div class="player-position">📍 ${position}</div>` : ''}
                     </div>
-                    ${canKick ? `<button class="kick-btn" onclick="kickPlayer('${userId}', '${fullName.replace(/'/g, "\\'")}')">KICK</button>` : ''}
+                    ${(canKick || canTransferRole)
+                        ? `<div class="player-actions">
+                            ${canKick ? `<button class="kick-btn" onclick="kickPlayer('${userId}', '${escapeAttr(fullName)}')">KICK</button>` : ''}
+                            ${canTransferRole ? `<button class="transfer-btn" onclick="requestTransferHost('${userId}', '${escapeAttr(fullName)}')">TRANSFER ROLE</button>` : ''}
+                           </div>`
+                        : ''}
                 </div>
             `;
         }
@@ -569,6 +637,11 @@
                 newHostCard.querySelector('.player-avatar').textContent = 'H';
                 newHostCard.querySelector('.player-role').textContent = 'Host';
             }
+
+            // Re-render from API so host-only action buttons are recalculated correctly.
+            if (currentRoomId) {
+                refreshRoom();
+            }
         }
 
         function removePlayer(userId) {
@@ -718,6 +791,45 @@
                     toast(`${data.kickedUserName} was kicked!`, 'error');
                 }
                 addEvent(`[X] ${data.kickedUserName} was kicked. Reason: ${data.reason}`, 'error');
+            });
+
+            // Event: Personal invite to become host
+            connection.on("HostTransferRequested", (data) => {
+                log('HostTransferRequested: ' + JSON.stringify(data));
+                const roomId = data.roomId || data.RoomId;
+                const hostName = data.hostName || data.HostName;
+
+                if (roomId === currentRoomId) {
+                    showTransferRequestModal(hostName, roomId);
+                    toast(`${hostName || 'Host'} invited you to become host`, 'info');
+                }
+
+                addEvent(`[HR] Transfer role request from ${hostName || 'Host'}`, 'info');
+            });
+
+            // Event: Old host gets rejection message
+            connection.on("HostTransferRejected", (data) => {
+                log('HostTransferRejected: ' + JSON.stringify(data));
+                const targetUserName = data.targetUserName || data.TargetUserName || 'Player';
+                toast(`${targetUserName} rejected host transfer`, 'error');
+                addEvent(`[HR] ${targetUserName} rejected transfer role`, 'error');
+            });
+
+            // Event: Whole room knows new host
+            connection.on("HostTransferred", (data) => {
+                log('HostTransferred: ' + JSON.stringify(data));
+                const roomId = data.roomId || data.RoomId;
+                const newHostId = data.newHostId || data.NewHostId;
+                const newHostName = data.newHostName || data.NewHostName || 'New host';
+
+                if (roomId === currentRoomId) {
+                    hideTransferRequestModal();
+                    pendingTransferRequest = null;
+                    updateHost(newHostId);
+                    toast(`${newHostName} is now host`, 'success');
+                }
+
+                addEvent(`[HR] Host transferred to ${newHostName}`, 'team');
             });
 
             connection.onclose(() => { updateConnectionUI(false); });
@@ -885,6 +997,48 @@
                 addEvent(`[X] You kicked ${targetUserName}`, 'error');
                 toast(`Kicked ${targetUserName}!`, 'success');
                 
+            } catch (err) {
+                addEvent(`[ERR] ${err.message}`, 'error');
+                toast(err.message, 'error');
+            }
+        }
+
+        async function requestTransferHost(targetUserId, targetUserName) {
+            if (!currentRoomId) { alert('Load a room first'); return; }
+            if (currentUserId !== hostId) {
+                alert('Only host can transfer host role.');
+                return;
+            }
+
+            const ok = confirm(`Transfer host role to ${targetUserName}?`);
+            if (!ok) return;
+
+            try {
+                await api(`/match-rooms/${currentRoomId}/transfer-host`, 'POST', { targetUserId });
+                addEvent(`[HR] You requested host transfer to ${targetUserName}`, 'info');
+                toast(`Transfer request sent to ${targetUserName}`, 'info');
+            } catch (err) {
+                addEvent(`[ERR] ${err.message}`, 'error');
+                toast(err.message, 'error');
+            }
+        }
+
+        async function respondTransferHost(isAccepted) {
+            if (!currentRoomId || !pendingTransferRequest) {
+                hideTransferRequestModal();
+                return;
+            }
+
+            try {
+                await api(`/match-rooms/${currentRoomId}/transfer-host/respond`, 'POST', { isAccepted });
+                addEvent(`[HR] You ${isAccepted ? 'accepted' : 'rejected'} transfer host request`, isAccepted ? 'team' : 'error');
+                toast(isAccepted ? 'You are now host!' : 'You rejected transfer request', isAccepted ? 'success' : 'info');
+                hideTransferRequestModal();
+                pendingTransferRequest = null;
+
+                if (isAccepted) {
+                    await refreshRoom();
+                }
             } catch (err) {
                 addEvent(`[ERR] ${err.message}`, 'error');
                 toast(err.message, 'error');

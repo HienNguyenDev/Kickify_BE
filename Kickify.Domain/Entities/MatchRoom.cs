@@ -35,7 +35,9 @@ public class MatchRoom : Entity
     public string? StartMatchJobId { get; set; }
     public string? EndMatchJobId { get; set; }
     public string? FinalizeResultJobId { get; set; }
-    
+
+    public Guid? PendingHostTransferId { get; set; }
+
     // Final match result
     public MatchResult? FinalResult { get; set; }
 
