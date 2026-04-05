@@ -11,6 +11,9 @@ namespace Kickify.Application.Features.MatchPresets.Queries.GetMyMatchPresets
     public record MyMatchPresetItemDto(
         Guid PresetId,
         Guid? FieldId,
+        string? FieldName,
+        string? VenueName,
+        string? VenueAddress,
         string RoomName,
         string MatchFormat,
         string Visibility,
