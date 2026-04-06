@@ -55,6 +55,15 @@ internal sealed class RespondTransferHostCommandHandler : ICommandHandler<Respon
             return Result.Failure<RespondTransferHostResponse>(MatchRoomErrors.NotTargetTransferUser);
         }
 
+        var responderParticipant = room.RoomParticipants.FirstOrDefault(p => p.UserId == currentUserId);
+        if (responderParticipant is null)
+        {
+            room.PendingHostTransferId = null;
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            return Result.Failure<RespondTransferHostResponse>(MatchRoomErrors.TargetUserNoLongerParticipant);
+        }
+
         var oldHostId = room.HostId;
 
         if (!request.IsAccepted)
