@@ -62,6 +62,33 @@ internal sealed class RequestTransferHostCommandHandler : ICommandHandler<Reques
             return Result.Failure<RequestTransferHostResponse>(MatchRoomErrors.TargetUserNotParticipant);
         }
 
+        if (room.PendingHostTransferId.HasValue)
+        {
+            var pendingUserStillInRoom = room.RoomParticipants.Any(p => p.UserId == room.PendingHostTransferId.Value);
+
+            if (!pendingUserStillInRoom)
+            {
+                room.PendingHostTransferId = null;
+            }
+            else if (room.PendingHostTransferId.Value != request.TargetUserId)
+            {
+                return Result.Failure<RequestTransferHostResponse>(MatchRoomErrors.HostTransferRequestAlreadyPending);
+            }
+            else
+            {
+                // Idempotent behavior for repeated requests to the same target.
+                var host = await _userRepository.GetByIdAsync(currentUserId);
+
+                await _matchRoomHubService.NotifyHostTransferRequestedAsync(
+                    room.RoomId,
+                    request.TargetUserId,
+                    host?.FullName ?? host?.Email ?? "The Host",
+                    cancellationToken);
+
+                return Result.Success(new RequestTransferHostResponse(true));
+            }
+        }
+
         room.PendingHostTransferId = request.TargetUserId;
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
