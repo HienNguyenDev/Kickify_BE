@@ -9,6 +9,7 @@ using Kickify.Domain.Common;
 using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
 using Kickify.Domain.Errors;
+using Kickify.Domain.Event;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -29,8 +30,12 @@ public class JoinRoomCommandHandlerTests
 
     private readonly JoinRoomCommandHandler _sut;
 
-    public JoinRoomCommandHandlerTests()
+        public JoinRoomCommandHandlerTests()
     {
+        _matchRoomRepositoryMock
+            .Setup(x => x.GetActiveRoomsForUserByDateAsync(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<MatchRoom>());
+
         _sut = new JoinRoomCommandHandler(
             _matchRoomRepositoryMock.Object,
             _userRepositoryMock.Object,
@@ -221,5 +226,54 @@ public class JoinRoomCommandHandlerTests
         result.Error.Should().NotBeNull();
         result.Error!.Code.Should().Be(MatchRoomErrors.PasswordRequiredForPrivateRoom.Code);
     }
+
+    [Fact]
+    public async Task Handle_WhenPlayerJoins_DoesNotTriggerAutoCloseExtensionEvent()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var roomId = Guid.NewGuid();
+        _userContextMock.SetupGet(x => x.UserId).Returns(userId);
+
+        var command = new JoinRoomCommand(roomId, null);
+
+        var user = new User { UserId = userId, FullName = "Test User", Email = "test@example.com" };
+        _userRepositoryMock
+            .Setup(x => x.GetByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        // Player not yet in the room
+        _roomParticipantRepositoryMock
+            .Setup(x => x.GetParticipantByRoomAndUserAsync(roomId, userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((RoomParticipant?)null);
+
+        var room = new MatchRoom
+        {
+            RoomId = roomId,
+            Status = RoomStatus.Open,
+            Visibility = Visibility.Public,
+            FilledSlots = 1,
+            TotalSlots = 10,
+            DepositPerPerson = 50000,
+            AutoCloseJobId = "job-123"
+        };
+        // Ensure starting clean
+        room.ClearDomainEvents();
+
+        _matchRoomRepositoryMock
+            .Setup(x => x.GetRoomWithParticipantsForUpdateAsync(roomId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(room);
+
+        // Act
+        var result = await _sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        
+        // Verify no ParticipantJoinedRoomDomainEvent was raised
+        var domainEvents = room.DomainEvents;
+        domainEvents.OfType<ParticipantJoinedRoomDomainEvent>().Should().BeEmpty("Because player joining should NOT extend the auto-close timer by 20 minutes anymore.");
+    }
 }
+
 
