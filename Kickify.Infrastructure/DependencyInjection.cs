@@ -1,4 +1,4 @@
-﻿using BrewView.Infrastructure.Authentication;
+using BrewView.Infrastructure.Authentication;
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
 using Kickify.Application.Abstractions.Authentication;
@@ -119,6 +119,8 @@ namespace Kickify.Infrastructure
             services.AddScoped<IPushNotificationService, PushNotificationService>();
             services.AddSingleton<IQrCodeService, QrCodeService>();
             services.AddScoped<ILeaderboardCacheService, LeaderboardCacheService>();
+            services.AddScoped<ITrustScoreService, TrustScoreService>();
+            services.AddScoped<IAfkVoteService, AfkVoteService>();
 
             // AI Sentiment Analysis Service
             services.AddHttpClient<ISentimentAnalysisService, SentimentAnalysisService>((sp, client) =>

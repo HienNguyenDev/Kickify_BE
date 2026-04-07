@@ -51,4 +51,5 @@ public class MatchRoom : Entity
     public ICollection<PlayerReport> PlayerReports { get; set; } = new List<PlayerReport>();
     public ICollection<MatchFormation> Formations { get; set; } = new List<MatchFormation>();
     public ICollection<MatchResultVote> ResultVotes { get; set; } = new List<MatchResultVote>();
+    public ICollection<AfkVote> AfkVotes { get; set; } = new List<AfkVote>();
 }

@@ -8,11 +8,13 @@ using Kickify.Application.Features.MatchRooms.Commands.JoinRoom;
 using Kickify.Application.Features.MatchRooms.Commands.KickPlayer;
 using Kickify.Application.Features.MatchRooms.Commands.LeaveRoom;
 using Kickify.Application.Features.MatchRooms.Commands.RenameTeam;
+using Kickify.Application.Features.MatchRooms.Commands.SubmitAfkVote;
 using Kickify.Application.Features.MatchRooms.Commands.UpdateFormation;
 using Kickify.Application.Features.MatchRooms.Commands.UpdateParticipant;
 using Kickify.Application.Features.MatchRooms.Commands.UpdateRoomInfo;
 using Kickify.Application.Features.MatchRooms.Commands.UpdateRoomPrivacy;
 using Kickify.Application.Features.MatchRooms.Commands.VoteMatchResult;
+using Kickify.Application.Features.MatchRooms.Queries.GetAfkVoteStatus;
 using Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById;
 using Kickify.Application.Features.MatchRooms.Queries.GetMatchRooms;
 using Kickify.Application.Features.MatchRooms.Queries.GetMyMatchRooms;
@@ -306,6 +308,33 @@ namespace Kickify.Api.Controllers
 
             var result = await _sender.Send(command, cancellationToken);
 
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Submit AFK votes for teammates in a reviewing match.
+        /// </summary>
+        [HttpPost("{matchRoomId}/afk-votes")]
+        public async Task<IResult> SubmitAfkVotes(
+            Guid matchRoomId,
+            [FromBody] SubmitAfkVoteRequest request,
+            CancellationToken cancellationToken)
+        {
+            var command = new SubmitAfkVoteCommand(matchRoomId, request.TargetPlayerIds);
+            var result = await _sender.Send(command, cancellationToken);
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Get current AFK vote status for all match participants.
+        /// </summary>
+        [HttpGet("{matchRoomId}/afk-votes/status")]
+        public async Task<IResult> GetAfkVoteStatus(
+            Guid matchRoomId,
+            CancellationToken cancellationToken)
+        {
+            var query = new GetAfkVoteStatusQuery(matchRoomId);
+            var result = await _sender.Send(query, cancellationToken);
             return result.MatchOk();
         }
 

@@ -187,6 +187,18 @@ namespace Kickify.Domain.Errors
             "MatchRoom.VoteNotAllowed",
             "Voting is only allowed during the reviewing phase");
 
+        public static readonly Error AlreadySubmittedAfkVote = Error.Conflict(
+            "MatchRoom.AlreadySubmittedAfkVote",
+            "You have already submitted AFK votes for this match");
+
+        public static readonly Error CannotVoteSelfAfk = Error.Conflict(
+            "MatchRoom.CannotVoteSelfAfk",
+            "You cannot vote yourself as AFK");
+
+        public static readonly Error CannotVoteOpposingTeamAfk = Error.Conflict(
+            "MatchRoom.CannotVoteOpposingTeamAfk",
+            "Cannot vote players from opposing team");
+
         public static readonly Error NotInReviewingPhase = Error.Conflict(
             "MatchRoom.NotInReviewingPhase",
             "Match is not in reviewing phase");

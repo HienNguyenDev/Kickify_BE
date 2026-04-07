@@ -1,4 +1,4 @@
-﻿using Kickify.Domain.Entities;
+using Kickify.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Kickify.Application.Abstractions.Persistence;
@@ -25,6 +25,7 @@ public interface IApplicationDbContext
     DbSet<MatchPreset> MatchPresets { get; set; }
     DbSet<RoomParticipant> RoomParticipants { get; set; }
     DbSet<RoomInvitation> RoomInvitations { get; set; }
+    DbSet<AfkVote> AfkVotes { get; set; }
     DbSet<Booking> Bookings { get; set; }
     DbSet<ChatMessage> ChatMessages { get; set; }
 
@@ -42,6 +43,8 @@ public interface IApplicationDbContext
     DbSet<EloHistory> EloHistories { get; set; }
     DbSet<EloConfiguration> EloConfigurations { get; set; }
     DbSet<PlayerReport> PlayerReports { get; set; }
+    DbSet<MatchResultVote> MatchResultVotes { get; set; }
+    DbSet<PlayerRadarSnapshot> PlayerRadarSnapshots { get; set; }
 
     // System Schema
     DbSet<Notification> Notifications { get; set; }
