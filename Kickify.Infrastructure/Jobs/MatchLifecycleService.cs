@@ -7,21 +7,22 @@ using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
 using Kickify.Domain.Event;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace Kickify.Infrastructure.Jobs;
 
 public class MatchLifecycleService : IMatchLifecycleService
 {
+    private const string AiContractVersion = "2026-04-elo-radar-v1";
     private readonly IBackgroundJobClient _backgroundJobClient;
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly ILogger<MatchLifecycleService> _logger;
 
     // Thời gian cho phép vote và feedback sau trận đấu
     private static readonly TimeSpan ReviewingPeriod = TimeSpan.FromHours(22);
-    // Thời gian sau reviewing period để xử lý post-match (gửi AI + update profile)
-    private static readonly TimeSpan PostMatchDelay = TimeSpan.FromHours(1);
 
     public MatchLifecycleService(
         IBackgroundJobClient backgroundJobClient,
@@ -275,10 +276,30 @@ public class MatchLifecycleService : IMatchLifecycleService
 
         _logger.LogInformation("Room {RoomId} reviewing period closed after 22 hours. Status changed to Completed.", roomId);
 
-        // Schedule post-match processing sau 1 tiếng (tổng cộng 23 tiếng sau match end)
-        // Gửi feedbacks cho AI sentiment analysis + update player profiles
-        var postMatchTime = DateTime.UtcNow.Add(PostMatchDelay);
-        SchedulePostMatchProcessing(roomId, postMatchTime);
+        // Trigger post-match processing ngay khi reviewing đóng.
+        _backgroundJobClient.Enqueue(() => ProcessPostMatchAsync(roomId));
+    }
+
+    public async Task TryFinalizeReviewingWhenAllVotesAsync(Guid roomId)
+    {
+        using var scope = _serviceScopeFactory.CreateScope();
+        var matchRoomRepository = scope.ServiceProvider.GetRequiredService<IMatchRoomRepository>();
+        var matchResultVoteRepository = scope.ServiceProvider.GetRequiredService<IMatchResultVoteRepository>();
+
+        var room = await matchRoomRepository.GetByIdAsync(roomId);
+        if (room is null || room.Status != RoomStatus.Reviewing)
+        {
+            return;
+        }
+
+        var voteCount = await matchResultVoteRepository.GetVoteCountByRoomAsync(roomId, CancellationToken.None);
+        if (voteCount < room.FilledSlots || room.FilledSlots <= 0)
+        {
+            return;
+        }
+
+        CancelAllJobs(null, null, room.FinalizeResultJobId);
+        await CloseReviewingPeriodAsync(roomId);
     }
 
     /// <summary>
@@ -294,6 +315,7 @@ public class MatchLifecycleService : IMatchLifecycleService
         var playerProfileRepository = scope.ServiceProvider.GetRequiredService<IPlayerProfileRepository>();
         var roomParticipantRepository = scope.ServiceProvider.GetRequiredService<IRoomParticipantRepository>();
         var sentimentAnalysisService = scope.ServiceProvider.GetRequiredService<ISentimentAnalysisService>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
         var room = await matchRoomRepository.GetByIdAsync(roomId);
@@ -312,7 +334,16 @@ public class MatchLifecycleService : IMatchLifecycleService
 
         _logger.LogInformation("Starting post-match processing for room {RoomId}", roomId);
 
-        await SendFeedbacksToAiAsync(roomId, matchFeedbackRepository, sentimentAnalysisService);
+        await SendFeedbacksToAiAsync(roomId, matchFeedbackRepository, sentimentAnalysisService, unitOfWork);
+
+        await CalculateEloAndRadarWithAiAsync(
+            room,
+            matchFeedbackRepository,
+            roomParticipantRepository,
+            playerProfileRepository,
+            sentimentAnalysisService,
+            dbContext,
+            unitOfWork);
 
         await UpdatePlayerProfilesAsync(room, roomParticipantRepository, playerProfileRepository, unitOfWork);
 
@@ -326,7 +357,8 @@ public class MatchLifecycleService : IMatchLifecycleService
     private async Task SendFeedbacksToAiAsync(
         Guid roomId,
         IMatchFeedbackRepository matchFeedbackRepository,
-        ISentimentAnalysisService sentimentAnalysisService)
+        ISentimentAnalysisService sentimentAnalysisService,
+        IUnitOfWork unitOfWork)
     {
         try
         {
@@ -357,7 +389,28 @@ public class MatchLifecycleService : IMatchLifecycleService
                     )).ToList()
                 );
 
-                await sentimentAnalysisService.SendFeedbacksForAnalysisAsync(request);
+                var sentimentResponse = await sentimentAnalysisService.SendFeedbacksForAnalysisAsync(request);
+                if (sentimentResponse is not null && sentimentResponse.SentimentDetails.Count > 0)
+                {
+                    var feedbackById = playerFeedbacks.ToDictionary(x => x.FeedbackId.ToString(), x => x);
+                    foreach (var detail in sentimentResponse.SentimentDetails)
+                    {
+                        if (!feedbackById.TryGetValue(detail.FeedbackId, out var feedback))
+                        {
+                            continue;
+                        }
+
+                        feedback.SentimentScore = detail.Score;
+                        feedback.SentimentLabel = detail.Label.ToLowerInvariant() switch
+                        {
+                            "positive" => SentimentLabel.Positive,
+                            "negative" => SentimentLabel.Negative,
+                            _ => SentimentLabel.Neutral
+                        };
+
+                        matchFeedbackRepository.Update(feedback);
+                    }
+                }
 
                 _logger.LogInformation(
                     "Sent {Count} feedbacks for player {PlayerId} in match {MatchId} to AI",
@@ -368,6 +421,376 @@ public class MatchLifecycleService : IMatchLifecycleService
         {
             _logger.LogError(ex, "Error sending feedbacks to AI for room {RoomId}", roomId);
         }
+
+        await unitOfWork.SaveChangesAsync(CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Call AI service to calculate ELO and radar analysis, then persist ELO history.
+    /// </summary>
+    private async Task CalculateEloAndRadarWithAiAsync(
+        MatchRoom room,
+        IMatchFeedbackRepository matchFeedbackRepository,
+        IRoomParticipantRepository roomParticipantRepository,
+        IPlayerProfileRepository playerProfileRepository,
+        ISentimentAnalysisService sentimentAnalysisService,
+        IApplicationDbContext dbContext,
+        IUnitOfWork unitOfWork)
+    {
+        var participants = await roomParticipantRepository.GetParticipantsByRoomAsync(room.RoomId);
+        if (participants.Count == 0 || room.FinalResult is null)
+        {
+            return;
+        }
+
+        var allFeedbacks = await matchFeedbackRepository.GetFeedbacksByMatchAsync(room.RoomId);
+        var teamAElo = await CalculateAverageTeamEloAsync(participants, TeamAssignment.A, playerProfileRepository);
+        var teamBElo = await CalculateAverageTeamEloAsync(participants, TeamAssignment.B, playerProfileRepository);
+        var matchEndUtc = room.MatchDate.Date + room.StartTime + TimeSpan.FromMinutes(room.DurationMinutes);
+        var feedbackDeadlineUtc = matchEndUtc + ReviewingPeriod;
+
+        foreach (var participant in participants)
+        {
+            var profile = await dbContext.PlayerProfiles.FirstOrDefaultAsync(x => x.UserId == participant.UserId);
+            if (profile is null)
+            {
+                continue;
+            }
+
+            var teamResult = ResolveTeamResult(room.FinalResult.Value, participant.TeamAssignment);
+            var feedbackForPlayer = allFeedbacks.Where(x => x.RevieweeId == participant.UserId).ToList();
+            var recentTotal = Math.Min(profile.TotalMatches, 15);
+            var recentWins = Math.Min(profile.Wins, recentTotal);
+            var daysSinceLastMatch = await GetDaysSinceLastMatchAsync(room.RoomId, participant.UserId, dbContext);
+            var myFeedbackAsReviewer = allFeedbacks.Where(x => x.ReviewerId == participant.UserId).ToList();
+            var submittedFeedback = myFeedbackAsReviewer.Count > 0;
+            var feedbackOnTime = myFeedbackAsReviewer.Any(f => f.CreatedAt <= feedbackDeadlineUtc);
+
+            var eloRequest = new EloCalculationRequest(
+                AiContractVersion,
+                new EloCalculationMatch(
+                    room.RoomId.ToString(),
+                    teamResult,
+                    participant.TeamAssignment == TeamAssignment.A ? teamAElo : teamBElo,
+                    participant.TeamAssignment == TeamAssignment.A ? teamBElo : teamAElo,
+                    daysSinceLastMatch),
+                new EloCalculationPlayer(
+                    participant.UserId.ToString(),
+                    profile.CurrentElo,
+                    profile.TrustScore,
+                    new EloRecentMatches(recentTotal, recentWins),
+                    new EloContribution(
+                        submittedFeedback,
+                        feedbackOnTime)),
+                feedbackForPlayer.Select(f => new EloCalculationFeedback(
+                    f.ReviewerId.ToString(),
+                    f.Rating,
+                    f.Comment)).ToList());
+
+            var eloResponse = await sentimentAnalysisService.CalculateEloAsync(eloRequest);
+            if (eloResponse is not null && ValidateEloResponse(eloResponse, profile.CurrentElo, _logger))
+            {
+                var eloBefore = profile.CurrentElo;
+                profile.CurrentElo = eloResponse.Elo.New;
+                dbContext.PlayerProfiles.Update(profile);
+
+                var existingEloHistory = await dbContext.EloHistories
+                    .FirstOrDefaultAsync(x => x.MatchId == room.RoomId && x.UserId == participant.UserId);
+
+                if (existingEloHistory is null)
+                {
+                    existingEloHistory = new EloHistory
+                    {
+                        EloHistoryId = Guid.NewGuid(),
+                        UserId = participant.UserId,
+                        MatchId = room.RoomId,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    dbContext.EloHistories.Add(existingEloHistory);
+                }
+
+                existingEloHistory.EloBefore = eloBefore;
+                existingEloHistory.EloAfter = eloResponse.Elo.New;
+                existingEloHistory.EloChange = eloResponse.Elo.New - eloBefore;
+                existingEloHistory.WinLossComponent = eloResponse.Breakdown.K1MatchResult.Delta;
+                existingEloHistory.FeedbackComponent = eloResponse.Breakdown.K2FeedbackSentiment.Delta;
+                existingEloHistory.PerformanceComponent = eloResponse.Breakdown.K3WinRate.Delta;
+                existingEloHistory.RoleComponent = eloResponse.Breakdown.K4Contribution.Delta;
+                existingEloHistory.TrustComponent = eloResponse.Breakdown.K5Trust.Delta;
+                existingEloHistory.SentimentComponent = feedbackForPlayer.Count == 0
+                    ? 0
+                    : feedbackForPlayer.Average(x => x.SentimentScore ?? 0m);
+                existingEloHistory.CalculationDetails = JsonSerializer.Serialize(eloResponse.Breakdown);
+            }
+
+            var radarRequest = new RadarAnalysisRequest(
+                AiContractVersion,
+                participant.UserId.ToString(),
+                new RadarPlayerProfile(
+                    profile.CurrentElo,
+                    profile.TrustScore,
+                    profile.TotalMatches,
+                    profile.Wins,
+                    profile.Losses,
+                    profile.Draws,
+                    profile.WinStreak,
+                    0,
+                    profile.ReportCount,
+                    string.Empty),
+                await BuildRecentMatchPayloadAsync(participant.UserId, dbContext),
+                feedbackForPlayer.Select(f => new RadarFeedbackReceived(f.Rating, f.Comment, Math.Max(1, (DateTime.UtcNow - f.CreatedAt).Days))).ToList());
+
+            var radarResponse = await sentimentAnalysisService.AnalyzeRadarAsync(radarRequest);
+            if (radarResponse is not null && ValidateRadarResponse(radarResponse, _logger))
+            {
+                var existingSnapshot = await dbContext.PlayerRadarSnapshots
+                    .FirstOrDefaultAsync(x => x.PlayerId == participant.UserId);
+
+                if (existingSnapshot is null)
+                {
+                    existingSnapshot = new PlayerRadarSnapshot
+                    {
+                        PlayerId = participant.UserId
+                    };
+                    dbContext.PlayerRadarSnapshots.Add(existingSnapshot);
+                }
+
+                existingSnapshot.Form = radarResponse.Radar.Form;
+                existingSnapshot.WinRate = radarResponse.Radar.WinRate;
+                existingSnapshot.CommunityScore = radarResponse.Radar.CommunityScore;
+                existingSnapshot.Trust = radarResponse.Radar.Trust;
+                existingSnapshot.Contribution = radarResponse.Radar.Contribution;
+                existingSnapshot.AssessmentsJson = JsonSerializer.Serialize(radarResponse.Assessments);
+                existingSnapshot.Summary = radarResponse.Summary;
+                existingSnapshot.UpdatedAt = DateTime.UtcNow;
+            }
+        }
+
+        await unitOfWork.SaveChangesAsync(CancellationToken.None);
+    }
+
+    private static decimal ResolveTeamResult(MatchResult finalResult, TeamAssignment team)
+    {
+        return finalResult switch
+        {
+            MatchResult.TeamAWin when team == TeamAssignment.A => 1.0m,
+            MatchResult.TeamBWin when team == TeamAssignment.B => 1.0m,
+            MatchResult.Draw => 0.5m,
+            _ => 0.0m
+        };
+    }
+
+    private static async Task<int> CalculateAverageTeamEloAsync(
+        IEnumerable<RoomParticipant> participants,
+        TeamAssignment team,
+        IPlayerProfileRepository playerProfileRepository)
+    {
+        var teamParticipants = participants.Where(x => x.TeamAssignment == team).ToList();
+        if (teamParticipants.Count == 0)
+        {
+            return 1000;
+        }
+
+        var sum = 0;
+        foreach (var member in teamParticipants)
+        {
+            var profile = await playerProfileRepository.GetByUserIdAsync(member.UserId);
+            sum += profile?.CurrentElo ?? 1000;
+        }
+
+        return (int)Math.Round((double)sum / teamParticipants.Count);
+    }
+
+    private static async Task<int> GetDaysSinceLastMatchAsync(Guid currentMatchId, Guid userId, IApplicationDbContext dbContext)
+    {
+        var previousMatchDate = await dbContext.RoomParticipants
+            .Where(x => x.UserId == userId && x.RoomId != currentMatchId)
+            .Join(dbContext.MatchRooms, rp => rp.RoomId, rm => rm.RoomId, (rp, rm) => rm.MatchDate)
+            .OrderByDescending(x => x)
+            .FirstOrDefaultAsync();
+
+        if (previousMatchDate == default)
+        {
+            return 0;
+        }
+
+        return Math.Max(0, (DateTime.UtcNow.Date - previousMatchDate.Date).Days);
+    }
+
+    private static async Task<List<RadarRecentMatch>> BuildRecentMatchPayloadAsync(Guid userId, IApplicationDbContext dbContext)
+    {
+        var matches = await dbContext.RoomParticipants
+            .Where(x => x.UserId == userId)
+            .Join(dbContext.MatchRooms, rp => rp.RoomId, rm => rm.RoomId, (rp, rm) => new { rp, rm })
+            .Where(x => x.rm.Status == RoomStatus.Completed && x.rm.FinalResult != null)
+            .OrderByDescending(x => x.rm.MatchDate)
+            .ThenByDescending(x => x.rm.StartTime)
+            .Take(15)
+            .Select(x => new
+            {
+                x.rp.RoomId,
+                x.rp.TeamAssignment,
+                x.rm.FinalResult,
+                x.rm.MatchDate
+            })
+            .ToListAsync();
+
+        if (matches.Count == 0)
+        {
+            return [];
+        }
+
+        var roomIds = matches.Select(m => m.RoomId).Distinct().ToList();
+
+        var participantRows = await dbContext.RoomParticipants
+            .Where(x => roomIds.Contains(x.RoomId))
+            .Select(x => new { x.RoomId, x.UserId, x.TeamAssignment })
+            .ToListAsync();
+
+        var userIds = participantRows.Select(x => x.UserId).Distinct().ToList();
+        var currentEloByUser = await dbContext.PlayerProfiles
+            .Where(x => userIds.Contains(x.UserId))
+            .ToDictionaryAsync(x => x.UserId, x => x.CurrentElo);
+
+        var eloHistoryByRoomAndUser = await dbContext.EloHistories
+            .Where(x => roomIds.Contains(x.MatchId))
+            .Select(x => new
+            {
+                x.MatchId,
+                x.UserId,
+                x.EloBefore
+            })
+            .ToListAsync();
+
+        var historicalEloLookup = eloHistoryByRoomAndUser
+            .GroupBy(x => (x.MatchId, x.UserId))
+            .ToDictionary(g => g.Key, g => g.Last().EloBefore);
+
+        var feedbackMatchIds = await dbContext.MatchFeedbacks
+            .Where(x => x.ReviewerId == userId && roomIds.Contains(x.MatchId))
+            .Select(x => x.MatchId)
+            .Distinct()
+            .ToListAsync();
+
+        var feedbackSubmitted = feedbackMatchIds.ToHashSet();
+
+        static int TeamAverage(
+            Guid roomId,
+            IEnumerable<Guid> ids,
+            IReadOnlyDictionary<(Guid MatchId, Guid UserId), int> historicalElos,
+            Dictionary<Guid, int> fallbackCurrentElos)
+        {
+            var list = ids
+                .Select(userId =>
+                {
+                    if (historicalElos.TryGetValue((roomId, userId), out var historical))
+                    {
+                        return historical;
+                    }
+
+                    return fallbackCurrentElos.GetValueOrDefault(userId, 1000);
+                })
+                .ToList();
+            var avg = list.Count == 0 ? 1000 : list.Average();
+            return (int)Math.Round(avg);
+        }
+
+        var list = new List<RadarRecentMatch>();
+        foreach (var m in matches)
+        {
+            if (m.FinalResult is null)
+            {
+                continue;
+            }
+
+            var inRoom = participantRows.Where(x => x.RoomId == m.RoomId).ToList();
+            var teamAIds = inRoom.Where(x => x.TeamAssignment == TeamAssignment.A).Select(x => x.UserId);
+            var teamBIds = inRoom.Where(x => x.TeamAssignment == TeamAssignment.B).Select(x => x.UserId);
+            var ownTeamIds = m.TeamAssignment == TeamAssignment.A ? teamAIds : teamBIds;
+            var oppTeamIds = m.TeamAssignment == TeamAssignment.A ? teamBIds : teamAIds;
+            var ownElo = TeamAverage(m.RoomId, ownTeamIds, historicalEloLookup, currentEloByUser);
+            var oppElo = TeamAverage(m.RoomId, oppTeamIds, historicalEloLookup, currentEloByUser);
+            var expected = ComputeEloExpectedScore(ownElo, oppElo);
+
+            var resultDecimal = m.FinalResult.Value switch
+            {
+                MatchResult.TeamAWin when m.TeamAssignment == TeamAssignment.A => 1.0m,
+                MatchResult.TeamBWin when m.TeamAssignment == TeamAssignment.B => 1.0m,
+                MatchResult.Draw => 0.5m,
+                _ => 0.0m
+            };
+
+            var daysAgo = Math.Max(0, (DateTime.UtcNow.Date - m.MatchDate.Date).Days);
+            var submitted = feedbackSubmitted.Contains(m.RoomId);
+
+            list.Add(new RadarRecentMatch(
+                m.RoomId.ToString(),
+                resultDecimal,
+                expected,
+                daysAgo,
+                submitted));
+        }
+
+        return list;
+    }
+
+    private static decimal ComputeEloExpectedScore(int ownTeamAverageElo, int opponentTeamAverageElo)
+    {
+        var diff = opponentTeamAverageElo - ownTeamAverageElo;
+        return (decimal)(1.0 / (1.0 + Math.Pow(10, diff / 400.0)));
+    }
+
+    private static bool ValidateEloResponse(EloCalculationResponse response, int previousElo, ILogger logger)
+    {
+        if (!string.Equals(response.ContractVersion, AiContractVersion, StringComparison.Ordinal))
+        {
+            logger.LogWarning("Rejected ELO response: contract version mismatch {ContractVersion}", response.ContractVersion);
+            return false;
+        }
+
+        var componentSum = response.Breakdown.K1MatchResult.Delta
+            + response.Breakdown.K2FeedbackSentiment.Delta
+            + response.Breakdown.K3WinRate.Delta
+            + response.Breakdown.K4Contribution.Delta
+            + response.Breakdown.K5Trust.Delta;
+
+        if (Math.Abs(componentSum - response.Elo.Delta) > 0.01m)
+        {
+            logger.LogWarning("Rejected ELO response: breakdown sum mismatch. Sum={Sum}, Delta={Delta}", componentSum, response.Elo.Delta);
+            return false;
+        }
+
+        var expectedNew = (int)Math.Round(previousElo + response.Elo.Delta, MidpointRounding.AwayFromZero);
+        if (response.Elo.New != expectedNew)
+        {
+            logger.LogWarning("Rejected ELO response: new ELO mismatch. Expected={Expected}, Actual={Actual}", expectedNew, response.Elo.New);
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool ValidateRadarResponse(RadarAnalysisResponse response, ILogger logger)
+    {
+        if (!string.Equals(response.ContractVersion, AiContractVersion, StringComparison.Ordinal))
+        {
+            logger.LogWarning("Rejected radar response: contract version mismatch {ContractVersion}", response.ContractVersion);
+            return false;
+        }
+
+        var radar = response.Radar;
+        var isValid = radar.Form >= -1m && radar.Form <= 1m
+            && radar.WinRate >= 0m && radar.WinRate <= 1m
+            && radar.CommunityScore >= -1m && radar.CommunityScore <= 1m
+            && radar.Trust >= 0m && radar.Trust <= 100m
+            && radar.Contribution >= 0m && radar.Contribution <= 1m;
+
+        if (!isValid)
+        {
+            logger.LogWarning("Rejected radar response: axis out of range for player {PlayerId}", response.PlayerId);
+        }
+
+        return isValid;
     }
 
     /// <summary>

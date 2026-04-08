@@ -12,6 +12,8 @@ public class MatchFeedback
     public string Comment { get; set; } = string.Empty;
     public decimal? SentimentScore { get; set; } // AI-analyzed: -1.00 to 1.00
     public SentimentLabel? SentimentLabel { get; set; }
+    public string? RevieweeResponse { get; set; }
+    public DateTime? ResponseDate { get; set; }
     public DateTime CreatedAt { get; set; }
 
     // Navigation properties
