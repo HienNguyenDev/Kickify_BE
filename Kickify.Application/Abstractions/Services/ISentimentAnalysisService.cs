@@ -48,6 +48,7 @@ public record SentimentItemResult(
     decimal Confidence);
 
 public record EloCalculationRequest(
+    string ContractVersion,
     EloCalculationMatch Match,
     EloCalculationPlayer Player,
     List<EloCalculationFeedback> Feedbacks);
@@ -80,6 +81,10 @@ public record EloCalculationFeedback(
     string Comment);
 
 public record EloCalculationResponse(
+    string ContractVersion,
+    string FormulaVersion,
+    string ModelVersion,
+    string GeneratedAtUtc,
     string PlayerId,
     string MatchId,
     EloResult Elo,
@@ -109,6 +114,7 @@ public record EloSentimentDetail(
     decimal Score);
 
 public record RadarAnalysisRequest(
+    string ContractVersion,
     string PlayerId,
     RadarPlayerProfile PlayerProfile,
     List<RadarRecentMatch> RecentMatches,
@@ -139,6 +145,10 @@ public record RadarFeedbackReceived(
     int DaysAgo);
 
 public record RadarAnalysisResponse(
+    string ContractVersion,
+    string FormulaVersion,
+    string ModelVersion,
+    string GeneratedAtUtc,
     string PlayerId,
     RadarAxis Radar,
     List<RadarAssessment> Assessments,

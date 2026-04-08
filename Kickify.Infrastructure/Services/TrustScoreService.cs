@@ -15,7 +15,7 @@ public class TrustScoreService : ITrustScoreService
     }
 
     /// <summary>
-    /// Recalculate trust score for a player based on AFK, cancellation and participation signals.
+    /// Recalculate trust score for a player based on cancellation and participation signals.
     /// </summary>
     public async Task RecalculateAsync(Guid playerId, CancellationToken cancellationToken = default)
     {
