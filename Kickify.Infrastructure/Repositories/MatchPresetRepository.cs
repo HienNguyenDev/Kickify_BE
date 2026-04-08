@@ -24,7 +24,7 @@ namespace Kickify.Infrastructure.Repositories
                 .AsNoTracking()
                 .Include(p => p.User)
                 .Include(p => p.Field)
-                    .ThenInclude(f => f!.Venue)
+                    .ThenInclude(f => f.Venue)
                 .FirstOrDefaultAsync(p => p.PresetId == presetId, cancellationToken);
         }
 
@@ -32,8 +32,6 @@ namespace Kickify.Infrastructure.Repositories
         {
             return await _dbSet
                 .AsNoTracking()
-                .Include(p => p.Field)
-                    .ThenInclude(f => f!.Venue)
                 .Where(p => p.UserId == userId)
                 .OrderByDescending(p => p.CreatedAt)
                 .ToListAsync(cancellationToken);
@@ -47,8 +45,6 @@ namespace Kickify.Infrastructure.Repositories
             var query = _dbSet
                 .AsNoTracking()
                 .Include(p => p.User)
-                .Include(p => p.Field)
-                    .ThenInclude(f => f!.Venue)
                 .OrderByDescending(p => p.CreatedAt);
 
             var total = await query.CountAsync(cancellationToken);
@@ -70,7 +66,7 @@ namespace Kickify.Infrastructure.Repositories
             var query = _dbSet
                 .AsNoTracking()
                 .Include(p => p.Field)
-                    .ThenInclude(f => f!.Venue)
+                    .ThenInclude(f => f.Venue)
                 .Where(p => p.UserId == userId)
                 .OrderByDescending(p => p.CreatedAt);
 
@@ -85,3 +81,4 @@ namespace Kickify.Infrastructure.Repositories
         }
     }
 }
+

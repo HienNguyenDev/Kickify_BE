@@ -1,4 +1,4 @@
-using Kickify.Domain.Common;
+﻿using Kickify.Domain.Common;
 
 namespace Kickify.Domain.Errors
 {
@@ -218,5 +218,15 @@ namespace Kickify.Domain.Errors
             "MatchRoom.LeaveNotAllowed",
             "You cannot leave the room while the lineup is LOCKED or a match is in progress. Absence will result in losing your DEPOSIT and affecting your REPUTATION points.");
 
+        public static readonly Error RoomNotOpen = Error.Conflict("MatchRoom.RoomNotOpen", "This action is only allowed when the room status is Open.");
+        public static readonly Error TargetUserNotParticipant = Error.Conflict("MatchRoom.TargetUserNotParticipant", "The target user is not a participant in this room.");
+        public static readonly Error CurrentUserNotHost = Error.Conflict("MatchRoom.CurrentUserNotHost", "Only the room host can perform this action.");
+        public static readonly Error TargetUserIsAlreadyHost = Error.Conflict("MatchRoom.TargetUserIsAlreadyHost", "The target user is already the host of this room.");
+        public static readonly Error NotTargetTransferUser = Error.Conflict("MatchRoom.NotTargetTransferUser", "You are not the designated recipient of the host transfer request.");
+        public static readonly Error HostTransferRequestAlreadyPending = Error.Conflict("MatchRoom.HostTransferRequestAlreadyPending", "A host transfer request is already pending for another participant.");
+        public static readonly Error TargetUserNoLongerParticipant = Error.Conflict("MatchRoom.TargetUserNoLongerParticipant", "Cannot respond to host transfer because the target user is no longer a participant of this room.");
     }
 }
+
+
+

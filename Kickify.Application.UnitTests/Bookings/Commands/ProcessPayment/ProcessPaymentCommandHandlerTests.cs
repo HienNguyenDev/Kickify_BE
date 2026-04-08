@@ -274,5 +274,135 @@ public class ProcessPaymentCommandHandlerTests
         result.Error.Should().NotBeNull();
         result.Error!.Code.Should().Be(WalletErrors.InsufficientBalance.Code);
     }
+
+    [Fact]
+    public async Task ProcessPayment_WhenRoomIsNotLocked_DoesNotCancelAutoClose()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var roomId = Guid.NewGuid();
+        _userContextMock.SetupGet(x => x.UserId).Returns(userId);
+
+        var command = new ProcessPaymentCommand(roomId);
+
+        _userRepositoryMock
+            .Setup(x => x.GetByIdAsync(userId))
+            .ReturnsAsync(new User { UserId = userId });
+
+        var participant1 = new RoomParticipant
+        {
+            UserId = userId,
+            DepositPaid = false
+        };
+        var participant2 = new RoomParticipant
+        {
+            UserId = Guid.NewGuid(),
+            DepositPaid = false
+        };
+
+        var room = new MatchRoom
+        {
+            RoomId = roomId,
+            DepositPerPerson = 50000,
+            FilledSlots = 2,
+            TotalSlots = 2,
+            RoomParticipants = new List<RoomParticipant> { participant1, participant2 },
+            AutoCloseJobId = "job-123",
+            FieldId = Guid.NewGuid()
+        };
+
+        _matchRoomRepositoryMock
+            .Setup(x => x.GetRoomWithParticipantsForUpdateAsync(roomId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(room);
+
+        var wallet = new Wallet
+        {
+            WalletId = Guid.NewGuid(),
+            UserId = userId,
+            Balance = 100000
+        };
+
+        _walletRepositoryMock
+            .Setup(x => x.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(wallet);
+
+        // Act
+        var result = await _sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        _roomAutoCloseServiceMock.Verify(x => x.CancelAutoClose(It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ProcessPayment_WhenRoomIsLocked_CancelsAutoClose()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var roomId = Guid.NewGuid();
+        _userContextMock.SetupGet(x => x.UserId).Returns(userId);
+
+        var command = new ProcessPaymentCommand(roomId);
+
+        _userRepositoryMock
+            .Setup(x => x.GetByIdAsync(userId))
+            .ReturnsAsync(new User { UserId = userId });
+
+        var participant1 = new RoomParticipant
+        {
+            UserId = userId,
+            DepositPaid = false
+        };
+        var participant2 = new RoomParticipant
+        {
+            UserId = Guid.NewGuid(),
+            DepositPaid = true
+        };
+
+        var room = new MatchRoom
+        {
+            RoomId = roomId,
+            DepositPerPerson = 50000,
+            FilledSlots = 2,
+            TotalSlots = 2,
+            RoomParticipants = new List<RoomParticipant> { participant1, participant2 },
+            AutoCloseJobId = "job-123",
+            FieldId = Guid.NewGuid(),
+            MatchDate = DateTime.Today,
+            StartTime = new TimeSpan(10, 0, 0)
+        };
+
+        _matchRoomRepositoryMock
+            .Setup(x => x.GetRoomWithParticipantsForUpdateAsync(roomId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(room);
+
+        var wallet = new Wallet
+        {
+            WalletId = Guid.NewGuid(),
+            UserId = userId,
+            Balance = 100000
+        };
+
+        _walletRepositoryMock
+            .Setup(x => x.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(wallet);
+
+        var field = new Field { FieldId = room.FieldId.Value, VenueId = Guid.NewGuid() };
+        _fieldRepositoryMock
+            .Setup(x => x.GetFieldWithVenueAsync(room.FieldId.Value, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(field);
+
+        var booking = new Booking { BookingId = Guid.NewGuid(), RoomId = roomId };
+        _bookingRepositoryMock
+            .Setup(x => x.GetBookingByRoomAsync(roomId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(booking);
+
+        // Act
+        var result = await _sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        _roomAutoCloseServiceMock.Verify(x => x.CancelAutoClose(room.AutoCloseJobId), Times.Once);
+    }
 }
 

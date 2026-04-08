@@ -141,7 +141,7 @@ public class LeaveRoomCommandHandlerTests
         _autoCloseMock.Verify(x => x.CancelAutoClose("Job123"), Times.Once);
 
         // Booking bị cancel
-        booking.Status.Should().Be(BookingStatus.Completed);
+        booking.Status.Should().Be(BookingStatus.Cancelled);
         _bookingRepoMock.Verify(x => x.Update(booking), Times.Once);
     }
 

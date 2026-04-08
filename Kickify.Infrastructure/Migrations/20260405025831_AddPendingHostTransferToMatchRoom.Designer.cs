@@ -3,6 +3,7 @@ using System;
 using Kickify.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Kickify.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260405025831_AddPendingHostTransferToMatchRoom")]
+    partial class AddPendingHostTransferToMatchRoom
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -743,14 +746,8 @@ namespace Kickify.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasComment("1-5");
 
-                    b.Property<DateTime?>("ResponseDate")
-                        .HasColumnType("timestamp");
-
                     b.Property<Guid>("RevieweeId")
                         .HasColumnType("uuid");
-
-                    b.Property<string>("RevieweeResponse")
-                        .HasColumnType("text");
 
                     b.Property<Guid>("ReviewerId")
                         .HasColumnType("uuid");
@@ -816,6 +813,9 @@ namespace Kickify.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("CustomLocation")
+                        .HasColumnType("text");
+
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
@@ -829,30 +829,13 @@ namespace Kickify.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("Password")
-                        .HasColumnType("text")
-                        .HasColumnName("RoomPassword");
-
-                    b.Property<string>("RoomName")
+                    b.Property<string>("PresetName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("PresetName");
-
-                    b.Property<string>("Rules")
-                        .HasColumnType("text");
-
-                    b.Property<TimeSpan>("StartTime")
-                        .HasColumnType("time");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
-
-                    b.Property<string>("Visibility")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text")
-                        .HasDefaultValue("Public");
 
                     b.HasKey("PresetId");
 
@@ -1283,42 +1266,6 @@ namespace Kickify.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("PlayerProfiles", "identity");
-                });
-
-            modelBuilder.Entity("Kickify.Domain.Entities.PlayerRadarSnapshot", b =>
-                {
-                    b.Property<Guid>("PlayerId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("AssessmentsJson")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<decimal>("CommunityScore")
-                        .HasColumnType("decimal(6,4)");
-
-                    b.Property<decimal>("Contribution")
-                        .HasColumnType("decimal(6,4)");
-
-                    b.Property<decimal>("Form")
-                        .HasColumnType("decimal(6,4)");
-
-                    b.Property<string>("Summary")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<decimal>("Trust")
-                        .HasColumnType("decimal(6,2)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<decimal>("WinRate")
-                        .HasColumnType("decimal(6,4)");
-
-                    b.HasKey("PlayerId");
-
-                    b.ToTable("PlayerRadarSnapshots", "evaluation");
                 });
 
             modelBuilder.Entity("Kickify.Domain.Entities.PlayerReport", b =>
@@ -2629,17 +2576,6 @@ namespace Kickify.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Kickify.Domain.Entities.PlayerRadarSnapshot", b =>
-                {
-                    b.HasOne("Kickify.Domain.Entities.User", "Player")
-                        .WithMany()
-                        .HasForeignKey("PlayerId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Player");
                 });
 
             modelBuilder.Entity("Kickify.Domain.Entities.PlayerReport", b =>

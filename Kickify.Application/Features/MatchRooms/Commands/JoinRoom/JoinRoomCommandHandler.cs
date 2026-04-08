@@ -157,9 +157,9 @@ namespace Kickify.Application.Features.MatchRooms.Commands.JoinRoom
                 // Add participant via repository
                 await _roomParticipantRepository.AddAsync(participant);
 
-            var oldJobId = room.AutoCloseJobId;
+            // var oldJobId = room.AutoCloseJobId;
                 room.FilledSlots++;
-            room.Raise(new ParticipantJoinedRoomDomainEvent(room.RoomId, oldJobId));
+            // room.Raise(new ParticipantJoinedRoomDomainEvent(room.RoomId, oldJobId)); // Disabled legacy business rule: +20m auto-close extension
                 _matchRoomRepository.Update(room);
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);

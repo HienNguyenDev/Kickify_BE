@@ -385,5 +385,33 @@ namespace Kickify.Api.Controllers
             var result = await _sender.Send(command, cancellationToken);
             return result.MatchOk();
         }
+    
+        [HttpPost("{id}/transfer-host")]
+        public async Task<IResult> RequestTransferHost(
+            Guid id,
+            [FromBody] Kickify.Api.Requests.RequestTransferHostRequest request,
+            CancellationToken cancellationToken)
+        {
+            var command = new Kickify.Application.Features.MatchRooms.Commands.RequestTransferHost.RequestTransferHostCommand(
+                id,
+                request.TargetUserId);
+
+            var result = await _sender.Send(command, cancellationToken);
+            return result.MatchOk();
+        }
+
+        [HttpPost("{id}/transfer-host/respond")]
+        public async Task<IResult> RespondTransferHost(
+            Guid id,
+            [FromBody] Kickify.Api.Requests.RespondTransferHostRequest request,
+            CancellationToken cancellationToken)
+        {
+            var command = new Kickify.Application.Features.MatchRooms.Commands.RespondTransferHost.RespondTransferHostCommand(
+                id,
+                request.IsAccepted);
+
+            var result = await _sender.Send(command, cancellationToken);
+            return result.MatchOk();
+        }
     }
 }

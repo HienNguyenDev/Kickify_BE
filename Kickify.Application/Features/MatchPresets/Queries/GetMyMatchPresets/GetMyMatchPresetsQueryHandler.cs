@@ -30,12 +30,16 @@ namespace Kickify.Application.Features.MatchPresets.Queries.GetMyMatchPresets
 
             var items = presets.Select(p => new MyMatchPresetItemDto(
                 p.PresetId,
-                p.PresetName,
                 p.FieldId,
                 p.Field?.FieldName,
                 p.Field?.Venue?.VenueName,
-                p.CustomLocation,
+                p.Field?.Venue?.Address,
+                p.RoomName,
                 p.MatchFormat.ToString(),
+                p.Visibility.ToString(),
+                p.Password,
+                p.StartTime,
+                p.Rules,
                 p.DurationMinutes,
                 p.Description,
                 p.CreatedAt

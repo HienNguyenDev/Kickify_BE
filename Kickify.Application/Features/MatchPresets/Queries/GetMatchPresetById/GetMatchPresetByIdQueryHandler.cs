@@ -23,33 +23,20 @@ namespace Kickify.Application.Features.MatchPresets.Queries.GetMatchPresetById
                 return Result.Failure<GetMatchPresetByIdResponse>(MatchPresetErrors.NotFound(request.PresetId));
             }
 
-            // Map Field and Venue
-            PresetFieldDto? fieldDto = null;
-            if (preset.Field != null)
-            {
-                var venueDto = new PresetVenueDto(
-                    preset.Field.Venue.VenueId,
-                    preset.Field.Venue.VenueName,
-                    preset.Field.Venue.Address
-                );
-
-                fieldDto = new PresetFieldDto(
-                    preset.Field.FieldId,
-                    preset.Field.FieldName,
-                    preset.Field.FieldType.ToString(),
-                    venueDto
-                );
-            }
-
             return Result.Success(new GetMatchPresetByIdResponse(
                 preset.PresetId,
                 preset.UserId,
                 preset.User.FullName ?? "Unknown",
-                preset.PresetName,
                 preset.FieldId,
-                fieldDto,
-                preset.CustomLocation,
+                preset.Field?.FieldName,
+                preset.Field?.Venue?.VenueName,
+                preset.Field?.Venue?.Address,
+                preset.RoomName,
                 preset.MatchFormat.ToString(),
+                preset.Visibility.ToString(),
+                preset.Password,
+                preset.StartTime,
+                preset.Rules,
                 preset.DurationMinutes,
                 preset.Description,
                 preset.CreatedAt
