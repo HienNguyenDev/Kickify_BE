@@ -39,6 +39,12 @@ public class MatchFeedbackConfiguration : IEntityTypeConfiguration<MatchFeedback
         builder.Property(mf => mf.SentimentLabel)
             .HasConversion<string>();
 
+        builder.Property(mf => mf.RevieweeResponse)
+            .HasColumnType("text");
+
+        builder.Property(mf => mf.ResponseDate)
+            .HasColumnType("timestamp");
+
         // Indexes
         builder.HasIndex(mf => mf.MatchId);
         builder.HasIndex(mf => mf.RevieweeId);

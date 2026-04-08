@@ -12,6 +12,10 @@ public interface IMatchLifecycleService
     Task StartMatchAsync(Guid roomId);
     Task EndMatchAsync(Guid roomId);
     Task CloseReviewingPeriodAsync(Guid roomId);
+    /// <summary>
+    /// When every participant has submitted a match-result vote, finalizes reviewing (Completed) and cancels the scheduled 22h finalize job.
+    /// </summary>
+    Task TryFinalizeReviewingWhenAllVotesAsync(Guid roomId);
     Task ProcessPostMatchAsync(Guid roomId);
     Task PreMatchReminderAsync(Guid roomId, int minutesBefore);
     Task PostMatchVoteFeedbackReminderAsync(Guid roomId, int attempt);

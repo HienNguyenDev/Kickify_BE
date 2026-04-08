@@ -293,8 +293,8 @@ namespace Kickify.Api.Controllers
         /// </summary>
         /// <remarks>
         /// Voting is only allowed during the Reviewing phase (after match ends).
-        /// When 60% of participants have voted, the result will be finalized immediately.
-        /// Otherwise, the result will be finalized after 12 hours based on majority vote.
+        /// When every participant has voted, the room moves to Completed immediately (majority wins).
+        /// Otherwise, the reviewing period closes after 22 hours and the majority vote applies.
         /// </remarks>
         [HttpPost("{id}/vote-result")]
         public async Task<IResult> VoteMatchResult(

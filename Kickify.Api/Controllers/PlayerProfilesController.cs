@@ -4,8 +4,12 @@ using Kickify.Application.Features.PlayerProfiles.Commands.DeletePlayerProfile;
 using Kickify.Application.Features.PlayerProfiles.Commands.UpdatePlayerProfile;
 using Kickify.Application.Features.PlayerProfiles.Queries.GetAllPlayerProfiles;
 using Kickify.Application.Features.PlayerProfiles.Queries.GetLeaderboard;
+using Kickify.Application.Features.PlayerProfiles.Queries.GetMyEloBreakdown;
+using Kickify.Application.Features.PlayerProfiles.Queries.GetMyRadarSnapshot;
 using Kickify.Application.Features.PlayerProfiles.Queries.GetMyRank;
 using Kickify.Application.Features.PlayerProfiles.Queries.GetPlayerProfileById;
+using Kickify.Application.Features.MatchFeedbacks.Queries.GetMyReceivedFeedbacks;
+using Kickify.Application.Features.MatchFeedbacks.Queries.GetMyGivenFeedbacks;
 using Kickify.Domain.Common;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -71,6 +75,64 @@ namespace Kickify.Api.Controllers
         {
             var query = new GetMyRankQuery();
             Result<GetMyRankResponse> result = await _mediator.Send(query, cancellationToken);
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Get radar chart and AI assessments cached in database for current user.
+        /// </summary>
+        [HttpGet("me/radar-chart")]
+        [Authorize]
+        public async Task<IResult> GetMyRadarChart(CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(new GetMyRadarSnapshotQuery(), cancellationToken);
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Get ELO breakdown history for current user.
+        /// </summary>
+        [HttpGet("me/elo-breakdown")]
+        [Authorize]
+        public async Task<IResult> GetMyEloBreakdown([FromQuery] Guid? matchId, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(new GetMyEloBreakdownQuery(matchId), cancellationToken);
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Get feedbacks received by current user.
+        /// </summary>
+        [HttpGet("me/feedbacks/received")]
+        [Authorize]
+        public async Task<IResult> GetMyReceivedFeedbacks(
+            [FromQuery] DateTime? fromDate,
+            [FromQuery] DateTime? toDate,
+            [FromQuery] int? rating,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
+            CancellationToken cancellationToken = default)
+        {
+            var query = new GetMyReceivedFeedbacksQuery(fromDate, toDate, rating, page, pageSize);
+            var result = await _mediator.Send(query, cancellationToken);
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Get feedbacks given by current user.
+        /// </summary>
+        [HttpGet("me/feedbacks/given")]
+        [Authorize]
+        public async Task<IResult> GetMyGivenFeedbacks(
+            [FromQuery] DateTime? fromDate,
+            [FromQuery] DateTime? toDate,
+            [FromQuery] int? rating,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
+            CancellationToken cancellationToken = default)
+        {
+            var query = new GetMyGivenFeedbacksQuery(fromDate, toDate, rating, page, pageSize);
+            var result = await _mediator.Send(query, cancellationToken);
             return result.MatchOk();
         }
 

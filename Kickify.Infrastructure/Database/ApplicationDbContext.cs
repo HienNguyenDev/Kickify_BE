@@ -1,4 +1,4 @@
-﻿using Kickify.Application.Abstractions.Persistence;
+using Kickify.Application.Abstractions.Persistence;
 using Kickify.Domain.Common;
 using Kickify.Domain.Entities;
 using MediatR;
@@ -48,6 +48,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<MatchFeedback> MatchFeedbacks { get; set; }
     public DbSet<EloHistory> EloHistories { get; set; }
     public DbSet<EloConfiguration> EloConfigurations { get; set; }
+    public DbSet<PlayerRadarSnapshot> PlayerRadarSnapshots { get; set; }
     public DbSet<PlayerReport> PlayerReports { get; set; }
     public DbSet<ContentReport> ContentReports { get; set; }
 
