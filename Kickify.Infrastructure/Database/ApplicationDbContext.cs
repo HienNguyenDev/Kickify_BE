@@ -31,7 +31,6 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<MatchPreset> MatchPresets { get; set; }
     public DbSet<RoomParticipant> RoomParticipants { get; set; }
     public DbSet<RoomInvitation> RoomInvitations { get; set; }
-    public DbSet<AfkVote> AfkVotes { get; set; }
     public DbSet<Booking> Bookings { get; set; }
     public DbSet<ChatMessage> ChatMessages { get; set; }
     public DbSet<MatchFormation> MatchFormations { get; set; }

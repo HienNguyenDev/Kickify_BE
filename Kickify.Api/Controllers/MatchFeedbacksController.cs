@@ -1,6 +1,7 @@
-﻿using Kickify.Api.Extensions;
+using Kickify.Api.Extensions;
 using Kickify.Api.Requests;
 using Kickify.Application.Features.MatchFeedbacks.Commands.CreateMatchFeedback;
+using Kickify.Application.Features.MatchFeedbacks.Commands.RespondToFeedback;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -39,6 +40,20 @@ public class MatchFeedbacksController : ControllerBase
             }).ToList()
         };
 
+        var result = await _mediator.Send(command, cancellationToken);
+        return result.MatchOk();
+    }
+
+    /// <summary>
+    /// Gui phan hoi cho feedback da nhan.
+    /// </summary>
+    [HttpPost("{feedbackId:guid}/response")]
+    public async Task<IResult> RespondToFeedback(
+        Guid feedbackId,
+        [FromBody] RespondToFeedbackRequest request,
+        CancellationToken cancellationToken)
+    {
+        var command = new RespondToFeedbackCommand(feedbackId, request.Response);
         var result = await _mediator.Send(command, cancellationToken);
         return result.MatchOk();
     }

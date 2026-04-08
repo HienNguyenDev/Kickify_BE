@@ -25,7 +25,6 @@ public interface IApplicationDbContext
     DbSet<MatchPreset> MatchPresets { get; set; }
     DbSet<RoomParticipant> RoomParticipants { get; set; }
     DbSet<RoomInvitation> RoomInvitations { get; set; }
-    DbSet<AfkVote> AfkVotes { get; set; }
     DbSet<Booking> Bookings { get; set; }
     DbSet<ChatMessage> ChatMessages { get; set; }
 

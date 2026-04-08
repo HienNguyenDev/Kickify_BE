@@ -17,8 +17,6 @@ public class RoomParticipant
     public bool CheckedIn { get; set; } = false;
     public DateTime? CheckInTime { get; set; }
     public string? RemovalReason { get; set; }
-    public int AfkVoteCount { get; set; } = 0;
-    public bool IsConfirmedAfk { get; set; } = false;
 
     // Navigation properties
     public MatchRoom MatchRoom { get; set; } = null!;

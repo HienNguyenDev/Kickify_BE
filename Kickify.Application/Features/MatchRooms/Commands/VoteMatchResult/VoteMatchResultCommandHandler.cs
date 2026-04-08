@@ -1,4 +1,4 @@
-﻿using Kickify.Application.Abstractions.Authentication;
+using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Jobs;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
@@ -20,8 +20,6 @@ public class VoteMatchResultCommandHandler : ICommandHandler<VoteMatchResultComm
     private readonly IUnitOfWork _unitOfWork;
     private readonly IUserContext _userContext;
     private readonly ILogger<VoteMatchResultCommandHandler> _logger;
-
-    private const double VoteThresholdPercentage = 0.6; // 60%
 
     public VoteMatchResultCommandHandler(
         IMatchRoomRepository matchRoomRepository,
@@ -91,6 +89,11 @@ public class VoteMatchResultCommandHandler : ICommandHandler<VoteMatchResultComm
 
         _logger.LogInformation("User {UserId} voted {Vote} for room {RoomId}. Votes: {VoteCount}/{Total}",
             userId, request.Vote, request.RoomId, voteCount, totalParticipants);
+
+        if (voteCount >= totalParticipants && totalParticipants > 0)
+        {
+            await _matchLifecycleService.TryFinalizeReviewingWhenAllVotesAsync(request.RoomId);
+        }
 
         var message = $"Vote ghi nhận thành công. Hiện tại {voteCount}/{totalParticipants} người đã vote.";
 

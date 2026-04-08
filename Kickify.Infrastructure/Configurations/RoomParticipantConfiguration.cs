@@ -47,12 +47,6 @@ public class RoomParticipantConfiguration : IEntityTypeConfiguration<RoomPartici
         builder.Property(rp => rp.RemovalReason)
             .HasColumnType("text");
 
-        builder.Property(rp => rp.AfkVoteCount)
-            .HasDefaultValue(0);
-
-        builder.Property(rp => rp.IsConfirmedAfk)
-            .HasDefaultValue(false);
-
         // Indexes
         builder.HasIndex(rp => new { rp.RoomId, rp.UserId })
             .IsUnique();
