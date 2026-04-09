@@ -6,13 +6,11 @@ public class EloConfiguration : BaseEntity
 {
     public Guid ConfigId { get; set; }
     public string VersionName { get; set; } = string.Empty;
-    public decimal KBase { get; set; } // Base K factor
-    public decimal KWinloss { get; set; }
-    public decimal KPerformance { get; set; }
-    public decimal KFeedback { get; set; }
-    public decimal KSentiment { get; set; }
-    public decimal KTrust { get; set; }
-    public decimal KRole { get; set; }
+    public decimal K1MatchResult { get; set; }
+    public decimal K2FeedbackSentiment { get; set; }
+    public decimal K3WinRate { get; set; }
+    public decimal K4Contribution { get; set; }
+    public decimal K5Trust { get; set; }
     public DateTime EffectiveFrom { get; set; }
     public DateTime? EffectiveTo { get; set; }
     public bool IsActive { get; set; } = false;

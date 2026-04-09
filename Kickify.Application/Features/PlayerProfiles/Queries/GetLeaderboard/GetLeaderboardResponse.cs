@@ -11,6 +11,8 @@ public record LeaderboardEntry(
     string Email,
     string? AvatarUrl,
     int CurrentElo,
+    string CurrentRank,
+    bool IsLegend,
     int EloChange,
     int TotalMatches
 );

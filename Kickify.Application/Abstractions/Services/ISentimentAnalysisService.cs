@@ -51,7 +51,15 @@ public record EloCalculationRequest(
     string ContractVersion,
     EloCalculationMatch Match,
     EloCalculationPlayer Player,
+    EloKFactors KFactors,
     List<EloCalculationFeedback> Feedbacks);
+
+public record EloKFactors(
+    decimal K1MatchResult,
+    decimal K2FeedbackSentiment,
+    decimal K3WinRate,
+    decimal K4Contribution,
+    decimal K5Trust);
 
 public record EloCalculationMatch(
     string MatchId,
@@ -64,6 +72,7 @@ public record EloCalculationPlayer(
     string PlayerId,
     int CurrentElo,
     int TrustScore,
+    bool IsLegend,
     EloRecentMatches RecentMatches,
     EloContribution Contribution);
 
@@ -73,7 +82,7 @@ public record EloRecentMatches(
 
 public record EloContribution(
     bool SubmittedFeedback,
-    bool OnTime);
+    bool FullFeedbackCoverage);
 
 public record EloCalculationFeedback(
     string FromPlayerId,
@@ -88,8 +97,14 @@ public record EloCalculationResponse(
     string PlayerId,
     string MatchId,
     EloResult Elo,
+    EloRankResult Rank,
     EloBreakdown Breakdown,
     List<EloSentimentDetail> SentimentDetails);
+
+public record EloRankResult(
+    string Previous,
+    string New,
+    bool Changed);
 
 public record EloResult(
     int Previous,

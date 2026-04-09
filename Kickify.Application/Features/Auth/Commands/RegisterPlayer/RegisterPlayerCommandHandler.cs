@@ -82,6 +82,8 @@ public class RegisterPlayerCommandHandler : ICommandHandler<RegisterPlayerComman
             ProfileId = Guid.NewGuid(),
             UserId = user.UserId,
             CurrentElo = 1000,
+            CurrentRank = "Amateur",
+            IsLegend = false,
             TrustScore = 100,
             TotalMatches = 0,
             Wins = 0,

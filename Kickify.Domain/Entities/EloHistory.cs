@@ -8,12 +8,11 @@ public class EloHistory
     public int EloBefore { get; set; }
     public int EloAfter { get; set; }
     public int EloChange { get; set; }
-    public decimal? WinLossComponent { get; set; }
-    public decimal? PerformanceComponent { get; set; }
-    public decimal? FeedbackComponent { get; set; }
-    public decimal? SentimentComponent { get; set; }
-    public decimal? TrustComponent { get; set; }
-    public decimal? RoleComponent { get; set; }
+    public decimal? K1MatchResultComponent { get; set; }
+    public decimal? K2FeedbackSentimentComponent { get; set; }
+    public decimal? K3WinRateComponent { get; set; }
+    public decimal? K4ContributionComponent { get; set; }
+    public decimal? K5TrustComponent { get; set; }
     public string? CalculationDetails { get; set; } // JSON with all coefficients
     public DateTime CreatedAt { get; set; }
 

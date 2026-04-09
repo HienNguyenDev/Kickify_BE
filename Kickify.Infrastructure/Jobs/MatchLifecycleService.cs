@@ -446,8 +446,25 @@ public class MatchLifecycleService : IMatchLifecycleService
         var allFeedbacks = await matchFeedbackRepository.GetFeedbacksByMatchAsync(room.RoomId);
         var teamAElo = await CalculateAverageTeamEloAsync(participants, TeamAssignment.A, playerProfileRepository);
         var teamBElo = await CalculateAverageTeamEloAsync(participants, TeamAssignment.B, playerProfileRepository);
-        var matchEndUtc = room.MatchDate.Date + room.StartTime + TimeSpan.FromMinutes(room.DurationMinutes);
-        var feedbackDeadlineUtc = matchEndUtc + ReviewingPeriod;
+        var top50UserIds = await dbContext.PlayerProfiles
+            .AsNoTracking()
+            .OrderByDescending(x => x.CurrentElo)
+            .ThenByDescending(x => x.TotalMatches)
+            .Take(50)
+            .Select(x => x.UserId)
+            .ToListAsync();
+        var top50Set = top50UserIds.ToHashSet();
+        var activeEloConfig = await dbContext.EloConfigurations
+            .AsNoTracking()
+            .Where(x => x.IsActive && x.EffectiveFrom <= DateTime.UtcNow.Date && (x.EffectiveTo == null || x.EffectiveTo >= DateTime.UtcNow.Date))
+            .OrderByDescending(x => x.EffectiveFrom)
+            .FirstOrDefaultAsync();
+
+        if (activeEloConfig is null)
+        {
+            _logger.LogError("No active EloConfiguration found. Skipping ELO/Radar AI processing for room {RoomId}", room.RoomId);
+            return;
+        }
 
         foreach (var participant in participants)
         {
@@ -459,12 +476,18 @@ public class MatchLifecycleService : IMatchLifecycleService
 
             var teamResult = ResolveTeamResult(room.FinalResult.Value, participant.TeamAssignment);
             var feedbackForPlayer = allFeedbacks.Where(x => x.RevieweeId == participant.UserId).ToList();
-            var recentTotal = Math.Min(profile.TotalMatches, 15);
-            var recentWins = Math.Min(profile.Wins, recentTotal);
+            var (recentTotal, recentWins) = await GetRecentMatchesStatsAsync(room.RoomId, participant.UserId, dbContext);
             var daysSinceLastMatch = await GetDaysSinceLastMatchAsync(room.RoomId, participant.UserId, dbContext);
             var myFeedbackAsReviewer = allFeedbacks.Where(x => x.ReviewerId == participant.UserId).ToList();
             var submittedFeedback = myFeedbackAsReviewer.Count > 0;
-            var feedbackOnTime = myFeedbackAsReviewer.Any(f => f.CreatedAt <= feedbackDeadlineUtc);
+            var teammateCount = participants.Count(x => x.TeamAssignment == participant.TeamAssignment) - 1;
+            var reviewedTeammateCount = myFeedbackAsReviewer
+                .Select(x => x.RevieweeId)
+                .Distinct()
+                .Count();
+            var fullFeedbackCoverage = teammateCount > 0 && reviewedTeammateCount >= teammateCount;
+            // Send top-50 membership; AI applies the elo >= 2001 condition.
+            var isLegend = top50Set.Contains(participant.UserId);
 
             var eloRequest = new EloCalculationRequest(
                 AiContractVersion,
@@ -478,10 +501,17 @@ public class MatchLifecycleService : IMatchLifecycleService
                     participant.UserId.ToString(),
                     profile.CurrentElo,
                     profile.TrustScore,
+                    isLegend,
                     new EloRecentMatches(recentTotal, recentWins),
                     new EloContribution(
                         submittedFeedback,
-                        feedbackOnTime)),
+                        fullFeedbackCoverage)),
+                new EloKFactors(
+                    activeEloConfig.K1MatchResult,
+                    activeEloConfig.K2FeedbackSentiment,
+                    activeEloConfig.K3WinRate,
+                    activeEloConfig.K4Contribution,
+                    activeEloConfig.K5Trust),
                 feedbackForPlayer.Select(f => new EloCalculationFeedback(
                     f.ReviewerId.ToString(),
                     f.Rating,
@@ -492,6 +522,8 @@ public class MatchLifecycleService : IMatchLifecycleService
             {
                 var eloBefore = profile.CurrentElo;
                 profile.CurrentElo = eloResponse.Elo.New;
+                profile.CurrentRank = eloResponse.Rank.New;
+                profile.IsLegend = string.Equals(eloResponse.Rank.New, "Legend", StringComparison.Ordinal);
                 dbContext.PlayerProfiles.Update(profile);
 
                 var existingEloHistory = await dbContext.EloHistories
@@ -512,14 +544,11 @@ public class MatchLifecycleService : IMatchLifecycleService
                 existingEloHistory.EloBefore = eloBefore;
                 existingEloHistory.EloAfter = eloResponse.Elo.New;
                 existingEloHistory.EloChange = eloResponse.Elo.New - eloBefore;
-                existingEloHistory.WinLossComponent = eloResponse.Breakdown.K1MatchResult.Delta;
-                existingEloHistory.FeedbackComponent = eloResponse.Breakdown.K2FeedbackSentiment.Delta;
-                existingEloHistory.PerformanceComponent = eloResponse.Breakdown.K3WinRate.Delta;
-                existingEloHistory.RoleComponent = eloResponse.Breakdown.K4Contribution.Delta;
-                existingEloHistory.TrustComponent = eloResponse.Breakdown.K5Trust.Delta;
-                existingEloHistory.SentimentComponent = feedbackForPlayer.Count == 0
-                    ? 0
-                    : feedbackForPlayer.Average(x => x.SentimentScore ?? 0m);
+                existingEloHistory.K1MatchResultComponent = eloResponse.Breakdown.K1MatchResult.Delta;
+                existingEloHistory.K2FeedbackSentimentComponent = eloResponse.Breakdown.K2FeedbackSentiment.Delta;
+                existingEloHistory.K3WinRateComponent = eloResponse.Breakdown.K3WinRate.Delta;
+                existingEloHistory.K4ContributionComponent = eloResponse.Breakdown.K4Contribution.Delta;
+                existingEloHistory.K5TrustComponent = eloResponse.Breakdown.K5Trust.Delta;
                 existingEloHistory.CalculationDetails = JsonSerializer.Serialize(eloResponse.Breakdown);
             }
 
@@ -615,6 +644,28 @@ public class MatchLifecycleService : IMatchLifecycleService
         }
 
         return Math.Max(0, (DateTime.UtcNow.Date - previousMatchDate.Date).Days);
+    }
+
+    private static async Task<(int Total, int Wins)> GetRecentMatchesStatsAsync(Guid currentMatchId, Guid userId, IApplicationDbContext dbContext)
+    {
+        var recent = await dbContext.RoomParticipants
+            .Where(x => x.UserId == userId && x.RoomId != currentMatchId)
+            .Join(
+                dbContext.MatchRooms.Where(r => r.Status == RoomStatus.Completed && r.FinalResult != null),
+                rp => rp.RoomId,
+                rm => rm.RoomId,
+                (rp, rm) => new { rp.TeamAssignment, rm.FinalResult, rm.MatchDate, rm.StartTime })
+            .OrderByDescending(x => x.MatchDate)
+            .ThenByDescending(x => x.StartTime)
+            .Take(15)
+            .ToListAsync();
+
+        var total = recent.Count;
+        var wins = recent.Count(x =>
+            (x.FinalResult == MatchResult.TeamAWin && x.TeamAssignment == TeamAssignment.A)
+            || (x.FinalResult == MatchResult.TeamBWin && x.TeamAssignment == TeamAssignment.B));
+
+        return (total, wins);
     }
 
     private static async Task<List<RadarRecentMatch>> BuildRecentMatchPayloadAsync(Guid userId, IApplicationDbContext dbContext)
@@ -760,7 +811,8 @@ public class MatchLifecycleService : IMatchLifecycleService
             return false;
         }
 
-        var expectedNew = (int)Math.Round(previousElo + response.Elo.Delta, MidpointRounding.AwayFromZero);
+        // Python round() uses banker's rounding (to even).
+        var expectedNew = (int)Math.Round(previousElo + response.Elo.Delta, MidpointRounding.ToEven);
         if (response.Elo.New != expectedNew)
         {
             logger.LogWarning("Rejected ELO response: new ELO mismatch. Expected={Expected}, Actual={Actual}", expectedNew, response.Elo.New);

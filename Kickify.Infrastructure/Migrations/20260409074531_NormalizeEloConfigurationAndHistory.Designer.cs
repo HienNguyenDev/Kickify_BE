@@ -3,6 +3,7 @@ using System;
 using Kickify.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Kickify.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260409074531_NormalizeEloConfigurationAndHistory")]
+    partial class NormalizeEloConfigurationAndHistory
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -465,9 +468,7 @@ namespace Kickify.Infrastructure.Migrations
 
                     b.HasIndex("EffectiveFrom");
 
-                    b.HasIndex("IsActive")
-                        .IsUnique()
-                        .HasFilter("\"IsActive\" = true");
+                    b.HasIndex("IsActive");
 
                     b.ToTable("EloConfigurations", "evaluation");
                 });
@@ -1216,13 +1217,6 @@ namespace Kickify.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(1000);
 
-                    b.Property<string>("CurrentRank")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)")
-                        .HasDefaultValue("Amateur");
-
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1230,11 +1224,6 @@ namespace Kickify.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
-
-                    b.Property<bool>("IsLegend")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false);
 
                     b.Property<int>("Losses")
                         .ValueGeneratedOnAdd()
