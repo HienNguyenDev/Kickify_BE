@@ -54,6 +54,8 @@ namespace Kickify.Application.Features.Users.Queries.GetUserById
                 {
                     ProfileId = user.PlayerProfile.ProfileId,
                     CurrentElo = user.PlayerProfile.CurrentElo,
+                    CurrentRank = user.PlayerProfile.CurrentRank,
+                    IsLegend = user.PlayerProfile.IsLegend,
                     TrustScore = user.PlayerProfile.TrustScore,
                     TotalMatches = user.PlayerProfile.TotalMatches,
                     Wins = user.PlayerProfile.Wins,

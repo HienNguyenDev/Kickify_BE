@@ -22,6 +22,14 @@ public class PlayerProfileConfiguration : IEntityTypeConfiguration<PlayerProfile
         builder.Property(p => p.CurrentElo)
             .HasDefaultValue(1000);
 
+        builder.Property(p => p.CurrentRank)
+            .IsRequired()
+            .HasMaxLength(32)
+            .HasDefaultValue("Amateur");
+
+        builder.Property(p => p.IsLegend)
+            .HasDefaultValue(false);
+
         builder.Property(p => p.TrustScore)
             .HasDefaultValue(100);
 

@@ -86,7 +86,7 @@ public class GetAdminDashboardQueryHandler
             revenue30d, revenue30dChangePct);
 
         // ════════════════════════════════════════════
-        // Chart: User Growth (last N days, with previous period mirror)
+        // Chart: User Growth (newly registered users by day, with previous period mirror)
         // ════════════════════════════════════════════
         var chartStartLocal = todayLocal.AddDays(-(request.ChartDays - 1));
         var prevChartStartLocal = chartStartLocal.AddDays(-request.ChartDays);
@@ -94,11 +94,10 @@ public class GetAdminDashboardQueryHandler
         var chartStartUtc = ToUtc(chartStartLocal, tz);
         var prevChartStartUtc = ToUtc(prevChartStartLocal, tz);
 
-        // Pre-load system logs for both periods
-        var allLogs = await _db.SystemLogs
-            .Where(l => l.CreatedAt >= prevChartStartUtc && l.CreatedAt < todayEndUtc
-                && l.UserId != null)
-            .Select(l => new { l.UserId, l.CreatedAt })
+        // Use Users.CreatedAt as the stable source for growth.
+        var allUsers = await _db.Users
+            .Where(u => u.CreatedAt >= prevChartStartUtc && u.CreatedAt < todayEndUtc)
+            .Select(u => new { u.UserId, u.CreatedAt })
             .ToListAsync(cancellationToken);
 
         var userGrowth = new List<UserGrowthItemDto>();
@@ -108,9 +107,9 @@ public class GetAdminDashboardQueryHandler
             var dayStart = ToUtc(day, tz);
             var dayEnd = ToUtc(day.AddDays(1), tz);
 
-            var users = allLogs
+            var users = allUsers
                 .Where(l => l.CreatedAt >= dayStart && l.CreatedAt < dayEnd)
-                .Select(l => l.UserId)
+                .Select(l => (Guid?)l.UserId)
                 .Distinct()
                 .Count();
 
@@ -119,9 +118,9 @@ public class GetAdminDashboardQueryHandler
             var prevDayStart = ToUtc(prevDay, tz);
             var prevDayEnd = ToUtc(prevDay.AddDays(1), tz);
 
-            var prev = allLogs
+            var prev = allUsers
                 .Where(l => l.CreatedAt >= prevDayStart && l.CreatedAt < prevDayEnd)
-                .Select(l => l.UserId)
+                .Select(l => (Guid?)l.UserId)
                 .Distinct()
                 .Count();
 
@@ -173,7 +172,7 @@ public class GetAdminDashboardQueryHandler
                     && t.CreatedAt >= dayStart && t.CreatedAt < dayEnd)
                 .Sum(t => Math.Abs(t.Amount));
 
-            revenueTrend.Add(new RevenueTrendItemDto(day.ToString("yyyy-MM-dd"), paid - refunded));
+            revenueTrend.Add(new RevenueTrendItemDto(day.ToString("yyyy-MM-dd"), Math.Max(0m, paid - refunded)));
         }
 
         // ════════════════════════════════════════════
@@ -220,9 +219,31 @@ public class GetAdminDashboardQueryHandler
     private async Task<int> CountActiveUsers(
         DateTime fromUtc, DateTime toUtcExclusive, CancellationToken ct)
     {
-        return await _db.SystemLogs
+        var logUsers = _db.SystemLogs
             .Where(l => l.CreatedAt >= fromUtc && l.CreatedAt < toUtcExclusive && l.UserId != null)
-            .Select(l => l.UserId)
+            .Select(l => l.UserId);
+
+        var newUsers = _db.Users
+            .Where(u => u.CreatedAt >= fromUtc && u.CreatedAt < toUtcExclusive)
+            .Select(u => (Guid?)u.UserId);
+
+        var feedbackReviewerUsers = _db.MatchFeedbacks
+            .Where(f => f.CreatedAt >= fromUtc && f.CreatedAt < toUtcExclusive)
+            .Select(f => (Guid?)f.ReviewerId);
+
+        var feedbackRevieweeUsers = _db.MatchFeedbacks
+            .Where(f => f.CreatedAt >= fromUtc && f.CreatedAt < toUtcExclusive)
+            .Select(f => (Guid?)f.RevieweeId);
+
+        var joinedRoomUsers = _db.RoomParticipants
+            .Where(p => p.JoinDate >= fromUtc && p.JoinDate < toUtcExclusive)
+            .Select(p => (Guid?)p.UserId);
+
+        return await logUsers
+            .Concat(newUsers)
+            .Concat(feedbackReviewerUsers)
+            .Concat(feedbackRevieweeUsers)
+            .Concat(joinedRoomUsers)
             .Distinct()
             .CountAsync(ct);
     }
@@ -236,9 +257,9 @@ public class GetAdminDashboardQueryHandler
                     || t.TransactionType == TransactionType.Refund))
             .ToListAsync(ct);
 
-        var paid = txns.Where(t => t.TransactionType == TransactionType.BookingIncome).Sum(t => t.Amount);
+        var paid = txns.Where(t => t.TransactionType == TransactionType.BookingIncome).Sum(t => Math.Abs(t.Amount));
         var refund = txns.Where(t => t.TransactionType == TransactionType.Refund).Sum(t => Math.Abs(t.Amount));
-        return paid - refund;
+        return Math.Max(0m, paid - refund);
     }
 
     private static double? CalcChangePct(decimal current, decimal previous)

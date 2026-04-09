@@ -35,6 +35,8 @@ namespace Kickify.Application.Features.PlayerProfiles.Queries.GetAllPlayerProfil
                 UserEmail = p.User?.Email ?? string.Empty,
                 UserAvatarUrl = p.User?.AvatarUrl,
                 CurrentElo = p.CurrentElo,
+                CurrentRank = p.CurrentRank,
+                IsLegend = p.IsLegend,
                 TrustScore = p.TrustScore,
                 TotalMatches = p.TotalMatches,
                 Wins = p.Wins,

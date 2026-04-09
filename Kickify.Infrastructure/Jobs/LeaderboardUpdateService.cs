@@ -58,6 +58,8 @@ public class LeaderboardUpdateService : ILeaderboardUpdateService
                 Email: item.Profile.User.Email,
                 AvatarUrl: item.Profile.User.AvatarUrl,
                 CurrentElo: item.Profile.CurrentElo,
+                CurrentRank: item.Profile.CurrentRank,
+                IsLegend: item.Profile.IsLegend,
                 EloChange: item.LatestEloChange,
                 TotalMatches: item.Profile.TotalMatches
             )).ToList();

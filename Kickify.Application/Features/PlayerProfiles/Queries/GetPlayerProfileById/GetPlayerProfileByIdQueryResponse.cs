@@ -8,6 +8,8 @@ namespace Kickify.Application.Features.PlayerProfiles.Queries.GetPlayerProfileBy
         public string? UserEmail { get; set; }
         public string? UserAvatarUrl { get; set; }
         public int CurrentElo { get; set; }
+        public string CurrentRank { get; set; } = string.Empty;
+        public bool IsLegend { get; set; }
         public decimal TrustScore { get; set; }
         public int TotalMatches { get; set; }
         public int Wins { get; set; }

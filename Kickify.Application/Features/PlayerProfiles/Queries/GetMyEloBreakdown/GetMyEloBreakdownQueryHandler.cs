@@ -39,12 +39,11 @@ public class GetMyEloBreakdownQueryHandler : IQueryHandler<GetMyEloBreakdownQuer
                 x.EloBefore,
                 x.EloAfter,
                 x.EloChange,
-                x.WinLossComponent,
-                x.FeedbackComponent,
-                x.PerformanceComponent,
-                x.TrustComponent,
-                x.RoleComponent,
-                x.SentimentComponent,
+                x.K1MatchResultComponent,
+                x.K2FeedbackSentimentComponent,
+                x.K3WinRateComponent,
+                x.K4ContributionComponent,
+                x.K5TrustComponent,
                 x.CalculationDetails,
                 x.CreatedAt))
             .ToListAsync(cancellationToken);
