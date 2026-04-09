@@ -41,6 +41,7 @@ app.MapHealthChecks("health", new HealthCheckOptions()
 app.UseCors("AllowAll");
 
 app.UseRequestContextLogging();
+app.UseSystemAuditLogging();
 
 app.UseSerilogRequestLogging();
 

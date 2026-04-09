@@ -7,6 +7,8 @@ public class PlayerProfile : BaseEntity
     public Guid ProfileId { get; set; }
     public Guid UserId { get; set; }
     public int CurrentElo { get; set; } = 1000;
+    public string CurrentRank { get; set; } = "Amateur";
+    public bool IsLegend { get; set; } = false;
     public int TrustScore { get; set; } = 100;
     public int TotalMatches { get; set; } = 0;
     public int Wins { get; set; } = 0;

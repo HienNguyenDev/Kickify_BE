@@ -1,0 +1,109 @@
+using Kickify.Domain.Entities;
+using Kickify.Infrastructure.Database;
+using Kickify.Infrastructure.Services;
+using Kickify.Application.Abstractions.Services;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+
+namespace Kickify.Infrastructure.Jobs;
+
+public sealed class SystemLogBatchInsertService(
+    SystemLogQueue queue,
+    IServiceScopeFactory scopeFactory,
+    ILogger<SystemLogBatchInsertService> logger) : BackgroundService
+{
+    private const int BatchSize = 100;
+    private static readonly TimeSpan FlushInterval = TimeSpan.FromSeconds(2);
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        var buffer = new List<SystemLog>(BatchSize);
+        var timer = new PeriodicTimer(FlushInterval);
+
+        try
+        {
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                while (buffer.Count < BatchSize && queue.Reader.TryRead(out var item))
+                {
+                    buffer.Add(Map(item));
+                }
+
+                if (buffer.Count >= BatchSize)
+                {
+                    await FlushAsync(buffer, stoppingToken);
+                    continue;
+                }
+
+                var waitForDataTask = queue.Reader.WaitToReadAsync(stoppingToken).AsTask();
+                var timerTask = timer.WaitForNextTickAsync(stoppingToken).AsTask();
+                await Task.WhenAny(waitForDataTask, timerTask);
+
+                if (buffer.Count > 0)
+                {
+                    await FlushAsync(buffer, stoppingToken);
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // graceful shutdown
+        }
+        finally
+        {
+            timer.Dispose();
+            if (buffer.Count > 0)
+            {
+                try
+                {
+                    await FlushAsync(buffer, CancellationToken.None);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Failed to flush remaining system logs on shutdown.");
+                }
+            }
+        }
+    }
+
+    private async Task FlushAsync(List<SystemLog> logs, CancellationToken cancellationToken)
+    {
+        if (logs.Count == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            using var scope = scopeFactory.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            await dbContext.SystemLogs.AddRangeAsync(logs, cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            logs.Clear();
+        }
+        catch (DbUpdateException ex)
+        {
+            logger.LogError(ex, "Failed to batch-insert {Count} system logs.", logs.Count);
+            logs.Clear();
+        }
+    }
+
+    private static SystemLog Map(SystemLogQueueItem item)
+    {
+        return new SystemLog
+        {
+            LogId = Guid.NewGuid(),
+            UserId = item.UserId,
+            UserName = item.UserName,
+            Action = item.Action,
+            EntityType = item.EntityType,
+            EntityId = item.EntityId,
+            UserAgent = item.UserAgent,
+            ResponseStatus = item.ResponseStatus,
+            ErrorMessage = item.ErrorMessage,
+            CreatedAt = item.CreatedAtUtc
+        };
+    }
+}

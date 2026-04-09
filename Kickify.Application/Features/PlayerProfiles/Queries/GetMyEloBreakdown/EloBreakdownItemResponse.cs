@@ -5,12 +5,11 @@ public record EloBreakdownItemResponse(
     int EloBefore,
     int EloAfter,
     int EloChange,
-    decimal? WinLossComponent,
-    decimal? FeedbackComponent,
-    decimal? PerformanceComponent,
-    decimal? TrustComponent,
-    decimal? RoleComponent,
-    decimal? SentimentComponent,
+    decimal? K1MatchResultComponent,
+    decimal? K2FeedbackSentimentComponent,
+    decimal? K3WinRateComponent,
+    decimal? K4ContributionComponent,
+    decimal? K5TrustComponent,
     string? CalculationDetails,
     DateTime CreatedAt
 );

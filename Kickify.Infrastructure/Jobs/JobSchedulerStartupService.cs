@@ -28,12 +28,14 @@ public class JobSchedulerStartupService : IHostedService
 
         using var scope = _serviceScopeFactory.CreateScope();
         var leaderboardUpdateService = scope.ServiceProvider.GetRequiredService<ILeaderboardUpdateService>();
+        var systemLogCleanupService = scope.ServiceProvider.GetRequiredService<ISystemLogCleanupService>();
 
         // ??ng ký recurring job ch?y m?i ngày 00:00 UTC
         leaderboardUpdateService.ScheduleLeaderboardUpdate();
 
         // Populate cache ngay l?n ??u n?u ch?a có
         await leaderboardUpdateService.UpdateLeaderboardCacheAsync();
+        systemLogCleanupService.ScheduleSystemLogCleanup();
 
         _logger.LogInformation("Recurring jobs registered successfully.");
     }

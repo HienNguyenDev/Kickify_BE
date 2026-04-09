@@ -120,6 +120,8 @@ namespace Kickify.Infrastructure
             services.AddSingleton<IQrCodeService, QrCodeService>();
             services.AddScoped<ILeaderboardCacheService, LeaderboardCacheService>();
             services.AddScoped<ITrustScoreService, TrustScoreService>();
+            services.AddSingleton<SystemLogQueue>();
+            services.AddSingleton<ISystemLogQueue>(sp => sp.GetRequiredService<SystemLogQueue>());
 
             // AI Sentiment Analysis Service
             services.AddHttpClient<ISentimentAnalysisService, SentimentAnalysisService>((sp, client) =>
@@ -264,7 +266,9 @@ namespace Kickify.Infrastructure
             services.AddScoped<IRoomAutoCloseService, RoomAutoCloseService>();
             services.AddScoped<IMatchLifecycleService, MatchLifecycleService>();
             services.AddScoped<ILeaderboardUpdateService, LeaderboardUpdateService>();
+            services.AddScoped<ISystemLogCleanupService, SystemLogCleanupService>();
             services.AddHostedService<JobSchedulerStartupService>();
+            services.AddHostedService<SystemLogBatchInsertService>();
 
             return services;
         }
