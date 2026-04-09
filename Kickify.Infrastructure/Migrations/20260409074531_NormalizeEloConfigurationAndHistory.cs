@@ -80,6 +80,11 @@ namespace Kickify.Infrastructure.Migrations
                 schema: "evaluation",
                 table: "EloConfigurations");
 
+            migrationBuilder.DropColumn(
+                name: "KBase",
+                schema: "evaluation",
+                table: "EloConfigurations");
+
             migrationBuilder.InsertData(
                 schema: "evaluation",
                 table: "EloConfigurations",
@@ -196,6 +201,15 @@ namespace Kickify.Infrastructure.Migrations
                 type: "numeric(5,2)",
                 nullable: false,
                 defaultValue: 0m);
+
+            migrationBuilder.AddColumn<decimal>(
+                name: "KBase",
+                schema: "evaluation",
+                table: "EloConfigurations",
+                type: "numeric(5,2)",
+                nullable: false,
+                defaultValue: 0m,
+                comment: "Base K factor");
 
             migrationBuilder.DeleteData(
                 schema: "evaluation",
