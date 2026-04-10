@@ -1,4 +1,4 @@
-﻿using FirebaseAdmin.Auth;
+using FirebaseAdmin.Auth;
 using FluentValidation;
 using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
@@ -22,7 +22,12 @@ namespace Kickify.Application.Features.Auth.Commands.Login
         private readonly IRefreshTokenRepository _refreshTokenRepository;
         private readonly IWalletRepository _walletRepository;
         private readonly IUnitOfWork _unitOfWork;
-        public LoginWithFirebaseForVenueOwner(IJwtProvider jwtProvider, IUserRepository userRepository, IRefreshTokenRepository refreshTokenRepository, IWalletRepository walletRepository, IUnitOfWork unitOfWork)
+    public LoginWithFirebaseForVenueOwner(
+        IJwtProvider jwtProvider,
+        IUserRepository userRepository,
+        IRefreshTokenRepository refreshTokenRepository,
+        IWalletRepository walletRepository,
+        IUnitOfWork unitOfWork)
         {
             _jwtProvider = jwtProvider;
             _userRepository = userRepository;
