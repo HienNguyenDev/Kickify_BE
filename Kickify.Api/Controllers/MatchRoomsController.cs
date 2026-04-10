@@ -79,8 +79,9 @@ namespace Kickify.Api.Controllers
         }
 
         /// <summary>
-        /// Get all match rooms for current user (as participant or host)
+        /// Get all match rooms for current user (as participant or host).
         /// </summary>
+        /// <param name="availableOnly">When true, returns every status except Cancelled. When false, returns only Cancelled. When omitted, no status filter.</param>
         [HttpGet("mine")]
         public async Task<IResult> GetMyRooms(
             [FromQuery] bool? availableOnly,
