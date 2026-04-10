@@ -96,6 +96,21 @@ pipeline {
                 '''
             }
         }
+
+        stage('Update Nginx Upstream') {
+            steps {
+                echo 'Updating Nginx upstream for current container IP...'
+                sh '''
+                    if [ ! -x /usr/local/bin/update-kickify-upstream.sh ]; then
+                        echo "ERROR: /usr/local/bin/update-kickify-upstream.sh not found or not executable"
+                        exit 1
+                    fi
+
+                    sudo /usr/local/bin/update-kickify-upstream.sh
+                    echo "Nginx upstream updated"
+                '''
+            }
+        }
         
         stage('Verify Deployment') {
             steps {
@@ -115,7 +130,7 @@ pipeline {
                     fi
                     
                     echo "Testing API endpoint..."
-                    curl -f http://localhost:5000/health || echo "Warning: Health endpoint not available"
+                    curl -f https://api.kickify.site/health || echo "Warning: Health endpoint not available"
                     
                     echo "Deployment verified successfully"
                 '''
