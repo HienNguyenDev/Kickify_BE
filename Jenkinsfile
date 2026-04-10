@@ -101,7 +101,7 @@ pipeline {
             steps {
                 echo 'Updating Nginx upstream for current container IP...'
                 sh '''
-                    set -euo pipefail
+                    set -eu
 
                     echo "Jenkins runtime info:"
                     whoami
