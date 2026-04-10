@@ -6,6 +6,7 @@ using Kickify.Api.Hubs;
 using Kickify.Application;
 using Kickify.Infrastructure;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Hosting;
 using Serilog;
 using Hangfire;
 using Prometheus;
@@ -13,6 +14,10 @@ using Prometheus;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseSerilog((context, loggerConfig) => loggerConfig.ReadFrom.Configuration(context.Configuration));
+builder.Services.Configure<HostOptions>(options =>
+{
+    options.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore;
+});
 
 builder.Services.AddSwaggerGenWithAuth();
 builder.Services
