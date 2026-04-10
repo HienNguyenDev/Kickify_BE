@@ -16,6 +16,7 @@ public sealed class SystemLogBatchInsertService(
 {
     private const int BatchSize = 100;
     private static readonly TimeSpan FlushInterval = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan ErrorBackoff = TimeSpan.FromSeconds(5);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -26,24 +27,36 @@ public sealed class SystemLogBatchInsertService(
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                while (buffer.Count < BatchSize && queue.Reader.TryRead(out var item))
+                try
                 {
-                    buffer.Add(Map(item));
+                    while (buffer.Count < BatchSize && queue.Reader.TryRead(out var item))
+                    {
+                        buffer.Add(Map(item));
+                    }
+
+                    if (buffer.Count >= BatchSize)
+                    {
+                        await FlushAsync(buffer, stoppingToken);
+                        continue;
+                    }
+
+                    var waitForDataTask = queue.Reader.WaitToReadAsync(stoppingToken).AsTask();
+                    var timerTask = timer.WaitForNextTickAsync(stoppingToken).AsTask();
+                    await Task.WhenAny(waitForDataTask, timerTask);
+
+                    if (buffer.Count > 0)
+                    {
+                        await FlushAsync(buffer, stoppingToken);
+                    }
                 }
-
-                if (buffer.Count >= BatchSize)
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                 {
-                    await FlushAsync(buffer, stoppingToken);
-                    continue;
+                    // graceful shutdown
                 }
-
-                var waitForDataTask = queue.Reader.WaitToReadAsync(stoppingToken).AsTask();
-                var timerTask = timer.WaitForNextTickAsync(stoppingToken).AsTask();
-                await Task.WhenAny(waitForDataTask, timerTask);
-
-                if (buffer.Count > 0)
+                catch (Exception ex)
                 {
-                    await FlushAsync(buffer, stoppingToken);
+                    logger.LogError(ex, "System log batch worker iteration failed. Retrying in {RetryDelaySeconds} seconds.", ErrorBackoff.TotalSeconds);
+                    await Task.Delay(ErrorBackoff, stoppingToken);
                 }
             }
         }
@@ -86,6 +99,11 @@ public sealed class SystemLogBatchInsertService(
         catch (DbUpdateException ex)
         {
             logger.LogError(ex, "Failed to batch-insert {Count} system logs.", logs.Count);
+            logs.Clear();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Unexpected failure while batch-inserting {Count} system logs.", logs.Count);
             logs.Clear();
         }
     }
