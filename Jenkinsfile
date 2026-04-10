@@ -101,13 +101,28 @@ pipeline {
             steps {
                 echo 'Updating Nginx upstream for current container IP...'
                 sh '''
-                    if [ ! -x /usr/local/bin/update-kickify-upstream.sh ]; then
-                        echo "ERROR: /usr/local/bin/update-kickify-upstream.sh not found or not executable"
+                    set -euo pipefail
+
+                    echo "Jenkins runtime info:"
+                    whoami
+                    hostname
+
+                    API_IP=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${CONTAINER_NAME})
+                    if [ -z "$API_IP" ]; then
+                        echo "ERROR: Could not resolve container IP for ${CONTAINER_NAME}"
                         exit 1
                     fi
 
-                    sudo /usr/local/bin/update-kickify-upstream.sh
-                    echo "Nginx upstream updated"
+                    sudo tee /etc/nginx/conf.d/upstream-kickify.conf > /dev/null <<EOF
+upstream kickify_api {
+    server ${API_IP}:8080 max_fails=2 fail_timeout=5s;
+    keepalive 64;
+}
+EOF
+
+                    sudo nginx -t
+                    sudo systemctl reload nginx
+                    echo "Nginx upstream updated to ${API_IP}:8080"
                 '''
             }
         }
