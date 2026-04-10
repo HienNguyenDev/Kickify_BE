@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Kickify.Application\Kickify.Application.csproj" />
+    <ProjectReference Include="..\Kickify.Infrastructure\Kickify.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

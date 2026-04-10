@@ -1,6 +1,9 @@
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Jobs;
 using Kickify.Application.Abstractions.Messaging;
@@ -15,6 +18,7 @@ using Kickify.Domain.Errors;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Xunit;
 
 namespace Kickify.Application.UnitTests.Bookings.Commands.ProcessPayment;
 
@@ -404,5 +408,167 @@ public class ProcessPaymentCommandHandlerTests
         result.IsSuccess.Should().BeTrue();
         _roomAutoCloseServiceMock.Verify(x => x.CancelAutoClose(room.AutoCloseJobId), Times.Once);
     }
-}
 
+
+    
+    // Covers UTCID32 from CSV
+    [Fact]
+    public async Task Handle_ProcessPayment_WhenAllPaid_ShouldConfirmBookingAndLockRoom_UTCID32()
+    {
+        // Arrange
+        var command = new ProcessPaymentCommand(Guid.NewGuid());
+        var userId = Guid.NewGuid();
+        var user = new User { UserId = userId, FullName = "Test User" };
+        var roomId = command.RoomId;
+
+        _userContextMock.Setup(uc => uc.UserId).Returns(userId);
+        _userRepositoryMock.Setup(repo => repo.GetByIdAsync(userId)).ReturnsAsync(user);
+
+        var room = new MatchRoom
+        {
+            RoomId = roomId,
+            Status = RoomStatus.Open,
+            DepositPerPerson = 100,
+            FieldId = Guid.NewGuid(),
+            FilledSlots = 2,
+            TotalSlots = 2,
+            MatchDate = DateTime.Today,
+            StartTime = new TimeSpan(10, 0, 0),
+            RoomParticipants = new List<RoomParticipant>
+            {
+                new RoomParticipant { UserId = userId, DepositPaid = false },
+                new RoomParticipant { UserId = Guid.NewGuid(), DepositPaid = true, DepositAmount = 100 }
+            }
+        };
+
+        _matchRoomRepositoryMock.Setup(repo => repo.GetRoomWithParticipantsForUpdateAsync(roomId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(room);
+
+        var wallet = new Wallet { WalletId = Guid.NewGuid(), UserId = userId, Balance = 200 };
+        _walletRepositoryMock.Setup(repo => repo.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(wallet);
+
+        var field = new Field { FieldId = room.FieldId.Value };
+        _fieldRepositoryMock.Setup(repo => repo.GetFieldWithVenueAsync(room.FieldId.Value, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(field);
+
+        var booking = new Booking { BookingId = Guid.NewGuid(), BookingDate = DateTime.Today, StartTime = new TimeSpan(10, 0, 0), EndTime = new TimeSpan(11, 0, 0) };
+        _bookingRepositoryMock.Setup(repo => repo.GetBookingByRoomAsync(roomId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(booking);
+
+        // Act
+        var result = await _sut.Handle(command, CancellationToken.None); // Changed _handler to _sut
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        room.Status.Should().Be(RoomStatus.Locked);
+        booking.Status.Should().Be(BookingStatus.Confirmed);
+
+        _walletTransactionRepositoryMock.Verify(repo => repo.AddAsync(It.IsAny<WalletTransaction>()), Times.Once);
+        _matchRoomRepositoryMock.Verify(repo => repo.Update(It.IsAny<MatchRoom>()), Times.Once);
+        _bookingRepositoryMock.Verify(repo => repo.Update(It.IsAny<Booking>()), Times.Once);
+        _unitOfWorkMock.Verify(uow => uow.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+        _matchRoomHubServiceMock.Verify(hub => hub.NotifyRoomStatusChangedAsync(roomId, RoomStatus.Locked.ToString(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // Covers UTCID33 from CSV
+    [Fact]
+    public async Task Handle_ProcessPayment_WhenAlreadyPaid_ShouldReturnError_UTCID33()
+    {
+        // Arrange
+        var command = new ProcessPaymentCommand(Guid.NewGuid());
+        var userId = Guid.NewGuid();
+        var user = new User { UserId = userId };
+
+        _userContextMock.Setup(uc => uc.UserId).Returns(userId);
+        _userRepositoryMock.Setup(repo => repo.GetByIdAsync(userId)).ReturnsAsync(user);
+
+        var room = new MatchRoom
+        {
+            RoomId = command.RoomId,
+            RoomParticipants = new List<RoomParticipant>
+            {
+                new RoomParticipant { UserId = userId, DepositPaid = true }
+            }
+        };
+
+        _matchRoomRepositoryMock.Setup(repo => repo.GetRoomWithParticipantsForUpdateAsync(command.RoomId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(room);
+
+        // Act
+        var result = await _sut.Handle(command, CancellationToken.None); // Changed _handler to _sut
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Should().Be(BookingErrors.AlreadyPaid);
+        _unitOfWorkMock.Verify(uow => uow.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    // Covers UTCID34 from CSV
+    [Fact]
+    public async Task Handle_ProcessPayment_WhenInsufficientBalance_ShouldReturnError_UTCID34()
+    {
+        // Arrange
+        var command = new ProcessPaymentCommand(Guid.NewGuid());
+        var userId = Guid.NewGuid();
+        var user = new User { UserId = userId };
+
+        _userContextMock.Setup(uc => uc.UserId).Returns(userId);
+        _userRepositoryMock.Setup(repo => repo.GetByIdAsync(userId)).ReturnsAsync(user);
+
+        var room = new MatchRoom
+        {
+            RoomId = command.RoomId,
+            DepositPerPerson = 100,
+            RoomParticipants = new List<RoomParticipant>
+            {
+                new RoomParticipant { UserId = userId, DepositPaid = false }
+            }
+        };
+
+        _matchRoomRepositoryMock.Setup(repo => repo.GetRoomWithParticipantsForUpdateAsync(command.RoomId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(room);
+
+        var wallet = new Wallet { WalletId = Guid.NewGuid(), UserId = userId, Balance = 50 }; // Less than deposit (100)
+        _walletRepositoryMock.Setup(repo => repo.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(wallet);
+
+        // Act
+        var result = await _sut.Handle(command, CancellationToken.None); // Changed _handler to _sut
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Should().Be(WalletErrors.InsufficientBalance);
+        _unitOfWorkMock.Verify(uow => uow.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    // Covers UTCID35 from CSV
+    [Fact]
+    public async Task Handle_ProcessPayment_WhenParticipantNotFound_ShouldReturnError_UTCID35()
+    {
+        // Arrange
+        var command = new ProcessPaymentCommand(Guid.NewGuid());
+        var userId = Guid.NewGuid();
+        var user = new User { UserId = userId };
+
+        _userContextMock.Setup(uc => uc.UserId).Returns(userId);
+        _userRepositoryMock.Setup(repo => repo.GetByIdAsync(userId)).ReturnsAsync(user);
+
+        var room = new MatchRoom
+        {
+            RoomId = command.RoomId,
+            RoomParticipants = new List<RoomParticipant>() // Empty, so user is not participant
+        };
+
+        _matchRoomRepositoryMock.Setup(repo => repo.GetRoomWithParticipantsForUpdateAsync(command.RoomId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(room);
+
+        // Act
+        var result = await _sut.Handle(command, CancellationToken.None); // Changed _handler to _sut
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Should().Be(BookingErrors.ParticipantNotFound);
+        _unitOfWorkMock.Verify(uow => uow.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+}
