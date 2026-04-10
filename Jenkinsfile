@@ -113,15 +113,21 @@ pipeline {
                         exit 1
                     fi
 
-                    sudo tee /etc/nginx/conf.d/upstream-kickify.conf > /dev/null <<EOF
+                    if ! (sudo -n /usr/bin/tee --version >/dev/null 2>&1 && sudo -n /usr/sbin/nginx -t >/dev/null 2>&1 && sudo -n /usr/bin/systemctl status nginx --no-pager >/dev/null 2>&1); then
+                        echo "ERROR: Jenkins user lacks required NOPASSWD sudo rights."
+                        echo "Required: /usr/bin/tee, /usr/sbin/nginx, /usr/bin/systemctl"
+                        exit 1
+                    fi
+
+                    sudo -n tee /etc/nginx/conf.d/upstream-kickify.conf > /dev/null <<EOF
 upstream kickify_api {
     server ${API_IP}:8080 max_fails=2 fail_timeout=5s;
     keepalive 64;
 }
 EOF
 
-                    sudo nginx -t
-                    sudo systemctl reload nginx
+                    sudo -n nginx -t
+                    sudo -n systemctl reload nginx
                     echo "Nginx upstream updated to ${API_IP}:8080"
                 '''
             }
