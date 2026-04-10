@@ -345,7 +345,7 @@ public class MatchLifecycleService : IMatchLifecycleService
             dbContext,
             unitOfWork);
 
-        await UpdatePlayerProfilesAsync(room, roomParticipantRepository, playerProfileRepository, unitOfWork);
+        await UpdatePlayerProfilesAsync(room, roomParticipantRepository, dbContext, unitOfWork);
 
         _logger.LogInformation("Post-match processing completed for room {RoomId}", roomId);
     }
@@ -855,7 +855,7 @@ public class MatchLifecycleService : IMatchLifecycleService
     private async Task UpdatePlayerProfilesAsync(
         MatchRoom room,
         IRoomParticipantRepository roomParticipantRepository,
-        IPlayerProfileRepository playerProfileRepository,
+        IApplicationDbContext dbContext,
         IUnitOfWork unitOfWork)
     {
         try
@@ -870,7 +870,10 @@ public class MatchLifecycleService : IMatchLifecycleService
 
             foreach (var participant in participants)
             {
-                var profile = await playerProfileRepository.GetByUserIdAsync(participant.UserId);
+                // Same scoped DbContext as CalculateEloAndRadarWithAiAsync: reuse tracked PlayerProfile
+                // instances instead of AsNoTracking + Update (avoids identity map conflict on ProfileId).
+                var profile = await dbContext.PlayerProfiles
+                    .FirstOrDefaultAsync(p => p.UserId == participant.UserId, CancellationToken.None);
                 if (profile == null)
                 {
                     _logger.LogWarning("Player profile not found for user {UserId} in room {RoomId}",
@@ -921,8 +924,6 @@ public class MatchLifecycleService : IMatchLifecycleService
                             break;
                     }
                 }
-
-                playerProfileRepository.Update(profile);
             }
 
             await unitOfWork.SaveChangesAsync(CancellationToken.None);
