@@ -149,5 +149,108 @@ public class RegisterPlayerCommandHandlerTests
 
         _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    // Covers UTCID06 from CSV
+    [Fact]
+    public async Task Handle_EmailAlreadyInUse_ReturnsEmailAlreadyExistsError()
+    {
+        // Arrange
+        var command = new RegisterPlayerCommand
+        {
+            FullName = "John Doe",
+            Email = "taken@kickify.com",
+            Password = "Password123!"
+        };
+
+        var existingUser = new User { Email = command.Email }; // DeletedAt is null by default
+
+        _userRepositoryMock.Setup(repo => repo.GetUserByEmailIgnoreFilterAsync(command.Email))
+            .ReturnsAsync(existingUser);
+
+        // Act
+        var result = await _sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be(UserErrors.EmailAlreadyExists.Code);
+    }
+
+    // Covers UTCID07 from CSV
+    [Fact]
+    public async Task Handle_PasswordHitsMinimumLimit_ReturnsSuccess()
+    {
+        // Arrange
+        var command = new RegisterPlayerCommand
+        {
+            FullName = "Jane Doe",
+            Email = "new@kickify.com",
+            Password = "P@ssw1" // Exact 6 chars bounds simulating minimum length setup
+        };
+
+        _userRepositoryMock.Setup(repo => repo.GetUserByEmailIgnoreFilterAsync(command.Email))
+            .ReturnsAsync((User?)null);
+
+        _authenticationServicesMock.Setup(auth => auth.RegisterAsync(command.Email, command.Password))
+            .ReturnsAsync("identity123");
+
+        _passwordHasherMock.Setup(hasher => hasher.Hash(command.Password))
+            .Returns("hashed_password");
+
+        _otpGeneratorMock.Setup(otp => otp.Generate6Digits())
+            .Returns("123456");
+
+        // Act
+        var result = await _sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeNull();
+        result.Value.Email.Should().Be(command.Email);
+
+        _userRepositoryMock.Verify(repo => repo.AddAsync(It.IsAny<User>()), Times.Once);
+        _walletRepositoryMock.Verify(repo => repo.AddAsync(It.IsAny<Wallet>()), Times.Once);
+        _playerProfileRepositoryMock.Verify(repo => repo.AddAsync(It.IsAny<PlayerProfile>()), Times.Once);
+        _notificationPreferenceRepositoryMock.Verify(repo => repo.AddAsync(It.IsAny<NotificationPreference>()), Times.Once);
+        _unitOfWorkMock.Verify(uow => uow.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _otpStoreMock.Verify(store => store.StoreAsync(It.IsAny<Guid>(), "123456", It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // Covers UTCID08 from CSV
+    [Fact]
+    public async Task Handle_FullyValidAndSecureInput_ReturnsSuccess()
+    {
+        // Arrange
+        var command = new RegisterPlayerCommand
+        {
+            FullName = "David Secure",
+            Email = "secure@kickify.com",
+            Password = "SuperSecurePassword999!"
+        };
+
+        _userRepositoryMock.Setup(repo => repo.GetUserByEmailIgnoreFilterAsync(command.Email))
+            .ReturnsAsync((User?)null);
+
+        _authenticationServicesMock.Setup(auth => auth.RegisterAsync(command.Email, command.Password))
+            .ReturnsAsync("identity999");
+
+        _passwordHasherMock.Setup(hasher => hasher.Hash(command.Password))
+            .Returns("hashed_secure_password");
+
+        _otpGeneratorMock.Setup(otp => otp.Generate6Digits())
+            .Returns("999999");
+
+        // Act
+        var result = await _sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeNull();
+        result.Value.Email.Should().Be(command.Email);
+
+        // Verify that the Otp was dispatched/stored as expected
+        _userRepositoryMock.Verify(repo => repo.AddAsync(It.Is<User>(u => u.PasswordHash == "hashed_secure_password")), Times.Once);
+        _otpStoreMock.Verify(store => store.StoreAsync(It.IsAny<Guid>(), "999999", It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWorkMock.Verify(uow => uow.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
 }
 

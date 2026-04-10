@@ -252,5 +252,186 @@ public class LoginCommandHandlerTests
         _refreshTokenRepositoryMock.Verify(x => x.AddAsync(It.IsAny<RefreshToken>()), Times.Once);
         _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    // Covers UTCID01 from CSV
+    [Fact]
+    public async Task Handle_EmailDoesNotExist_ReturnsUserNotFoundByEmailError()
+    {
+        // Arrange
+        var command = new LoginCommand { Email = "notfound@kickify.com", Password = "Password123!" };
+
+        _userRepositoryMock.Setup(repo => repo.GetByEmailAsync(command.Email, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((User?)null);
+
+        // Act
+        var result = await _sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be(UserErrors.NotFoundByEmail.Code);
+    }
+
+    // Covers UTCID02 from CSV
+    [Fact]
+    public async Task Handle_EmailExistsButPasswordWrong_ReturnsWrongPasswordError()
+    {
+        // Arrange
+        var command = new LoginCommand { Email = "exist@kickify.com", Password = "WrongPassword!" };
+        var user = new User { Email = command.Email, PasswordHash = "hashedPassword" };
+
+        _userRepositoryMock.Setup(repo => repo.GetByEmailAsync(command.Email, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+
+        _passwordHasherMock.Setup(hasher => hasher.Verify(command.Password, user.PasswordHash))
+            .Returns(false);
+
+        // Act
+        var result = await _sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be(UserErrors.WrongPassword.Code);
+    }
+
+    // Covers UTCID03 from CSV
+    [Fact]
+    public async Task Handle_AccountInactive_ReturnsInactiveError()
+    {
+        // Arrange
+        var command = new LoginCommand { Email = "inactive@kickify.com", Password = "ValidPassword!" };
+        var user = new User
+        {
+            Email = command.Email,
+            PasswordHash = "hashedPassword",
+            IsActive = false
+        };
+
+        _userRepositoryMock.Setup(repo => repo.GetByEmailAsync(command.Email, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+
+        _passwordHasherMock.Setup(hasher => hasher.Verify(command.Password, user.PasswordHash))
+            .Returns(true);
+
+        // Act
+        var result = await _sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be(UserErrors.InActive.Code);
+    }
+
+    // Covers UTCID03 from CSV (Second variation of inactive/unverified)
+    [Fact]
+    public async Task Handle_AccountUnverified_ReturnsIsNotVerifiedError()
+    {
+        // Arrange
+        var command = new LoginCommand { Email = "unverified@kickify.com", Password = "ValidPassword!" };
+        var user = new User
+        {
+            Email = command.Email,
+            PasswordHash = "hashedPassword",
+            IsActive = true,
+            IsEmailVerified = false
+        };
+
+        _userRepositoryMock.Setup(repo => repo.GetByEmailAsync(command.Email, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+
+        _passwordHasherMock.Setup(hasher => hasher.Verify(command.Password, user.PasswordHash))
+            .Returns(true);
+
+        // Act
+        var result = await _sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be(UserErrors.IsNotVerified.Code);
+    }
+
+    // Covers UTCID04 from CSV
+    [Theory]
+    [InlineData(0)]   // Exactly expired
+    [InlineData(-10)] // Expired 10 seconds ago
+    public async Task Handle_BannedUntilExpired_UnbansAndReturnsSuccess(int extraSeconds)
+    {
+        // Arrange
+        var command = new LoginCommand { Email = "expiredban@kickify.com", Password = "ValidPassword!" };
+        var user = new User
+        {
+            Email = command.Email,
+            PasswordHash = "hashedPassword",
+            IsActive = false,
+            IsEmailVerified = true,
+            BannedUntil = DateTime.UtcNow.AddSeconds(extraSeconds)
+        };
+
+        _userRepositoryMock.Setup(repo => repo.GetByEmailAsync(command.Email, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+
+        _passwordHasherMock.Setup(hasher => hasher.Verify(command.Password, user.PasswordHash))
+            .Returns(true);
+
+        _jwtProviderMock.Setup(jwt => jwt.GetForCredentialsAsync(command.Email))
+            .ReturnsAsync("valid_jwt_token");
+
+        _jwtProviderMock.Setup(jwt => jwt.GenerateRefreshToken())
+            .Returns("valid_refresh_token");
+
+        // Act
+        var result = await _sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeNull();
+        result.Value.AccessToken.Should().Be("valid_jwt_token");
+
+        user.IsActive.Should().BeTrue("Because the ban has expired, so IsActive flips to true");
+        user.BannedUntil.Should().BeNull("Because the ban has expired, so BannedUntil gets reset");
+
+        _userRepositoryMock.Verify(repo => repo.Update(user), Times.Once);
+        _refreshTokenRepositoryMock.Verify(repo => repo.AddAsync(It.IsAny<RefreshToken>()), Times.Once);
+        _unitOfWorkMock.Verify(uow => uow.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // Covers UTCID05 from CSV
+    [Fact]
+    public async Task Handle_ValidCredentials_ReturnsSuccessWithJwtTokens()
+    {
+        // Arrange
+        var command = new LoginCommand { Email = "valid@kickify.com", Password = "ValidPassword!" };
+        var user = new User
+        {
+            Email = command.Email,
+            PasswordHash = "hashedPassword",
+            IsActive = true,
+            IsEmailVerified = true
+        };
+
+        _userRepositoryMock.Setup(repo => repo.GetByEmailAsync(command.Email, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+
+        _passwordHasherMock.Setup(hasher => hasher.Verify(command.Password, user.PasswordHash))
+            .Returns(true);
+
+        _jwtProviderMock.Setup(jwt => jwt.GetForCredentialsAsync(command.Email))
+            .ReturnsAsync("jwt_token_123");
+
+        _jwtProviderMock.Setup(jwt => jwt.GenerateRefreshToken())
+            .Returns("refresh_token_xyz");
+
+        // Act
+        var result = await _sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeNull();
+        result.Value.AccessToken.Should().Be("jwt_token_123");
+        result.Value.RefreshToken.Should().Be("refresh_token_xyz");
+
+        _refreshTokenRepositoryMock.Verify(repo => repo.AddAsync(It.IsAny<RefreshToken>()), Times.Once);
+        _unitOfWorkMock.Verify(uow => uow.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
 }
+
+
 
