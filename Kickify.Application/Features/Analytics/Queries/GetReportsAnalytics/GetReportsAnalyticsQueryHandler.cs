@@ -1,5 +1,6 @@
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
+using Kickify.Application.Features.Analytics;
 using Kickify.Domain.Common;
 using Kickify.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -99,8 +100,10 @@ public class GetReportsAnalyticsQueryHandler
         var currentMonthEndUtc = ToUtc(currentMonthEnd, tz);
         var prevMonthStartUtc = ToUtc(prevMonthStart, tz);
 
-        var monthlyRevenue = await CalcNetRevenue(currentMonthStartUtc, currentMonthEndUtc, cancellationToken);
-        var prevMonthlyRevenue = await CalcNetRevenue(prevMonthStartUtc, currentMonthStartUtc, cancellationToken);
+        var monthlyRevenue = await CompletedBookingRevenue.SumTotalAmountAsync(
+            _db.Bookings, currentMonthStartUtc, currentMonthEndUtc, cancellationToken);
+        var prevMonthlyRevenue = await CompletedBookingRevenue.SumTotalAmountAsync(
+            _db.Bookings, prevMonthStartUtc, currentMonthStartUtc, cancellationToken);
         var monthlyRevenueChangePct = CalcChangePct(monthlyRevenue, prevMonthlyRevenue);
 
         var summary = new ReportsAnalyticsSummaryDto(
@@ -184,18 +187,12 @@ public class GetReportsAnalyticsQueryHandler
         bookingsByVenueType = bookingsByVenueType.OrderBy(x => x.Type).ToList();
 
         // ════════════════════════════════════════════
-        // Revenue Analysis Tab: Monthly Revenue & Bookings
+        // Revenue Analysis Tab: Monthly Revenue & Bookings (completed matches only)
         // ════════════════════════════════════════════
-        var allTransactions = await _db.WalletTransactions
-            .Where(t => t.CreatedAt >= fromUtc && t.CreatedAt < toUtcExclusive
-                && (t.TransactionType == TransactionType.BookingIncome
-                    || t.TransactionType == TransactionType.Refund))
+        var completedBookingRevenueRows = await _db.Bookings
             .AsNoTracking()
-            .ToListAsync(cancellationToken);
-
-        var allBookingsInPeriod = await _db.Bookings
-            .Where(b => b.BookingDate >= fromUtc && b.BookingDate < toUtcExclusive)
-            .Select(b => b.BookingDate)
+            .WhereRecognizedBetween(fromUtc, toUtcExclusive)
+            .Select(b => new { b.TotalAmount, CompletedAt = b.MatchRoom.UpdatedAt })
             .ToListAsync(cancellationToken);
 
         var monthlyRevenueAndBookings = new List<MonthlyRevenueAndBookingsDto>();
@@ -206,19 +203,14 @@ public class GetReportsAnalyticsQueryHandler
             var mStart = ToUtc(revMonthCursor, tz);
             var mEnd = ToUtc(revMonthCursor.AddMonths(1), tz);
 
-            var paid = allTransactions
-                .Where(t => t.TransactionType == TransactionType.BookingIncome
-                    && t.CreatedAt >= mStart && t.CreatedAt < mEnd)
-                .Sum(t => t.Amount);
-            var refunded = allTransactions
-                .Where(t => t.TransactionType == TransactionType.Refund
-                    && t.CreatedAt >= mStart && t.CreatedAt < mEnd)
-                .Sum(t => Math.Abs(t.Amount));
-
-            var bookingsInMonth = allBookingsInPeriod.Count(d => d >= mStart && d < mEnd);
+            var revenueInMonth = completedBookingRevenueRows
+                .Where(x => x.CompletedAt >= mStart && x.CompletedAt < mEnd)
+                .Sum(x => x.TotalAmount);
+            var completedBookingsInMonth = completedBookingRevenueRows
+                .Count(x => x.CompletedAt >= mStart && x.CompletedAt < mEnd);
 
             monthlyRevenueAndBookings.Add(new MonthlyRevenueAndBookingsDto(
-                revMonthCursor.ToString("yyyy-MM"), paid - refunded, bookingsInMonth));
+                revMonthCursor.ToString("yyyy-MM"), revenueInMonth, completedBookingsInMonth));
 
             revMonthCursor = revMonthCursor.AddMonths(1);
         }
@@ -246,19 +238,6 @@ public class GetReportsAnalyticsQueryHandler
     }
 
     // ── Helpers ──
-
-    private async Task<decimal> CalcNetRevenue(DateTime fromUtc, DateTime toUtcExclusive, CancellationToken ct)
-    {
-        var txns = await _db.WalletTransactions
-            .Where(t => t.CreatedAt >= fromUtc && t.CreatedAt < toUtcExclusive
-                && (t.TransactionType == TransactionType.BookingIncome
-                    || t.TransactionType == TransactionType.Refund))
-            .ToListAsync(ct);
-
-        var paid = txns.Where(t => t.TransactionType == TransactionType.BookingIncome).Sum(t => t.Amount);
-        var refund = txns.Where(t => t.TransactionType == TransactionType.Refund).Sum(t => Math.Abs(t.Amount));
-        return paid - refund;
-    }
 
     private static double? CalcChangePct(decimal current, decimal previous)
     {

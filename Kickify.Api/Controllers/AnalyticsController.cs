@@ -1,4 +1,6 @@
 using Kickify.Api.Extensions;
+using Kickify.Application.Features.Analytics.Queries.GetAdminBookingRevenueDetail;
+using Kickify.Application.Features.Analytics.Queries.GetAdminBookingRevenueList;
 using Kickify.Application.Features.Analytics.Queries.GetAdminDashboard;
 using Kickify.Application.Features.Analytics.Queries.GetReportsAnalytics;
 using Kickify.Application.Features.Analytics.Queries.GetVenueDashboard;
@@ -73,6 +75,39 @@ public class AnalyticsController : ControllerBase
         CancellationToken cancellationToken = default)
     {
         var query = new GetReportsAnalyticsQuery(fromDate, toDate, timezone);
+        var result = await _sender.Send(query, cancellationToken);
+        return result.MatchOk();
+    }
+
+    /// <summary>
+    /// Paginated list of platform booking revenue (completed matches) for admin.
+    /// </summary>
+    [Authorize(Roles = "Admin")]
+    [HttpGet("admin/booking-revenue")]
+    public async Task<IResult> GetAdminBookingRevenueList(
+        [FromQuery] DateTime fromDate,
+        [FromQuery] DateTime toDate,
+        [FromQuery] string? timezone,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var query = new GetAdminBookingRevenueListQuery(
+            fromDate, toDate, timezone, page, pageSize);
+        var result = await _sender.Send(query, cancellationToken);
+        return result.MatchOk();
+    }
+
+    /// <summary>
+    /// Detail of one completed-match booking revenue row for admin.
+    /// </summary>
+    [Authorize(Roles = "Admin")]
+    [HttpGet("admin/booking-revenue/{bookingId:guid}")]
+    public async Task<IResult> GetAdminBookingRevenueDetail(
+        Guid bookingId,
+        CancellationToken cancellationToken = default)
+    {
+        var query = new GetAdminBookingRevenueDetailQuery(bookingId);
         var result = await _sender.Send(query, cancellationToken);
         return result.MatchOk();
     }

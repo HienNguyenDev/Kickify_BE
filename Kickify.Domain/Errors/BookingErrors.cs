@@ -55,5 +55,9 @@ namespace Kickify.Domain.Errors
         public static readonly Error NotVenueOwner = Error.Failure(
             "Bookings.NotVenueOwner",
             "You must be a venue owner to access this resource");
+
+        public static Error NotEligibleForRevenueReport(Guid bookingId) => Error.Problem(
+            "Bookings.NotEligibleForRevenueReport",
+            $"Booking '{bookingId}' does not have completed match revenue (match not finished or booking cancelled).");
     }
 }
