@@ -13,7 +13,7 @@ namespace Kickify.Api.Controllers;
 
 [ApiController]
 [Route("api/announcements")]
-[Authorize(Roles = "Admin")]
+[Authorize]
 public class AnnouncementsController : ControllerBase
 {
     private readonly ISender _sender;
@@ -26,8 +26,9 @@ public class AnnouncementsController : ControllerBase
     /// <summary>
     /// Get announcements with optional filters
     /// </summary>
+    /// <summary>Admin and venue owners can view announcements.</summary>
     [HttpGet]
-    [Authorize]
+    [Authorize(Roles = "Admin,VenueOwner")]
     public async Task<IResult> GetAnnouncements(
         [FromQuery] AnnouncementType? announcementType = null,
         [FromQuery] bool? isActive = null,
@@ -50,6 +51,7 @@ public class AnnouncementsController : ControllerBase
     /// [Admin] Create a new announcement and push notification to all users
     /// </summary>
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     public async Task<IResult> CreateAnnouncement(
         [FromBody] CreateAnnouncementRequest request,
         CancellationToken cancellationToken)
@@ -71,6 +73,7 @@ public class AnnouncementsController : ControllerBase
     /// [Admin] Update an announcement and push notification to all users
     /// </summary>
     [HttpPut("{announcementId:guid}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IResult> UpdateAnnouncement(
         Guid announcementId,
         [FromBody] UpdateAnnouncementRequest request,
@@ -95,6 +98,7 @@ public class AnnouncementsController : ControllerBase
     /// [Admin] Delete an announcement
     /// </summary>
     [HttpDelete("{announcementId:guid}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IResult> DeleteAnnouncement(
         Guid announcementId,
         CancellationToken cancellationToken)

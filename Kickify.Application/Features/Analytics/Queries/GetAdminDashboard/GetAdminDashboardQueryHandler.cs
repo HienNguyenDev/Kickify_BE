@@ -1,5 +1,6 @@
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
+using Kickify.Application.Features.Analytics;
 using Kickify.Domain.Common;
 using Kickify.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -75,8 +76,10 @@ public class GetAdminDashboardQueryHandler
         var thirtyDaysAgoUtc = ToUtc(thirtyDaysAgoLocal, tz);
         var sixtyDaysAgoUtc = ToUtc(sixtyDaysAgoLocal, tz);
 
-        var revenue30d = await CalcNetRevenue(thirtyDaysAgoUtc, todayEndUtc, cancellationToken);
-        var revenuePrev30d = await CalcNetRevenue(sixtyDaysAgoUtc, thirtyDaysAgoUtc, cancellationToken);
+        var revenue30d = await CompletedBookingRevenue.SumTotalAmountAsync(
+            _db.Bookings, thirtyDaysAgoUtc, todayEndUtc, cancellationToken);
+        var revenuePrev30d = await CompletedBookingRevenue.SumTotalAmountAsync(
+            _db.Bookings, sixtyDaysAgoUtc, thirtyDaysAgoUtc, cancellationToken);
         var revenue30dChangePct = CalcChangePct(revenue30d, revenuePrev30d);
 
         var kpi = new AdminKpiDto(
@@ -147,32 +150,23 @@ public class GetAdminDashboardQueryHandler
         }
 
         // ════════════════════════════════════════════
-        // Chart: Revenue Trend
+        // Chart: Revenue Trend (completed field bookings, by completion day in timezone)
         // ════════════════════════════════════════════
-        var allTransactions = await _db.WalletTransactions
-            .Where(t => t.CreatedAt >= chartStartUtc && t.CreatedAt < todayEndUtc
-                && (t.TransactionType == TransactionType.BookingIncome
-                    || t.TransactionType == TransactionType.Refund))
+        var revenueRows = await _db.Bookings
             .AsNoTracking()
+            .WhereRecognizedBetween(chartStartUtc, todayEndUtc)
+            .Select(b => new { b.TotalAmount, CompletedAt = b.MatchRoom.UpdatedAt })
             .ToListAsync(cancellationToken);
 
         var revenueTrend = new List<RevenueTrendItemDto>();
         for (int i = 0; i < request.ChartDays; i++)
         {
             var day = chartStartLocal.AddDays(i);
-            var dayStart = ToUtc(day, tz);
-            var dayEnd = ToUtc(day.AddDays(1), tz);
+            var dayRevenue = revenueRows
+                .Where(r => ToLocalDateUtc(r.CompletedAt, tz) == day)
+                .Sum(r => r.TotalAmount);
 
-            var paid = allTransactions
-                .Where(t => t.TransactionType == TransactionType.BookingIncome
-                    && t.CreatedAt >= dayStart && t.CreatedAt < dayEnd)
-                .Sum(t => t.Amount);
-            var refunded = allTransactions
-                .Where(t => t.TransactionType == TransactionType.Refund
-                    && t.CreatedAt >= dayStart && t.CreatedAt < dayEnd)
-                .Sum(t => Math.Abs(t.Amount));
-
-            revenueTrend.Add(new RevenueTrendItemDto(day.ToString("yyyy-MM-dd"), Math.Max(0m, paid - refunded)));
+            revenueTrend.Add(new RevenueTrendItemDto(day.ToString("yyyy-MM-dd"), Math.Max(0m, dayRevenue)));
         }
 
         // ════════════════════════════════════════════
@@ -248,18 +242,12 @@ public class GetAdminDashboardQueryHandler
             .CountAsync(ct);
     }
 
-    private async Task<decimal> CalcNetRevenue(
-        DateTime fromUtc, DateTime toUtcExclusive, CancellationToken ct)
+    private static DateTime ToLocalDateUtc(DateTime utcTimestamp, TimeZoneInfo tz)
     {
-        var txns = await _db.WalletTransactions
-            .Where(t => t.CreatedAt >= fromUtc && t.CreatedAt < toUtcExclusive
-                && (t.TransactionType == TransactionType.BookingIncome
-                    || t.TransactionType == TransactionType.Refund))
-            .ToListAsync(ct);
-
-        var paid = txns.Where(t => t.TransactionType == TransactionType.BookingIncome).Sum(t => Math.Abs(t.Amount));
-        var refund = txns.Where(t => t.TransactionType == TransactionType.Refund).Sum(t => Math.Abs(t.Amount));
-        return Math.Max(0m, paid - refund);
+        var utc = utcTimestamp.Kind == DateTimeKind.Utc
+            ? utcTimestamp
+            : DateTime.SpecifyKind(utcTimestamp, DateTimeKind.Utc);
+        return TimeZoneInfo.ConvertTimeFromUtc(utc, tz).Date;
     }
 
     private static double? CalcChangePct(decimal current, decimal previous)
