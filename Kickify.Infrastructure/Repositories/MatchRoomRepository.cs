@@ -178,12 +178,23 @@ namespace Kickify.Infrastructure.Repositories
                 .Include(r => r.RoomParticipants)
                 .Where(r => r.RoomParticipants.Any(p => p.UserId == userId));
 
-            // availableOnly: true = all rooms except Cancelled; false = only Cancelled; null = no status filter
+            // Filter based on availableOnly flag
             if (availableOnly.HasValue)
             {
-                query = availableOnly.Value
-                    ? query.Where(r => r.Status != RoomStatus.Cancelled)
-                    : query.Where(r => r.Status == RoomStatus.Cancelled);
+                if (availableOnly.Value)
+                {
+                    query = query.Where(r => 
+                        r.Status == Kickify.Domain.Enums.RoomStatus.Open ||
+                        r.Status == Kickify.Domain.Enums.RoomStatus.Locked ||
+                        r.Status == Kickify.Domain.Enums.RoomStatus.InProgress ||
+                        r.Status == Kickify.Domain.Enums.RoomStatus.Reviewing);
+                }
+                else
+                {
+                    query = query.Where(r => 
+                        r.Status == Kickify.Domain.Enums.RoomStatus.Completed ||
+                        r.Status == Kickify.Domain.Enums.RoomStatus.Cancelled);
+                }
             }
 
             var total = await query.CountAsync(cancellationToken);
