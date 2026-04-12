@@ -88,4 +88,12 @@ public class FriendshipRepository : GenericRepository<Friendship>, IFriendshipRe
         var requests = await query.OrderByDescending(f => f.CreatedAt).Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(cancellationToken);
         return (requests, total);
     }
+
+    public async Task<List<Guid>> GetFriendIdsAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await _dbSet
+            .Where(f => (f.RequesterId == userId || f.AddresseeId == userId) && f.Status == FriendshipStatus.Accepted)
+            .Select(f => f.RequesterId == userId ? f.AddresseeId : f.RequesterId)
+            .ToListAsync(cancellationToken);
+    }
 }
