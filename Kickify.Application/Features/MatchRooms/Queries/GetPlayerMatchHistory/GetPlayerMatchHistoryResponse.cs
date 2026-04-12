@@ -27,7 +27,16 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetPlayerMatchHistory
         int? TeamAScore,
         int? TeamBScore,
         string Status,
-        DateTime CreatedAt
+        DateTime CreatedAt,
+        int TotalSlots,
+        int FilledSlots,
+        List<PlayerRoomVenuePhotoDto> VenuePhotos
+    );
+
+    public record PlayerRoomVenuePhotoDto(
+        Guid PhotoId,
+        string PhotoUrl,
+        int DisplayOrder
     );
 
     public record PlayerRoomHostDto(

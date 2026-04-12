@@ -35,5 +35,11 @@ namespace Kickify.Application.Abstractions.Repositories
 
         Task<List<MatchRoom>> GetActiveRoomsForUserByDateAsync(Guid userId, DateTime matchDate, CancellationToken cancellationToken);
 
+        Task<(IEnumerable<MatchRoom> Rooms, int Total)> GetRecommendedRoomsAsync(
+            Guid userId,
+            List<Guid> friendIds,
+            int page,
+            int pageSize,
+            CancellationToken cancellationToken = default);
     }
 }

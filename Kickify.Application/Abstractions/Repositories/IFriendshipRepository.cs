@@ -11,4 +11,5 @@ public interface IFriendshipRepository : IGenericRepository<Friendship>
     Task<(IEnumerable<Friendship> Friendships, int Total)> GetFriendsAsync(Guid userId, string? searchTerm = null, int page = 1, int pageSize = 20, CancellationToken cancellationToken = default);
     Task<(IEnumerable<Friendship> Requests, int Total)> GetPendingRequestsAsync(Guid userId, string? searchTerm = null, int page = 1, int pageSize = 20, CancellationToken cancellationToken = default);
     Task<(IEnumerable<Friendship> Requests, int Total)> GetSentRequestsAsync(Guid userId, string? searchTerm = null, int page = 1, int pageSize = 20, CancellationToken cancellationToken = default);
+    Task<List<Guid>> GetFriendIdsAsync(Guid userId, CancellationToken cancellationToken = default);
 }

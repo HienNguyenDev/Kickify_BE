@@ -11,10 +11,12 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetPlayerMatchHistory
     public class GetPlayerMatchHistoryQueryHandler : IQueryHandler<GetPlayerMatchHistoryQuery, GetPlayerMatchHistoryResponse>
     {
         private readonly IMatchRoomRepository _matchRoomRepository;
+        private readonly IVenuePhotoRepository _venuePhotoRepository;
 
-        public GetPlayerMatchHistoryQueryHandler(IMatchRoomRepository matchRoomRepository)
+        public GetPlayerMatchHistoryQueryHandler(IMatchRoomRepository matchRoomRepository, IVenuePhotoRepository venuePhotoRepository)
         {
             _matchRoomRepository = matchRoomRepository;
+            _venuePhotoRepository = venuePhotoRepository;
         }
 
         public async Task<Result<GetPlayerMatchHistoryResponse>> Handle(GetPlayerMatchHistoryQuery request, CancellationToken cancellationToken)
@@ -25,6 +27,20 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetPlayerMatchHistory
                 request.PageSize,
                 cancellationToken
             );
+
+            // Fetch photos for all venues in a single query
+            var venueIds = rooms.Where(r => r.Field?.Venue != null).Select(r => r.Field!.Venue.VenueId).Distinct().ToList();
+            var venuePhotosDict = new System.Collections.Generic.Dictionary<System.Guid, System.Collections.Generic.List<PlayerRoomVenuePhotoDto>>();
+            if (venueIds.Any())
+            {
+                var photosDict = await _venuePhotoRepository.GetPhotosByVenueIdsAsync(venueIds, cancellationToken);
+                foreach (var kvp in photosDict)
+                {
+                    venuePhotosDict[kvp.Key] = kvp.Value
+                        .Select(p => new PlayerRoomVenuePhotoDto(p.PhotoId, p.PhotoUrl, p.DisplayOrder))
+                        .ToList();
+                }
+            }
 
             var roomItems = rooms.Select(room =>
             {
@@ -51,6 +67,12 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetPlayerMatchHistory
                     );
                 }
 
+                var venuePhotos = new System.Collections.Generic.List<PlayerRoomVenuePhotoDto>();
+                if (room.Field?.Venue != null && venuePhotosDict.ContainsKey(room.Field.Venue.VenueId))
+                {
+                    venuePhotos = venuePhotosDict[room.Field.Venue.VenueId];
+                }
+
                 return new PlayerMatchRoomItemDto(
                     room.RoomId,
                     room.HostId,
@@ -67,7 +89,10 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetPlayerMatchHistory
                     room.TeamAScore,
                     room.TeamBScore,
                     room.Status.ToString(),
-                    room.CreatedAt
+                    room.CreatedAt,
+                    room.TotalSlots,
+                    room.FilledSlots,
+                    venuePhotos
                 );
             }).ToList();
 
