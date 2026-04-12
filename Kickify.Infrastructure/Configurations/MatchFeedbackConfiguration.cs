@@ -43,7 +43,7 @@ public class MatchFeedbackConfiguration : IEntityTypeConfiguration<MatchFeedback
             .HasColumnType("text");
 
         builder.Property(mf => mf.ResponseDate)
-            .HasColumnType("timestamp");
+            .HasColumnType("timestamp with time zone");
 
         // Indexes
         builder.HasIndex(mf => mf.MatchId);

@@ -33,7 +33,7 @@ public class ProcessReportCommandHandler : ICommandHandler<ProcessReportCommand,
         if (report.Status != ReportStatus.Pending)
             return Result.Failure<ProcessReportResponse>(PlayerReportErrors.AlreadyProcessed);
 
-        var now = DateTime.UtcNow;
+        var now = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
 
         report.Status = request.IsApproved ? ReportStatus.Resolved : ReportStatus.Dismissed;
         report.AdminNotes = request.AdminNotes;

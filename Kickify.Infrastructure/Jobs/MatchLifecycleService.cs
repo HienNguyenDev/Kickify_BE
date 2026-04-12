@@ -514,8 +514,8 @@ public class MatchLifecycleService : IMatchLifecycleService
                     activeEloConfig.K5Trust),
                 feedbackForPlayer.Select(f => new EloCalculationFeedback(
                     f.ReviewerId.ToString(),
-                    f.Rating,
-                    f.Comment)).ToList());
+                    Math.Clamp(f.Rating, 1, 5),
+                    f.Comment ?? string.Empty)).ToList());
 
             var eloResponse = await sentimentAnalysisService.CalculateEloAsync(eloRequest);
             if (eloResponse is not null && ValidateEloResponse(eloResponse, profile.CurrentElo, _logger))
@@ -567,7 +567,10 @@ public class MatchLifecycleService : IMatchLifecycleService
                     profile.ReportCount,
                     string.Empty),
                 await BuildRecentMatchPayloadAsync(participant.UserId, dbContext),
-                feedbackForPlayer.Select(f => new RadarFeedbackReceived(f.Rating, f.Comment, Math.Max(1, (DateTime.UtcNow - f.CreatedAt).Days))).ToList());
+                feedbackForPlayer.Select(f => new RadarFeedbackReceived(
+                    Math.Clamp(f.Rating, 1, 5),
+                    f.Comment ?? string.Empty,
+                    Math.Max(1, (DateTime.UtcNow - f.CreatedAt).Days))).ToList());
 
             var radarResponse = await sentimentAnalysisService.AnalyzeRadarAsync(radarRequest);
             if (radarResponse is not null && ValidateRadarResponse(radarResponse, _logger))
