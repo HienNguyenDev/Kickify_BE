@@ -217,5 +217,35 @@ namespace Kickify.Infrastructure.Repositories
                          && r.RoomParticipants.Any(p => p.UserId == userId))
                 .ToListAsync(cancellationToken);
         }
+
+        public async Task<(IEnumerable<MatchRoom> Rooms, int Total)> GetRecommendedRoomsAsync(
+            Guid userId,
+            List<Guid> friendIds,
+            int page,
+            int pageSize,
+            CancellationToken cancellationToken = default)
+        {
+            var query = _dbSet
+                .AsNoTracking()
+                .Include(r => r.Host)
+                .Include(r => r.Field)
+                    .ThenInclude(f => f!.Venue)
+                .Include(r => r.RoomParticipants)
+                .Where(r => r.Status == RoomStatus.Open && r.FilledSlots < r.TotalSlots)
+                // Phải có bạn bè tham gia
+                .Where(r => r.RoomParticipants.Any(p => friendIds.Contains(p.UserId)))
+                // Không nằm trong danh sách các match room mà User hiện tại đã là người tham gia
+                .Where(r => !r.RoomParticipants.Any(p => p.UserId == userId));
+
+            var total = await query.CountAsync(cancellationToken);
+
+            var rooms = await query
+                .OrderByDescending(r => r.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+
+            return (rooms, total);
+        }
     }
 }
