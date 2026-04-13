@@ -17,6 +17,7 @@ using Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById;
 using Kickify.Application.Features.MatchRooms.Queries.GetMatchRooms;
 using Kickify.Application.Features.MatchRooms.Queries.GetMyMatchRooms;
 using Kickify.Application.Features.MatchRooms.Queries.GetPlayerMatchHistory;
+using Kickify.Application.Features.MatchRooms.Queries.GetRecommendedMatchRooms;
 using Kickify.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -113,6 +114,21 @@ namespace Kickify.Api.Controllers
         {
             var query = new GetMatchRoomsQuery(date, matchFormat, availableOnly, latitude, longitude, radiusKm, page, pageSize);
 
+            var result = await _sender.Send(query, cancellationToken);
+
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Get recommended match rooms (from friends, with Open status)
+        /// </summary>
+        [HttpGet("recommended")]
+        public async Task<IResult> GetRecommendedMatchRooms(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
+            CancellationToken cancellationToken = default)
+        {
+            var query = new GetRecommendedMatchRoomsQuery(page, pageSize);
             var result = await _sender.Send(query, cancellationToken);
 
             return result.MatchOk();
