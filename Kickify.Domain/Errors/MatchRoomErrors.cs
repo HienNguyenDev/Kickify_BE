@@ -225,7 +225,14 @@ namespace Kickify.Domain.Errors
         public static readonly Error NotTargetTransferUser = Error.Conflict("MatchRoom.NotTargetTransferUser", "You are not the designated recipient of the host transfer request.");
         public static readonly Error HostTransferRequestAlreadyPending = Error.Conflict("MatchRoom.HostTransferRequestAlreadyPending", "A host transfer request is already pending for another participant.");
         public static readonly Error TargetUserNoLongerParticipant = Error.Conflict("MatchRoom.TargetUserNoLongerParticipant", "Cannot respond to host transfer because the target user is no longer a participant of this room.");
+
+        public static readonly Error InvalidTime = Error.Conflict("MatchRoomErrors.InvalidTime", "Match start time cannot be in the past.");
+        public static readonly Error TooCloseToStartTime = Error.Conflict("MatchRoomErrors.TooCloseToStartTime", "You must create the room at least 30 minutes before the match starts.");
+
+
+
     }
+
 }
 
 
