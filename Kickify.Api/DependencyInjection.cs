@@ -20,7 +20,9 @@ namespace Kickify.Api
             services.AddControllers()
                     .AddJsonOptions(opts =>
                     {
-                        opts.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+                        // Allow integer enum values (e.g. mobile clients) as well as string names.
+                        opts.JsonSerializerOptions.Converters.Add(
+                            new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: true));
                         opts.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
                         opts.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.Never;
                     }); ;

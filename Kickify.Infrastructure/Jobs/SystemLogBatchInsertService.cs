@@ -21,7 +21,6 @@ public sealed class SystemLogBatchInsertService(
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var buffer = new List<SystemLog>(BatchSize);
-        var timer = new PeriodicTimer(FlushInterval);
 
         try
         {
@@ -40,9 +39,12 @@ public sealed class SystemLogBatchInsertService(
                         continue;
                     }
 
+                    // Do not use PeriodicTimer with Task.WhenAny: only one WaitForNextTickAsync may be
+                    // in flight per timer; if the channel wins, the next loop would start a second wait
+                    // and throw InvalidOperationException.
                     var waitForDataTask = queue.Reader.WaitToReadAsync(stoppingToken).AsTask();
-                    var timerTask = timer.WaitForNextTickAsync(stoppingToken).AsTask();
-                    await Task.WhenAny(waitForDataTask, timerTask);
+                    var delayTask = Task.Delay(FlushInterval, stoppingToken);
+                    await Task.WhenAny(waitForDataTask, delayTask);
 
                     if (buffer.Count > 0)
                     {
@@ -66,7 +68,6 @@ public sealed class SystemLogBatchInsertService(
         }
         finally
         {
-            timer.Dispose();
             if (buffer.Count > 0)
             {
                 try

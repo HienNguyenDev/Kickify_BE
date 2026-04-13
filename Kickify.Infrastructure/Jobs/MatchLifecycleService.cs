@@ -390,7 +390,7 @@ public class MatchLifecycleService : IMatchLifecycleService
                 );
 
                 var sentimentResponse = await sentimentAnalysisService.SendFeedbacksForAnalysisAsync(request);
-                if (sentimentResponse is not null && sentimentResponse.SentimentDetails.Count > 0)
+                if (sentimentResponse?.SentimentDetails is { Count: > 0 })
                 {
                     var feedbackById = playerFeedbacks.ToDictionary(x => x.FeedbackId.ToString(), x => x);
                     foreach (var detail in sentimentResponse.SentimentDetails)
