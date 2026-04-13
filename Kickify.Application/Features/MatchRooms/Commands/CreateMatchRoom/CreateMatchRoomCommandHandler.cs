@@ -1,4 +1,4 @@
-using Kickify.Application.Abstractions.Authentication;
+﻿using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
@@ -180,22 +180,72 @@ public class CreateMatchRoomCommandHandler : ICommandHandler<CreateMatchRoomComm
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var now = DateTime.UtcNow;
-        // Make sure it handles correctly based on standard DateTime comparisons
-        var matchStartDateTime = request.MatchDate.Date.Add(request.StartTime);
-        var timeToMatchStartMinus2h = matchStartDateTime.AddHours(-2) - now;
+        //var now = DateTime.UtcNow;
+        //// Make sure it handles correctly based on standard DateTime comparisons
+        //var matchStartDateTime = request.MatchDate.Date.Add(request.StartTime);
+        //var timeToMatchStartMinus2h = matchStartDateTime.AddHours(-2) - now;
+        //var timeTo24h = TimeSpan.FromHours(24);
+
+        //var calculatedDelay = timeToMatchStartMinus2h < timeTo24h ? timeToMatchStartMinus2h : timeTo24h;
+        //if (calculatedDelay <= TimeSpan.Zero) 
+        //{
+        //    calculatedDelay = TimeSpan.FromMinutes(15);
+        //}
+
+        //_roomAutoCloseService.ScheduleAutoClose(room.RoomId, calculatedDelay);
+
+        //var matchStartTime = room.MatchDate.Add(room.StartTime);
+        //_matchLifecycleService.SchedulePreMatchReminders(room.RoomId, matchStartTime);
+        var utcNow = DateTime.UtcNow;
+
+        // 1. Xác định múi giờ Việt Nam (giống hàm CheckAvailability)
+        TimeZoneInfo vnTimeZone;
+        try
+        {
+            vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"); // Windows
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Ho_Chi_Minh"); // Linux/Docker
+        }
+
+        // 2. Lấy giờ đá do User nhập (Giờ VN) và ép kiểu nó thành DateTimeKind.Unspecified
+        // để báo cho C# biết con số này chưa gắn với múi giờ nào.
+        var matchStartVietnam = DateTime.SpecifyKind(request.MatchDate.Date.Add(request.StartTime), DateTimeKind.Unspecified);
+
+        // 3. Chuyển đổi giờ đá từ VN sang chuẩn UTC
+        var matchStartUtc = TimeZoneInfo.ConvertTimeToUtc(matchStartVietnam, vnTimeZone);
+
+        // 4. BÂY GIỜ MỚI LÀM PHÉP TRỪ (Cả 2 đều đang ở hệ UTC+0)
+        var timeToMatchStartMinus2h = matchStartUtc.AddHours(-2) - utcNow;
         var timeTo24h = TimeSpan.FromHours(24);
 
         var calculatedDelay = timeToMatchStartMinus2h < timeTo24h ? timeToMatchStartMinus2h : timeTo24h;
-        if (calculatedDelay <= TimeSpan.Zero) 
+        if (calculatedDelay <= TimeSpan.Zero)
         {
+            // Nếu tạo phòng quá sát giờ đá (< 2 tiếng), cho họ 15 phút để gom người
             calculatedDelay = TimeSpan.FromMinutes(15);
         }
 
+        // Lên lịch Hangfire với số giây delay chuẩn xác
         _roomAutoCloseService.ScheduleAutoClose(room.RoomId, calculatedDelay);
 
-        var matchStartTime = room.MatchDate.Add(room.StartTime);
-        _matchLifecycleService.SchedulePreMatchReminders(room.RoomId, matchStartTime);
+        // Tương tự, nhắc nhở cũng phải lên lịch theo hệ UTC (nếu hàm này dùng Hangfire background job)
+        _matchLifecycleService.SchedulePreMatchReminders(room.RoomId, matchStartUtc);
+       
+
+        // Quy định: Phải tạo phòng trước giờ bóng lăn ÍT NHẤT 30 phút
+        var minAdvanceTime = TimeSpan.FromMinutes(30);
+
+        if (matchStartUtc <= utcNow)
+        {
+            return Result.Failure<CreateMatchRoomResponse>(MatchRoomErrors.InvalidTime);
+        }
+
+        if (matchStartUtc - utcNow < minAdvanceTime)
+        {
+            return Result.Failure<CreateMatchRoomResponse>(MatchRoomErrors.TooCloseToStartTime);
+        }
 
         return Result.Success(new CreateMatchRoomResponse(
             room.RoomId,
