@@ -62,6 +62,16 @@ public class SentimentAnalysisService : ISentimentAnalysisService
             }
 
             var result = await response.Content.ReadFromJsonAsync<SentimentBatchResponse>(SnakeCaseOptions, cancellationToken);
+            if (result is null)
+            {
+                return null;
+            }
+
+            if (result.SentimentDetails is null)
+            {
+                result = new SentimentBatchResponse(result.MatchId, result.TargetPlayerId, []);
+            }
+
             _logger.LogInformation(
                 "Successfully sent feedbacks for player {PlayerId} in match {MatchId} to AI",
                 request.TargetPlayerId, request.MatchId);
