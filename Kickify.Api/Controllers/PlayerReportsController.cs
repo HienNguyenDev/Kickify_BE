@@ -1,4 +1,5 @@
 using Kickify.Api.Extensions;
+using Kickify.Api.Requests;
 using Kickify.Application.Features.PlayerReports.Commands.ProcessReport;
 using Kickify.Application.Features.PlayerReports.Commands.ReportPlayer;
 using Kickify.Application.Features.PlayerReports.Queries.GetReports;
@@ -6,6 +7,7 @@ using Kickify.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
 namespace Kickify.Api.Controllers;
 
@@ -26,9 +28,23 @@ public class PlayerReportsController : ControllerBase
     /// </summary>
     [HttpPost]
     public async Task<IResult> ReportPlayer(
-        [FromBody] ReportPlayerCommand command,
+        [FromBody] ReportPlayerRequest request,
         CancellationToken cancellationToken)
     {
+        if (!TryParseReportType(request.ReportType, out var reportType))
+        {
+            return Results.BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                ["reportType"] = ["ReportType is invalid. Use enum name or numeric value."]
+            }));
+        }
+
+        var command = new ReportPlayerCommand(
+            request.ReportedUserId,
+            reportType,
+            request.Description,
+            request.MatchId);
+
         var result = await _sender.Send(command, cancellationToken);
         return result.MatchOk();
     }
@@ -68,11 +84,33 @@ public class PlayerReportsController : ControllerBase
         var result = await _sender.Send(command, cancellationToken);
         return result.MatchOk();
     }
-}
 
-public class ProcessReportRequest
-{
-    public bool IsApproved { get; set; }
-    public string? AdminNotes { get; set; }
-    public string? ActionTaken { get; set; }
+    private static bool TryParseReportType(JsonElement rawReportType, out ReportType reportType)
+    {
+        reportType = default;
+
+        if (rawReportType.ValueKind == JsonValueKind.Number && rawReportType.TryGetInt32(out var numericValue))
+        {
+            if (Enum.IsDefined(typeof(ReportType), numericValue))
+            {
+                reportType = (ReportType)numericValue;
+                return true;
+            }
+
+            return false;
+        }
+
+        if (rawReportType.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+
+        var value = rawReportType.GetString();
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        return Enum.TryParse(value, ignoreCase: true, out reportType);
+    }
 }
