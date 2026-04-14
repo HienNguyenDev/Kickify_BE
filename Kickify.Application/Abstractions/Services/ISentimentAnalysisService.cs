@@ -22,6 +22,13 @@ public interface ISentimentAnalysisService
     Task<RadarAnalysisResponse?> AnalyzeRadarAsync(
         RadarAnalysisRequest request,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Request AI service to generate feedback suggestion lines by star rating and role.
+    /// </summary>
+    Task<FeedbackSuggestionResponse?> GenerateFeedbackSuggestionsAsync(
+        FeedbackSuggestionRequest request,
+        CancellationToken cancellationToken = default);
 }
 
 public record SentimentBatchRequest(
@@ -182,3 +189,15 @@ public record RadarAssessment(
     string Description,
     string Icon,
     string HighlightAxis);
+
+public record FeedbackSuggestionRequest(
+    int StarRating,
+    int Count,
+    string? Role);
+
+public record FeedbackSuggestionResponse(
+    int StarRating,
+    List<string> Suggestions,
+    string Source,
+    string? ModelUsed,
+    string? FallbackReason);

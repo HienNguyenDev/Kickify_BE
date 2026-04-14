@@ -1,5 +1,6 @@
 using Kickify.Api.Extensions;
 using Kickify.Api.Requests;
+using Kickify.Application.Abstractions.Services;
 using Kickify.Application.Features.MatchFeedbacks.Commands.CreateMatchFeedback;
 using Kickify.Application.Features.MatchFeedbacks.Commands.RespondToFeedback;
 using MediatR;
@@ -14,10 +15,14 @@ namespace Kickify.Api.Controllers;
 public class MatchFeedbacksController : ControllerBase
 {
     private readonly ISender _mediator;
+    private readonly ISentimentAnalysisService _sentimentAnalysisService;
 
-    public MatchFeedbacksController(ISender mediator)
+    public MatchFeedbacksController(
+        ISender mediator,
+        ISentimentAnalysisService sentimentAnalysisService)
     {
         _mediator = mediator;
+        _sentimentAnalysisService = sentimentAnalysisService;
     }
 
     /// <summary>
@@ -56,5 +61,34 @@ public class MatchFeedbacksController : ControllerBase
         var command = new RespondToFeedbackCommand(feedbackId, request.Response);
         var result = await _mediator.Send(command, cancellationToken);
         return result.MatchOk();
+    }
+
+    /// <summary>
+    /// Generate AI feedback suggestions by star rating and optional role.
+    /// </summary>
+    [HttpPost("generate-suggestions")]
+    public async Task<IResult> GenerateFeedbackSuggestions(
+        [FromBody] GenerateFeedbackSuggestionRequest request,
+        CancellationToken cancellationToken)
+    {
+        var aiRequest = new FeedbackSuggestionRequest(
+            StarRating: request.StarRating,
+            Count: request.Count,
+            Role: request.Role
+        );
+
+        var aiResponse = await _sentimentAnalysisService.GenerateFeedbackSuggestionsAsync(
+            aiRequest,
+            cancellationToken);
+
+        if (aiResponse is null)
+        {
+            return Results.Problem(
+                title: "AI feedback generation is unavailable",
+                detail: "Cannot generate feedback suggestions at the moment.",
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+
+        return Results.Ok(aiResponse);
     }
 }
