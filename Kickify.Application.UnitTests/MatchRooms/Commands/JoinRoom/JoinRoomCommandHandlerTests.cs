@@ -1,19 +1,16 @@
-using System.Threading;
-using System.Threading.Tasks;
 using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Application.Abstractions.Services;
 using Kickify.Application.Features.MatchRooms.Commands.JoinRoom;
-using Kickify.Domain.Common;
 using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
 using Kickify.Domain.Errors;
 using Kickify.Domain.Event;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Xunit;
 
 namespace Kickify.Application.UnitTests.MatchRooms.Commands.JoinRoom;
 
@@ -30,7 +27,7 @@ public class JoinRoomCommandHandlerTests
 
     private readonly JoinRoomCommandHandler _sut;
 
-        public JoinRoomCommandHandlerTests()
+    public JoinRoomCommandHandlerTests()
     {
         _matchRoomRepositoryMock
             .Setup(x => x.GetActiveRoomsForUserByDateAsync(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
@@ -269,11 +266,113 @@ public class JoinRoomCommandHandlerTests
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        
+
         // Verify no ParticipantJoinedRoomDomainEvent was raised
         var domainEvents = room.DomainEvents;
         domainEvents.OfType<ParticipantJoinedRoomDomainEvent>().Should().BeEmpty("Because player joining should NOT extend the auto-close timer by 20 minutes anymore.");
     }
+
+    // =========================================================================
+    // NEW TESTS
+    // =========================================================================
+
+    [Fact]
+    public async Task Handle_AlreadyInRoom_ReturnsSuccessIdempotent_UTCID11()
+    {
+        var userId = Guid.NewGuid(); var roomId = Guid.NewGuid();
+        _userContextMock.Setup(x => x.UserId).Returns(userId);
+        _userRepositoryMock.Setup(x => x.GetByIdAsync(userId)).ReturnsAsync(new User { UserId = userId });
+
+        var participant = new RoomParticipant { ParticipantId = Guid.NewGuid(), JoinDate = DateTime.UtcNow };
+        _roomParticipantRepositoryMock.Setup(x => x.GetParticipantByRoomAndUserAsync(roomId, userId, It.IsAny<CancellationToken>())).ReturnsAsync(participant);
+        _matchRoomRepositoryMock.Setup(x => x.GetByIdAsync(roomId)).ReturnsAsync(new MatchRoom { RoomId = roomId, FilledSlots = 1, TotalSlots = 10 });
+
+        var result = await _sut.Handle(new JoinRoomCommand(roomId, null), CancellationToken.None);
+        result.IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Handle_StatusNotOpen_ReturnsFailure_UTCID12()
+    {
+        var userId = Guid.NewGuid(); var roomId = Guid.NewGuid();
+        _userContextMock.Setup(x => x.UserId).Returns(userId);
+        _userRepositoryMock.Setup(x => x.GetByIdAsync(userId)).ReturnsAsync(new User { UserId = userId });
+        _matchRoomRepositoryMock.Setup(x => x.GetRoomWithParticipantsForUpdateAsync(roomId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MatchRoom { RoomId = roomId, Status = RoomStatus.Locked });
+
+        var result = await _sut.Handle(new JoinRoomCommand(roomId, null), CancellationToken.None);
+        result.IsFailure.Should().BeTrue();
+        result.Error!.Code.Should().Be(MatchRoomErrors.NotOpen.Code);
+    }
+
+    [Fact]
+    public async Task Handle_TimeConflict_ReturnsFailure_UTCID13()
+    {
+        var userId = Guid.NewGuid(); var roomId = Guid.NewGuid();
+        _userContextMock.Setup(x => x.UserId).Returns(userId);
+        _userRepositoryMock.Setup(x => x.GetByIdAsync(userId)).ReturnsAsync(new User { UserId = userId });
+        var roomDate = DateTime.UtcNow.Date;
+        _matchRoomRepositoryMock.Setup(x => x.GetRoomWithParticipantsForUpdateAsync(roomId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MatchRoom { RoomId = roomId, Status = RoomStatus.Open, MatchDate = roomDate, StartTime = TimeSpan.FromHours(18), DurationMinutes = 60 });
+        _matchRoomRepositoryMock.Setup(x => x.GetActiveRoomsForUserByDateAsync(userId, roomDate, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<MatchRoom> { new MatchRoom { RoomId = Guid.NewGuid(), MatchDate = roomDate, StartTime = TimeSpan.FromHours(18), DurationMinutes = 60, RoomName = "Other Room" } });
+
+        var result = await _sut.Handle(new JoinRoomCommand(roomId, null), CancellationToken.None);
+        result.IsFailure.Should().BeTrue();
+        result.Error!.Code.Should().Be(MatchRoomErrors.TimeConflict("Other Room").Code);
+    }
+
+    [Fact]
+    public async Task Handle_RoomFull_ReturnsFailure_UTCID14()
+    {
+        var userId = Guid.NewGuid(); var roomId = Guid.NewGuid();
+        _userContextMock.Setup(x => x.UserId).Returns(userId);
+        _userRepositoryMock.Setup(x => x.GetByIdAsync(userId)).ReturnsAsync(new User { UserId = userId });
+        _matchRoomRepositoryMock.Setup(x => x.GetRoomWithParticipantsForUpdateAsync(roomId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MatchRoom { RoomId = roomId, Status = RoomStatus.Open, FilledSlots = 10, TotalSlots = 10, Visibility = Visibility.Public });
+
+        var result = await _sut.Handle(new JoinRoomCommand(roomId, null), CancellationToken.None);
+        result.IsFailure.Should().BeTrue();
+        result.Error!.Code.Should().Be(MatchRoomErrors.RoomFull.Code);
+    }
+
+    [Fact]
+    public async Task Handle_PrivateRoomWrongPassword_ReturnsFailure_UTCID15()
+    {
+        var userId = Guid.NewGuid(); var roomId = Guid.NewGuid();
+        _userContextMock.Setup(x => x.UserId).Returns(userId);
+        _userRepositoryMock.Setup(x => x.GetByIdAsync(userId)).ReturnsAsync(new User { UserId = userId });
+        _matchRoomRepositoryMock.Setup(x => x.GetRoomWithParticipantsForUpdateAsync(roomId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MatchRoom { RoomId = roomId, Status = RoomStatus.Open, FilledSlots = 1, TotalSlots = 10, Visibility = Visibility.Private, RoomPassword = "123" });
+
+        var result = await _sut.Handle(new JoinRoomCommand(roomId, "wrong"), CancellationToken.None);
+        result.IsFailure.Should().BeTrue();
+        result.Error!.Code.Should().Be(MatchRoomErrors.IncorrectRoomPassword.Code);
+    }
+
+    [Fact]
+    public async Task Handle_OpenAndFree_ReturnsSuccess_UTCID16()
+    {
+        var userId = Guid.NewGuid(); var roomId = Guid.NewGuid();
+        _userContextMock.Setup(x => x.UserId).Returns(userId);
+        _userRepositoryMock.Setup(x => x.GetByIdAsync(userId)).ReturnsAsync(new User { UserId = userId, FullName = "Player 1" });
+        _matchRoomRepositoryMock.Setup(x => x.GetRoomWithParticipantsForUpdateAsync(roomId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MatchRoom { RoomId = roomId, Status = RoomStatus.Open, FilledSlots = 1, TotalSlots = 10, Visibility = Visibility.Public, HostId = Guid.NewGuid() });
+
+        var result = await _sut.Handle(new JoinRoomCommand(roomId, null), CancellationToken.None);
+        result.IsSuccess.Should().BeTrue();
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_UserNotFound_ReturnsFailure_UTCID_New()
+    {
+        var userId = Guid.NewGuid(); var roomId = Guid.NewGuid();
+        _userContextMock.SetupGet(x => x.UserId).Returns(userId);
+        _userRepositoryMock.Setup(x => x.GetByIdAsync(userId)).ReturnsAsync((User?)null);
+
+        var result = await _sut.Handle(new JoinRoomCommand(roomId, null), CancellationToken.None);
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be(UserErrors.NotFound(userId).Code);
+    }
 }
-
-
