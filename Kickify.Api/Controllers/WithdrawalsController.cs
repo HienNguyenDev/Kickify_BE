@@ -1,4 +1,5 @@
 using Kickify.Api.Extensions;
+using Kickify.Api.Requests;
 using Kickify.Application.Features.Withdrawals.Commands.CancelWithdrawal;
 using Kickify.Application.Features.Withdrawals.Commands.CreateWithdrawal;
 using Kickify.Application.Features.Withdrawals.Commands.ProcessWithdrawal;
@@ -95,11 +96,5 @@ public class WithdrawalsController : ControllerBase
         var result = await _mediator.Send(command, cancellationToken);
         return result.MatchOk();
     }
-}
-
-public class ProcessWithdrawalRequest
-{
-    public bool IsApproved { get; set; }
-    public string? AdminNotes { get; set; }
 }
  
