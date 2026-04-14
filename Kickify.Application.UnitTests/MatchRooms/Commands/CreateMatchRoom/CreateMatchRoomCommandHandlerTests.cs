@@ -306,6 +306,124 @@ public class CreateMatchRoomCommandHandlerTests
         ), Times.Once);
     }
 
+
+    // Covers UTCID22 from CSV: Match start time is in the past
+    [Fact]
+    public async Task Handle_PastTime_ReturnsInvalidTimeError_UTCID22()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var fieldId = Guid.NewGuid();
+        _userContextMock.Setup(x => x.UserId).Returns(userId);
+        _userRepoMock.Setup(x => x.GetByIdAsync(userId)).ReturnsAsync(new User { UserId = userId });
+
+        TimeZoneInfo vnTimeZone;
+        try
+        {
+            vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Ho_Chi_Minh");
+        }
+
+        var utcNow = DateTime.UtcNow;
+        // Giả lập User nhập vào giờ đá là 1 tiếng TRƯỚC (Quá khứ)
+        var matchStartUtc = utcNow.AddHours(-1);
+        var matchStartVn = TimeZoneInfo.ConvertTimeFromUtc(matchStartUtc, vnTimeZone);
+
+        var field = new Field
+        {
+            FieldId = fieldId,
+            HourlyRate = 100000,
+            Venue = new Venue
+            {
+                Status = VenueStatus.Approved,
+                VenueOperatingHours = new List<VenueOperatingHour>
+                {
+                    new() {
+                        DayOfWeek = (DayOfWeekEnum)matchStartVn.DayOfWeek,
+                        OpenTime = TimeSpan.FromHours(0),
+                        CloseTime = TimeSpan.FromHours(48), // Nới giờ để qua ải OperatingHours
+                        IsClosed = false
+                    }
+                }
+            }
+        };
+
+        _fieldRepoMock.Setup(x => x.GetFieldWithVenueAsync(fieldId, It.IsAny<CancellationToken>())).ReturnsAsync(field);
+        _bookingRepoMock.Setup(x => x.IsTimeSlotAvailableAsync(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var command = CreateValidCommand(fieldId, matchStartVn.Date, matchStartVn.TimeOfDay);
+
+        // Act
+        var result = await _sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be(MatchRoomErrors.InvalidTime.Code);
+    }
+
+    // Covers UTCID23 from CSV: Match start time is too close (less than 30 mins)
+    [Fact]
+    public async Task Handle_TooCloseToStartTime_ReturnsError_UTCID23()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var fieldId = Guid.NewGuid();
+        _userContextMock.Setup(x => x.UserId).Returns(userId);
+        _userRepoMock.Setup(x => x.GetByIdAsync(userId)).ReturnsAsync(new User { UserId = userId });
+
+        TimeZoneInfo vnTimeZone;
+        try
+        {
+            vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Ho_Chi_Minh");
+        }
+
+        var utcNow = DateTime.UtcNow;
+        // Giả lập User tạo phòng nhưng chỉ cách giờ đá 20 phút (< 30 phút ranh giới)
+        var matchStartUtc = utcNow.AddMinutes(20);
+        var matchStartVn = TimeZoneInfo.ConvertTimeFromUtc(matchStartUtc, vnTimeZone);
+
+        var field = new Field
+        {
+            FieldId = fieldId,
+            HourlyRate = 100000,
+            Venue = new Venue
+            {
+                Status = VenueStatus.Approved,
+                VenueOperatingHours = new List<VenueOperatingHour>
+                {
+                    new() {
+                        DayOfWeek = (DayOfWeekEnum)matchStartVn.DayOfWeek,
+                        OpenTime = TimeSpan.FromHours(0),
+                        CloseTime = TimeSpan.FromHours(48),
+                        IsClosed = false
+                    }
+                }
+            }
+        };
+
+        _fieldRepoMock.Setup(x => x.GetFieldWithVenueAsync(fieldId, It.IsAny<CancellationToken>())).ReturnsAsync(field);
+        _bookingRepoMock.Setup(x => x.IsTimeSlotAvailableAsync(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var command = CreateValidCommand(fieldId, matchStartVn.Date, matchStartVn.TimeOfDay);
+
+        // Act
+        var result = await _sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be(MatchRoomErrors.TooCloseToStartTime.Code);
+    }
+
+
     // Covers multiple time-zone behaviors for Auto-Close Hangfire Job
     [Theory]
     [InlineData(48, 1440)] // Case 1: Tạo trước 48h -> Delay tối đa 24h (24 * 60 = 1440 phút)
