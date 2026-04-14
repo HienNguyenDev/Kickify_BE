@@ -315,6 +315,7 @@ public class MatchLifecycleService : IMatchLifecycleService
         var playerProfileRepository = scope.ServiceProvider.GetRequiredService<IPlayerProfileRepository>();
         var roomParticipantRepository = scope.ServiceProvider.GetRequiredService<IRoomParticipantRepository>();
         var sentimentAnalysisService = scope.ServiceProvider.GetRequiredService<ISentimentAnalysisService>();
+        var leaderboardCacheService = scope.ServiceProvider.GetRequiredService<ILeaderboardCacheService>();
         var dbContext = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
@@ -346,6 +347,10 @@ public class MatchLifecycleService : IMatchLifecycleService
             unitOfWork);
 
         await UpdatePlayerProfilesAsync(room, roomParticipantRepository, dbContext, unitOfWork);
+
+        // Invalidate leaderboard cache right after post-match ELO/profile updates
+        // so the next leaderboard request is rebuilt from fresh database state.
+        await leaderboardCacheService.ClearLeaderboardCacheAsync(CancellationToken.None);
 
         _logger.LogInformation("Post-match processing completed for room {RoomId}", roomId);
     }
@@ -449,7 +454,8 @@ public class MatchLifecycleService : IMatchLifecycleService
         var top50UserIds = await dbContext.PlayerProfiles
             .AsNoTracking()
             .OrderByDescending(x => x.CurrentElo)
-            .ThenByDescending(x => x.TotalMatches)
+            .ThenBy(x => x.UpdatedAt)
+            .ThenBy(x => x.UserId)
             .Take(50)
             .Select(x => x.UserId)
             .ToListAsync();

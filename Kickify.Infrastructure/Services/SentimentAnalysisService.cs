@@ -128,6 +128,39 @@ public class SentimentAnalysisService : ISentimentAnalysisService
         }
     }
 
+    public async Task<FeedbackSuggestionResponse?> GenerateFeedbackSuggestionsAsync(
+        FeedbackSuggestionRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var payload = new
+            {
+                star_rating = request.StarRating,
+                count = request.Count,
+                role = request.Role
+            };
+
+            var response = await PostWithRetryAsync("/api/sentiment/generate-feedback", payload, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogError(
+                    "AI feedback generation failed: {StatusCode} - {Error}",
+                    response.StatusCode,
+                    errorContent);
+                return null;
+            }
+
+            return await response.Content.ReadFromJsonAsync<FeedbackSuggestionResponse>(SnakeCaseOptions, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to call AI feedback generation API");
+            return null;
+        }
+    }
+
     private async Task<HttpResponseMessage> PostWithRetryAsync(string endpoint, object payload, CancellationToken cancellationToken)
     {
         var requestId = Guid.NewGuid().ToString("N");
