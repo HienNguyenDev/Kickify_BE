@@ -51,82 +51,72 @@ public class CreateMatchRoomCommandHandler : ICommandHandler<CreateMatchRoomComm
 
     public async Task<Result<CreateMatchRoomResponse>> Handle(CreateMatchRoomCommand request, CancellationToken cancellationToken)
     {
-        var userId = _userContext.UserId;
-        
-        var user = await _userRepository.GetByIdAsync(userId);
-        if (user == null)
+        // =========================================================================
+        // 1. EARLY VALIDATION: Check thời gian TRƯỚC KHI chọc vào Database
+        // =========================================================================
+        var utcNow = DateTime.UtcNow;
+        TimeZoneInfo vnTimeZone;
+        try { vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"); }
+        catch (TimeZoneNotFoundException) { vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Ho_Chi_Minh"); }
+
+        var matchStartVietnam = DateTime.SpecifyKind(request.MatchDate.Date.Add(request.StartTime), DateTimeKind.Unspecified);
+        var matchStartUtc = TimeZoneInfo.ConvertTimeToUtc(matchStartVietnam, vnTimeZone);
+
+        if (matchStartUtc <= utcNow)
         {
-            return Result.Failure<CreateMatchRoomResponse>(UserErrors.NotFound(userId));
+            return Result.Failure<CreateMatchRoomResponse>(MatchRoomErrors.InvalidTime);
         }
+
+        var minAdvanceTime = TimeSpan.FromMinutes(30);
+        if (matchStartUtc - utcNow < minAdvanceTime)
+        {
+            return Result.Failure<CreateMatchRoomResponse>(MatchRoomErrors.TooCloseToStartTime);
+        }
+
+        // =========================================================================
+        // 2. BUSINESS LOGIC & DB CHECKS
+        // =========================================================================
+        var userId = _userContext.UserId;
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user == null) return Result.Failure<CreateMatchRoomResponse>(UserErrors.NotFound(userId));
 
         var field = await _fieldRepository.GetFieldWithVenueAsync(request.FieldId, cancellationToken);
-        if (field == null)
-        {
-            return Result.Failure<CreateMatchRoomResponse>(FieldErrors.NotFound(request.FieldId));
-        }
-
-        // Check if venue is archived
-        if (field.Venue.Status == VenueStatus.Archived)
-        {
-            return Result.Failure<CreateMatchRoomResponse>(MatchRoomErrors.VenueArchived);
-        }
+        if (field == null) return Result.Failure<CreateMatchRoomResponse>(FieldErrors.NotFound(request.FieldId));
+        if (field.Venue.Status == VenueStatus.Archived) return Result.Failure<CreateMatchRoomResponse>(MatchRoomErrors.VenueArchived);
 
         var endTime = request.StartTime.Add(TimeSpan.FromMinutes(request.DurationMinutes));
-
         var dayOfWeek = (DayOfWeekEnum)request.MatchDate.DayOfWeek;
-        var operatingHour = field.Venue.VenueOperatingHours
-            .FirstOrDefault(oh => oh.DayOfWeek == dayOfWeek);
+        var operatingHour = field.Venue.VenueOperatingHours.FirstOrDefault(oh => oh.DayOfWeek == dayOfWeek);
 
         if (operatingHour == null || operatingHour.IsClosed)
-        {
             return Result.Failure<CreateMatchRoomResponse>(MatchRoomErrors.VenueClosed(request.MatchDate));
-        }
 
         var openTime = operatingHour.OpenTime ?? TimeSpan.Zero;
         var closeTime = operatingHour.CloseTime ?? TimeSpan.Zero;
 
         if (request.StartTime < openTime || endTime > closeTime)
-        {
-            return Result.Failure<CreateMatchRoomResponse>(
-                MatchRoomErrors.OutsideOperatingHours(request.StartTime, endTime, openTime, closeTime));
-        }
+            return Result.Failure<CreateMatchRoomResponse>(MatchRoomErrors.OutsideOperatingHours(request.StartTime, endTime, openTime, closeTime));
 
-        bool isSlotAvailable = await _bookingRepository.IsTimeSlotAvailableAsync(
-            request.FieldId,
-            request.MatchDate,
-            request.StartTime,
-            endTime,
-            cancellationToken);
-
-        if (!isSlotAvailable)
-        {
-            return Result.Failure<CreateMatchRoomResponse>(
-                MatchRoomErrors.SlotAlreadyBooked(request.StartTime, endTime));
-        }
+        bool isSlotAvailable = await _bookingRepository.IsTimeSlotAvailableAsync(request.FieldId, request.MatchDate, request.StartTime, endTime, cancellationToken);
+        if (!isSlotAvailable) return Result.Failure<CreateMatchRoomResponse>(MatchRoomErrors.SlotAlreadyBooked(request.StartTime, endTime));
 
         if (!Enum.TryParse<MatchFormat>(request.MatchFormat, true, out var matchFormat))
-        {
             return Result.Failure<CreateMatchRoomResponse>(MatchRoomErrors.InvalidFormat(request.MatchFormat));
-        }
 
         var visibility = Visibility.Public;
         if (!string.IsNullOrEmpty(request.Visibility) && !Enum.TryParse<Visibility>(request.Visibility, true, out visibility))
-        {
             return Result.Failure<CreateMatchRoomResponse>(MatchRoomErrors.InvalidVisibility(request.Visibility));
-        }
 
         int totalSlots = CalculateTotalSlots(matchFormat);
         var holiday = await _holidayRepository.GetByDateAsync(request.MatchDate, cancellationToken);
-        var priceResult = MatchPriceCalculator.CalculateMatchPrice(
-            field,
-            request.MatchDate,
-            request.StartTime,
-            request.DurationMinutes,
-            holiday);
+        var priceResult = MatchPriceCalculator.CalculateMatchPrice(field, request.MatchDate, request.StartTime, request.DurationMinutes, holiday);
 
         var totalAmount = priceResult.TotalPrice;
         var depositPerPerson = Math.Round(totalAmount / totalSlots, 0);
 
+        // =========================================================================
+        // 3. SAVE TO DATABASE
+        // =========================================================================
         var room = new MatchRoom
         {
             RoomId = Guid.NewGuid(),
@@ -161,8 +151,8 @@ public class CreateMatchRoomCommandHandler : ICommandHandler<CreateMatchRoomComm
             Status = BookingStatus.Pending,
             CreatedAt = DateTime.UtcNow
         };
-        await _bookingRepository.AddAsync(booking);
 
+        await _bookingRepository.AddAsync(booking);
         await _matchRoomRepository.AddAsync(room);
 
         var hostParticipant = new RoomParticipant
@@ -177,94 +167,24 @@ public class CreateMatchRoomCommandHandler : ICommandHandler<CreateMatchRoomComm
         };
 
         await _roomParticipantRepository.AddAsync(hostParticipant);
+        await _unitOfWork.SaveChangesAsync(cancellationToken); // LƯU DB THÀNH CÔNG AN TOÀN
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        //var now = DateTime.UtcNow;
-        //// Make sure it handles correctly based on standard DateTime comparisons
-        //var matchStartDateTime = request.MatchDate.Date.Add(request.StartTime);
-        //var timeToMatchStartMinus2h = matchStartDateTime.AddHours(-2) - now;
-        //var timeTo24h = TimeSpan.FromHours(24);
-
-        //var calculatedDelay = timeToMatchStartMinus2h < timeTo24h ? timeToMatchStartMinus2h : timeTo24h;
-        //if (calculatedDelay <= TimeSpan.Zero) 
-        //{
-        //    calculatedDelay = TimeSpan.FromMinutes(15);
-        //}
-
-        //_roomAutoCloseService.ScheduleAutoClose(room.RoomId, calculatedDelay);
-
-        //var matchStartTime = room.MatchDate.Add(room.StartTime);
-        //_matchLifecycleService.SchedulePreMatchReminders(room.RoomId, matchStartTime);
-        var utcNow = DateTime.UtcNow;
-
-        // 1. Xác định múi giờ Việt Nam (giống hàm CheckAvailability)
-        TimeZoneInfo vnTimeZone;
-        try
-        {
-            vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"); // Windows
-        }
-        catch (TimeZoneNotFoundException)
-        {
-            vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Ho_Chi_Minh"); // Linux/Docker
-        }
-
-        // 2. Lấy giờ đá do User nhập (Giờ VN) và ép kiểu nó thành DateTimeKind.Unspecified
-        // để báo cho C# biết con số này chưa gắn với múi giờ nào.
-        var matchStartVietnam = DateTime.SpecifyKind(request.MatchDate.Date.Add(request.StartTime), DateTimeKind.Unspecified);
-
-        // 3. Chuyển đổi giờ đá từ VN sang chuẩn UTC
-        var matchStartUtc = TimeZoneInfo.ConvertTimeToUtc(matchStartVietnam, vnTimeZone);
-
-        // 4. BÂY GIỜ MỚI LÀM PHÉP TRỪ (Cả 2 đều đang ở hệ UTC+0)
+        // =========================================================================
+        // 4. HANGFIRE JOBS
+        // =========================================================================
         var timeToMatchStartMinus2h = matchStartUtc.AddHours(-2) - utcNow;
         var timeTo24h = TimeSpan.FromHours(24);
 
         var calculatedDelay = timeToMatchStartMinus2h < timeTo24h ? timeToMatchStartMinus2h : timeTo24h;
-        if (calculatedDelay <= TimeSpan.Zero)
-        {
-            // Nếu tạo phòng quá sát giờ đá (< 2 tiếng), cho họ 15 phút để gom người
-            calculatedDelay = TimeSpan.FromMinutes(15);
-        }
+        if (calculatedDelay <= TimeSpan.Zero) calculatedDelay = TimeSpan.FromMinutes(15);
 
-        // Lên lịch Hangfire với số giây delay chuẩn xác
         _roomAutoCloseService.ScheduleAutoClose(room.RoomId, calculatedDelay);
-
-        // Tương tự, nhắc nhở cũng phải lên lịch theo hệ UTC (nếu hàm này dùng Hangfire background job)
         _matchLifecycleService.SchedulePreMatchReminders(room.RoomId, matchStartUtc);
-       
-
-        // Quy định: Phải tạo phòng trước giờ bóng lăn ÍT NHẤT 30 phút
-        var minAdvanceTime = TimeSpan.FromMinutes(30);
-
-        if (matchStartUtc <= utcNow)
-        {
-            return Result.Failure<CreateMatchRoomResponse>(MatchRoomErrors.InvalidTime);
-        }
-
-        if (matchStartUtc - utcNow < minAdvanceTime)
-        {
-            return Result.Failure<CreateMatchRoomResponse>(MatchRoomErrors.TooCloseToStartTime);
-        }
 
         return Result.Success(new CreateMatchRoomResponse(
-            room.RoomId,
-            room.HostId,
-            room.FieldId,
-            room.RoomName,
-            room.MatchDate,
-            room.StartTime,
-            endTime,
-            room.DurationMinutes,
-            room.MatchFormat.ToString(),
-            room.TotalSlots,
-            room.FilledSlots,
-            room.DepositPerPerson ?? 0,
-            room.TotalDepositCollected,
-            room.Visibility.ToString(),
-            room.Visibility == Visibility.Private,
-            room.Status.ToString(),
-            room.CreatedAt
+            room.RoomId, room.HostId, room.FieldId, room.RoomName, room.MatchDate, room.StartTime, endTime, room.DurationMinutes,
+            room.MatchFormat.ToString(), room.TotalSlots, room.FilledSlots, room.DepositPerPerson ?? 0, room.TotalDepositCollected,
+            room.Visibility.ToString(), room.Visibility == Visibility.Private, room.Status.ToString(), room.CreatedAt
         ));
     }
 
