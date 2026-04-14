@@ -47,8 +47,8 @@ public class LeaderboardUpdateService : ILeaderboardUpdateService
             var playerProfileRepository = scope.ServiceProvider.GetRequiredService<IPlayerProfileRepository>();
             var leaderboardCacheService = scope.ServiceProvider.GetRequiredService<ILeaderboardCacheService>();
 
-            // L?y top 20 players v?i EloChange
-            var topPlayersWithChange = await playerProfileRepository.GetTopPlayersByEloWithChangeAsync(20, CancellationToken.None);
+            // L?y top 50 players v?i EloChange
+            var topPlayersWithChange = await playerProfileRepository.GetTopPlayersByEloWithChangeAsync(50, CancellationToken.None);
 
             // Build leaderboard response
             var leaderboard = topPlayersWithChange.Select((item, index) => new LeaderboardEntry(
