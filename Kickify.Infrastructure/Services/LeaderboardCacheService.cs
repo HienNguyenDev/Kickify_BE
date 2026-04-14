@@ -9,7 +9,7 @@ public class LeaderboardCacheService : ILeaderboardCacheService
 {
     private readonly IConnectionMultiplexer _redis;
     private readonly ILogger<LeaderboardCacheService> _logger;
-    private const string LeaderboardCacheKey = "leaderboard:top20";
+    private const string LeaderboardCacheKey = "leaderboard:top50";
     private static readonly TimeSpan CacheExpiration = TimeSpan.FromHours(24);
 
     public LeaderboardCacheService(
