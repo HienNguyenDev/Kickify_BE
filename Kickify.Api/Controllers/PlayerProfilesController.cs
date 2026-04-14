@@ -56,7 +56,7 @@ namespace Kickify.Api.Controllers
         }
 
         /// <summary>
-        /// Get top 20 players leaderboard by ELO
+        /// Get top 50 players leaderboard by ELO
         /// </summary>
         [HttpGet("leaderboard")]
         public async Task<IResult> GetLeaderboard(CancellationToken cancellationToken)

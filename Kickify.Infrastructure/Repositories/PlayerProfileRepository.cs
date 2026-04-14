@@ -86,7 +86,8 @@ namespace Kickify.Infrastructure.Repositories
                 .AsNoTracking()
                 .Include(p => p.User)
                 .OrderByDescending(p => p.CurrentElo)
-                .ThenByDescending(p => p.TotalMatches)
+                .ThenBy(p => p.UpdatedAt)
+                .ThenBy(p => p.UserId)
                 .Take(count)
                 .ToListAsync(cancellationToken);
 
@@ -112,12 +113,14 @@ namespace Kickify.Infrastructure.Repositories
                 return 0;
             }
 
-            // Count how many players have higher ELO (or same ELO but more matches)
+            // Count how many players are ranked higher using deterministic tie-breakers:
+            // ELO DESC, UpdatedAt ASC, UserId ASC.
             var rank = await _dbSet
                 .AsNoTracking()
                 .CountAsync(p => 
                     p.CurrentElo > myProfile.CurrentElo || 
-                    (p.CurrentElo == myProfile.CurrentElo && p.TotalMatches > myProfile.TotalMatches),
+                    (p.CurrentElo == myProfile.CurrentElo && p.UpdatedAt < myProfile.UpdatedAt) ||
+                    (p.CurrentElo == myProfile.CurrentElo && p.UpdatedAt == myProfile.UpdatedAt && p.UserId.CompareTo(myProfile.UserId) < 0),
                     cancellationToken);
 
             return rank + 1; // +1 because rank starts from 1

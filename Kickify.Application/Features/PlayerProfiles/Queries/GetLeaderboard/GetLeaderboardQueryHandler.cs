@@ -54,7 +54,7 @@ public class GetLeaderboardQueryHandler : IQueryHandler<GetLeaderboardQuery, Get
         // N?u cache không có ho?c l?i, query t? database
         _logger.LogWarning("Cache miss or error, querying leaderboard from database");
         
-        var topPlayersWithChange = await _playerProfileRepository.GetTopPlayersByEloWithChangeAsync(20, cancellationToken);
+        var topPlayersWithChange = await _playerProfileRepository.GetTopPlayersByEloWithChangeAsync(50, cancellationToken);
 
         var leaderboard = topPlayersWithChange.Select((item, index) => new LeaderboardEntry(
             Rank: index + 1,
