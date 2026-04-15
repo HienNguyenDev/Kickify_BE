@@ -1,4 +1,4 @@
-﻿using Kickify.Domain.Common;
+using Kickify.Domain.Common;
 
 namespace Kickify.Domain.Errors
 {
@@ -38,5 +38,21 @@ namespace Kickify.Domain.Errors
         public static readonly Error NotEligible = Error.Conflict(
             "VenueReviews.NotEligible",
             "You are not eligible to review this venue. You must have a completed match that hasn't been reviewed yet.");
+
+        public static readonly Error NotOwnerOfVenue = Error.Failure(
+            "VenueReviews.NotOwnerOfVenue",
+            "You can only reply to reviews for venues you own.");
+
+        public static readonly Error AlreadyReplied = Error.Conflict(
+            "VenueReviews.AlreadyReplied",
+            "A reply has already been posted for this review.");
+
+        public static readonly Error ReplyRequired = Error.Failure(
+            "VenueReviews.ReplyRequired",
+            "Reply text is required.");
+
+        public static readonly Error NoReplyToUpdate = Error.Conflict(
+            "VenueReviews.NoReplyToUpdate",
+            "There is no reply to update. Create a reply first.");
     }
 }

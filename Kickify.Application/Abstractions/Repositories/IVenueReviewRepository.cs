@@ -16,6 +16,11 @@ namespace Kickify.Application.Abstractions.Repositories
         Task<VenueReview?> GetByIdWithDetailsAsync(Guid reviewId, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Get a review by ID with venue for update (tracked). Used for owner reply.
+        /// </summary>
+        Task<VenueReview?> GetByIdWithVenueForUpdateAsync(Guid reviewId, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// Get all reviews with filters and pagination, including navigation properties
         /// </summary>
         Task<(IEnumerable<VenueReview> Items, int Total)> GetAllPagedAsync(
