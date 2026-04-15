@@ -1,7 +1,6 @@
-using Kickify.Domain.Enums;
-
 namespace Kickify.Application.Features.Analytics.Queries.GetAdminBookingRevenueDetail;
 
+/// <param name="BookingDateUtc">UTC instant when the booked slot starts (VN local date + start time → UTC).</param>
 public record GetAdminBookingRevenueDetailResponse(
     Guid BookingId,
     Guid RoomId,
@@ -10,12 +9,12 @@ public record GetAdminBookingRevenueDetailResponse(
     string VenueAddress,
     Guid FieldId,
     string FieldName,
-    FieldType FieldType,
+    string FieldType,
     decimal TotalAmount,
     decimal PlatformFee,
     decimal VenueAmount,
-    BookingStatus BookingStatus,
-    RoomStatus MatchRoomStatus,
+    string BookingStatus,
+    string MatchRoomStatus,
     DateTime BookingDateUtc,
     TimeSpan StartTime,
     TimeSpan EndTime,

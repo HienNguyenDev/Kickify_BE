@@ -1,5 +1,8 @@
 using Kickify.Api.Extensions;
+using Kickify.Api.Requests;
 using Kickify.Application.Features.VenueReviews.Commands.DeleteVenueReview;
+using Kickify.Application.Features.VenueReviews.Commands.ReplyVenueReview;
+using Kickify.Application.Features.VenueReviews.Commands.UpdateReplyVenueReview;
 using Kickify.Application.Features.VenueReviews.Queries.GetAllVenueReviews;
 using Kickify.Application.Features.VenueReviews.Queries.GetVenueOwnerReviews;
 using MediatR;
@@ -47,6 +50,36 @@ public class VenueReviewsController : ControllerBase
     public async Task<IResult> DeleteVenueReview(Guid reviewId, CancellationToken cancellationToken)
     {
         var command = new DeleteVenueReviewCommand(reviewId);
+        var result = await _sender.Send(command, cancellationToken);
+        return result.MatchOk();
+    }
+
+    /// <summary>
+    /// Venue owner replies to a player's review for one of their venues (one reply per review).
+    /// </summary>
+    [Authorize(Roles = "VenueOwner")]
+    [HttpPost("{reviewId:guid}/reply")]
+    public async Task<IResult> ReplyToVenueReview(
+        Guid reviewId,
+        [FromBody] ReplyVenueReviewRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var command = new ReplyVenueReviewCommand(reviewId, request.Message);
+        var result = await _sender.Send(command, cancellationToken);
+        return result.MatchOk();
+    }
+
+    /// <summary>
+    /// Venue owner updates an existing reply (same body as create reply).
+    /// </summary>
+    [Authorize(Roles = "VenueOwner")]
+    [HttpPut("{reviewId:guid}/reply")]
+    public async Task<IResult> UpdateVenueReviewReply(
+        Guid reviewId,
+        [FromBody] ReplyVenueReviewRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var command = new UpdateReplyVenueReviewCommand(reviewId, request.Message);
         var result = await _sender.Send(command, cancellationToken);
         return result.MatchOk();
     }
