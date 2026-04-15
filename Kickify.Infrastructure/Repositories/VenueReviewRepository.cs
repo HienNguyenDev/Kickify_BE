@@ -28,6 +28,13 @@ namespace Kickify.Infrastructure.Repositories
                 .FirstOrDefaultAsync(r => r.ReviewId == reviewId, cancellationToken);
         }
 
+        public async Task<VenueReview?> GetByIdWithVenueForUpdateAsync(Guid reviewId, CancellationToken cancellationToken = default)
+        {
+            return await _dbSet
+                .Include(r => r.Venue)
+                .FirstOrDefaultAsync(r => r.ReviewId == reviewId, cancellationToken);
+        }
+
         public async Task<(IEnumerable<VenueReview> Items, int Total)> GetAllPagedAsync(
             Guid? venueId = null,
             Guid? userId = null,
