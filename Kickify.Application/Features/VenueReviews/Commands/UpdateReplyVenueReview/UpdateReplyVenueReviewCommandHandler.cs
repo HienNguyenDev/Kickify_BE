@@ -58,7 +58,8 @@ public class UpdateReplyVenueReviewCommandHandler
 
         var responseAt = DateTime.UtcNow;
         review.OwnerResponse = trimmed;
-        review.ResponseDate = responseAt;
+        // ResponseDate column is 'timestamp without time zone'; Npgsql rejects DateTimeKind.Utc.
+        review.ResponseDate = DateTime.SpecifyKind(responseAt, DateTimeKind.Unspecified);
 
         _venueReviewRepository.Update(review);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
