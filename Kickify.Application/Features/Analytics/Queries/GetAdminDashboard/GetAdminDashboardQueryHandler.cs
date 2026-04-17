@@ -76,9 +76,11 @@ public class GetAdminDashboardQueryHandler
         var thirtyDaysAgoUtc = ToUtc(thirtyDaysAgoLocal, tz);
         var sixtyDaysAgoUtc = ToUtc(sixtyDaysAgoLocal, tz);
 
-        var revenue30d = await CompletedBookingRevenue.SumTotalAmountAsync(
+        // Use all paid (Confirmed+Completed) bookings by BookingDate – consistent with
+        // how venue-owner dashboard counts revenue via BookingIncome wallet transactions.
+        var revenue30d = await CompletedBookingRevenue.SumPaidAmountAsync(
             _db.Bookings, thirtyDaysAgoUtc, todayEndUtc, cancellationToken);
-        var revenuePrev30d = await CompletedBookingRevenue.SumTotalAmountAsync(
+        var revenuePrev30d = await CompletedBookingRevenue.SumPaidAmountAsync(
             _db.Bookings, sixtyDaysAgoUtc, thirtyDaysAgoUtc, cancellationToken);
         var revenue30dChangePct = CalcChangePct(revenue30d, revenuePrev30d);
 
@@ -154,16 +156,18 @@ public class GetAdminDashboardQueryHandler
         // ════════════════════════════════════════════
         var revenueRows = await _db.Bookings
             .AsNoTracking()
-            .WhereRecognizedBetween(chartStartUtc, todayEndUtc)
-            .Select(b => new { b.TotalAmount, CompletedAt = b.MatchRoom.UpdatedAt })
+            .WherePaidBetween(chartStartUtc, todayEndUtc)
+            .Select(b => new { b.TotalAmount, BookingDate = b.BookingDate })
             .ToListAsync(cancellationToken);
 
         var revenueTrend = new List<RevenueTrendItemDto>();
         for (int i = 0; i < request.ChartDays; i++)
         {
             var day = chartStartLocal.AddDays(i);
+            var dayStart = ToUtc(day, tz);
+            var dayEnd = ToUtc(day.AddDays(1), tz);
             var dayRevenue = revenueRows
-                .Where(r => ToLocalDateUtc(r.CompletedAt, tz) == day)
+                .Where(r => r.BookingDate >= dayStart && r.BookingDate < dayEnd)
                 .Sum(r => r.TotalAmount);
 
             revenueTrend.Add(new RevenueTrendItemDto(day.ToString("yyyy-MM-dd"), Math.Max(0m, dayRevenue)));
@@ -240,14 +244,6 @@ public class GetAdminDashboardQueryHandler
             .Concat(joinedRoomUsers)
             .Distinct()
             .CountAsync(ct);
-    }
-
-    private static DateTime ToLocalDateUtc(DateTime utcTimestamp, TimeZoneInfo tz)
-    {
-        var utc = utcTimestamp.Kind == DateTimeKind.Utc
-            ? utcTimestamp
-            : DateTime.SpecifyKind(utcTimestamp, DateTimeKind.Utc);
-        return TimeZoneInfo.ConvertTimeFromUtc(utc, tz).Date;
     }
 
     private static double? CalcChangePct(decimal current, decimal previous)

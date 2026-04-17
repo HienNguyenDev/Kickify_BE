@@ -27,14 +27,16 @@ public class GetAdminBookingRevenueListQueryHandler
         var fromUtc = ToUtcBoundary(fromLocal, tz);
         var toUtcExclusive = ToUtcBoundary(toLocalNextDay, tz);
 
+        // Count all paid (Confirmed+Completed) bookings by BookingDate – same definition as
+        // venue-owner revenue so admin total is always >= any individual venue-owner total.
         var baseQuery = _db.Bookings
             .AsNoTracking()
-            .WhereRecognizedBetween(fromUtc, toUtcExclusive);
+            .WherePaidBetween(fromUtc, toUtcExclusive);
 
         var totalCount = await baseQuery.CountAsync(cancellationToken);
 
         var items = await baseQuery
-            .OrderByDescending(b => b.MatchRoom.UpdatedAt)
+            .OrderByDescending(b => b.BookingDate)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .Select(b => new AdminBookingRevenueListItemDto(
@@ -46,7 +48,7 @@ public class GetAdminBookingRevenueListQueryHandler
                 b.TotalAmount,
                 b.PlatformFee,
                 b.VenueAmount,
-                b.MatchRoom.UpdatedAt,
+                b.BookingDate,
                 b.Status,
                 b.MatchRoom.Status))
             .ToListAsync(cancellationToken);
