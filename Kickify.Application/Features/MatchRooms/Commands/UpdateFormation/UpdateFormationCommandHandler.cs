@@ -54,11 +54,11 @@ namespace Kickify.Application.Features.MatchRooms.Commands.UpdateFormation
                 return Result.Failure<UpdateFormationResponse>(MatchRoomErrors.NotFound(request.RoomId));
             }
 
-            // Check if room is still active
-            if (room.Status != RoomStatus.Open)
-            {
-                return Result.Failure<UpdateFormationResponse>(MatchRoomErrors.RoomNotActive);
-            }
+            //// Check if room is still active
+            //if (room.Status != RoomStatus.Open)
+            //{
+            //    return Result.Failure<UpdateFormationResponse>(MatchRoomErrors.RoomNotActive);
+            //}
 
             // Parse team assignment
             if (!Enum.TryParse<TeamAssignment>(request.Team, true, out var teamAssignment) ||

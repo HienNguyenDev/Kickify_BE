@@ -60,7 +60,9 @@ namespace Kickify.Application.Features.MatchRooms.Commands.KickPlayer
             }
 
             // 3. Check room status - cannot kick from completed/cancelled rooms
-            if (room.Status == RoomStatus.Completed || room.Status == RoomStatus.Cancelled)
+            //if (room.Status == RoomStatus.Completed || room.Status == RoomStatus.Cancelled || room.Status == RoomStatus.Locked || room.Status == RoomStatus.InProgress || room.Status == RoomStatus.Reviewing)
+            if (room.Status != RoomStatus.Open)
+
             {
                 return Result.Failure<KickPlayerResponse>(MatchRoomErrors.RoomNotActive);
             }
