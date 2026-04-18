@@ -67,7 +67,7 @@ namespace Kickify.Api.Controllers
         }
 
         /// <summary>
-        /// Get room detail by ID
+        /// Get room detail by ID (participants, formations, team average Elo, skill imbalance when both teams differ by &gt; 200 Elo).
         /// </summary>
         [HttpGet("{id}")]
         public async Task<IResult> GetRoomById(Guid id, CancellationToken cancellationToken)
@@ -80,7 +80,7 @@ namespace Kickify.Api.Controllers
         }
 
         /// <summary>
-        /// Get all match rooms for current user (as participant or host).
+        /// Get all match rooms for current user (as participant or host). Each item includes myMatchOutcome (Win, Loss, Draw) when the room has a final result and the user is assigned to a team.
         /// </summary>
         /// <param name="availableOnly">When true, returns every status except Cancelled. When false, returns only Cancelled. When omitted, no status filter.</param>
         [HttpGet("mine")]

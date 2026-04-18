@@ -42,6 +42,7 @@ public class GetMyReceivedFeedbacksQueryHandler : IQueryHandler<GetMyReceivedFee
         }
 
         var total = await query.CountAsync(cancellationToken);
+        var totalPages = (int)Math.Ceiling(total / (double)request.PageSize);
         var items = await query
             .OrderByDescending(x => x.CreatedAt)
             .Skip((request.Page - 1) * request.PageSize)
@@ -61,6 +62,7 @@ public class GetMyReceivedFeedbacksQueryHandler : IQueryHandler<GetMyReceivedFee
                 x.CreatedAt))
             .ToListAsync(cancellationToken);
 
-        return Result.Success(new GetMyReceivedFeedbacksResponse(items, total, request.Page, request.PageSize));
+        return Result.Success(new GetMyReceivedFeedbacksResponse(
+            items, total, request.Page, request.PageSize, totalPages));
     }
 }

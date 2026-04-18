@@ -29,6 +29,7 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMyMatchRooms
         string Visibility,
         bool IsPrivate,
         string Status,
+        string? MyMatchOutcome,
         DateTime CreatedAt,
         bool HasLeftFeedback,
         List<MyRoomVenuePhotoDto> VenuePhotos
