@@ -1,5 +1,6 @@
 namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById
 {
+    /// <summary>Room detail including team average Elo (0 if no one on that team) and skill-imbalance when both teams have players and Elo differs by &gt; 200.</summary>
     public record GetMatchRoomByIdResponse(
         Guid RoomId,
         Guid HostId,
@@ -23,6 +24,9 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById
         string Status,
         RoomParticipantsDto Participants,
         RoomFormationsDto? Formations,
+        decimal TeamAAverageElo,
+        decimal TeamBAverageElo,
+        bool IsSkillImbalanced,
         DateTime CreatedAt
     );
 

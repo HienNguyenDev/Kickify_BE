@@ -4,7 +4,8 @@ public record GetMyGivenFeedbacksResponse(
     IReadOnlyList<GivenFeedbackItem> Items,
     int TotalCount,
     int Page,
-    int PageSize
+    int PageSize,
+    int TotalPages
 );
 
 public record GivenFeedbackItem(

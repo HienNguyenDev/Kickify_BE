@@ -67,7 +67,7 @@ namespace Kickify.Api.Controllers
         }
 
         /// <summary>
-        /// Get room detail by ID
+        /// Get room detail by ID (participants, formations, team average Elo, skill imbalance when both teams differ by &gt; 200 Elo).
         /// </summary>
         [HttpGet("{id}")]
         public async Task<IResult> GetRoomById(Guid id, CancellationToken cancellationToken)

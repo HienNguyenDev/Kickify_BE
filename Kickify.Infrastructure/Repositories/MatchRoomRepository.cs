@@ -40,6 +40,7 @@ namespace Kickify.Infrastructure.Repositories
                     .ThenInclude(f => f!.Venue)
                 .Include(r => r.RoomParticipants)
                     .ThenInclude(p => p.User)
+                        .ThenInclude(u => u!.PlayerProfile)
                 .FirstOrDefaultAsync(r => r.RoomId == roomId, cancellationToken);
         }
 
