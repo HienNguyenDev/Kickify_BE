@@ -66,6 +66,7 @@ public class MatchRoomHubService : IMatchRoomHubService
         int totalSlots,
         bool isRoomDeleted,
         Guid? newHostId,
+        decimal totalDepositCollected,
         CancellationToken cancellationToken = default)
     {
         var payload = new
@@ -77,6 +78,7 @@ public class MatchRoomHubService : IMatchRoomHubService
             TotalSlots = totalSlots,
             IsRoomDeleted = isRoomDeleted,
             NewHostId = newHostId,
+            TotalDepositCollected = totalDepositCollected,
             LeftAt = DateTime.UtcNow
         };
 
@@ -139,6 +141,7 @@ public class MatchRoomHubService : IMatchRoomHubService
         string kickedUserName,
         int filledSlots,
         int totalSlots,
+        decimal totalDepositCollected,
         CancellationToken cancellationToken = default)
     {
         // 1. Notify the kicked user specifically
@@ -163,6 +166,7 @@ public class MatchRoomHubService : IMatchRoomHubService
             KickedUserName = kickedUserName,
             FilledSlots = filledSlots,
             TotalSlots = totalSlots,
+            TotalDepositCollected = totalDepositCollected,
             KickedAt = DateTime.UtcNow
         };
 
