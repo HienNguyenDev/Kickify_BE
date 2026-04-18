@@ -7,7 +7,6 @@ using Kickify.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Text.Json;
 
 namespace Kickify.Api.Controllers;
 
@@ -31,11 +30,12 @@ public class PlayerReportsController : ControllerBase
         [FromBody] ReportPlayerRequest request,
         CancellationToken cancellationToken)
     {
-        if (!TryParseReportType(request.ReportType, out var reportType))
+        if (!Enum.TryParse<ReportType>(request.ReportType, ignoreCase: true, out var reportType))
         {
+            var valid = string.Join(", ", Enum.GetNames<ReportType>());
             return Results.BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
             {
-                ["reportType"] = ["ReportType is invalid. Use enum name or numeric value."]
+                ["reportType"] = [$"Invalid value '{request.ReportType}'. Valid values: {valid}"]
             }));
         }
 
@@ -85,32 +85,4 @@ public class PlayerReportsController : ControllerBase
         return result.MatchOk();
     }
 
-    private static bool TryParseReportType(JsonElement rawReportType, out ReportType reportType)
-    {
-        reportType = default;
-
-        if (rawReportType.ValueKind == JsonValueKind.Number && rawReportType.TryGetInt32(out var numericValue))
-        {
-            if (Enum.IsDefined(typeof(ReportType), numericValue))
-            {
-                reportType = (ReportType)numericValue;
-                return true;
-            }
-
-            return false;
-        }
-
-        if (rawReportType.ValueKind != JsonValueKind.String)
-        {
-            return false;
-        }
-
-        var value = rawReportType.GetString();
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return false;
-        }
-
-        return Enum.TryParse(value, ignoreCase: true, out reportType);
-    }
 }
