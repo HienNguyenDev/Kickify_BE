@@ -2,6 +2,7 @@ using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
+using Kickify.Domain.Enums;
 
 namespace Kickify.Application.Features.MatchRooms.Queries.GetMyMatchRooms
 {
@@ -97,6 +98,10 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMyMatchRooms
                     venuePhotos = venuePhotosDict[room.Field.Venue.VenueId];
                 }
 
+                var myTeam = room.RoomParticipants.FirstOrDefault(p => p.UserId == userId)?.TeamAssignment
+                    ?? TeamAssignment.Unassigned;
+                var myMatchOutcome = ResolveMyMatchOutcome(room.FinalResult, myTeam);
+
                 return new MyMatchRoomItemDto(
                     room.RoomId,
                     room.HostId,
@@ -118,6 +123,7 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMyMatchRooms
                     room.Visibility.ToString(),
                     room.Visibility == Domain.Enums.Visibility.Private,
                     room.Status.ToString(),
+                    myMatchOutcome,
                     room.CreatedAt,
                     reviewedMatchIds.Contains(room.RoomId),
                     venuePhotos
@@ -133,6 +139,22 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMyMatchRooms
             );
 
             return Result.Success(response);
+        }
+
+        private static string? ResolveMyMatchOutcome(MatchResult? finalResult, TeamAssignment myTeam)
+        {
+            if (finalResult is null || myTeam == TeamAssignment.Unassigned)
+            {
+                return null;
+            }
+
+            return finalResult.Value switch
+            {
+                MatchResult.Draw => "Draw",
+                MatchResult.TeamAWin => myTeam == TeamAssignment.A ? "Win" : "Loss",
+                MatchResult.TeamBWin => myTeam == TeamAssignment.B ? "Win" : "Loss",
+                _ => null
+            };
         }
     }
 }

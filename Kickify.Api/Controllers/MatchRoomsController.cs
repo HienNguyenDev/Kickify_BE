@@ -80,7 +80,7 @@ namespace Kickify.Api.Controllers
         }
 
         /// <summary>
-        /// Get all match rooms for current user (as participant or host).
+        /// Get all match rooms for current user (as participant or host). Each item includes myMatchOutcome (Win, Loss, Draw) when the room has a final result and the user is assigned to a team.
         /// </summary>
         /// <param name="availableOnly">When true, returns every status except Cancelled. When false, returns only Cancelled. When omitted, no status filter.</param>
         [HttpGet("mine")]
