@@ -20,6 +20,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.KickPlayer
         private readonly IMatchRoomHubService _matchRoomHubService;
         private readonly IWalletRepository _walletRepository;
         private readonly IWalletTransactionRepository _walletTransactionRepository;
+        private readonly IUserRepository _userRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IUserContext _userContext;
         private readonly IPublisher _publisher;
@@ -31,6 +32,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.KickPlayer
             IMatchRoomHubService matchRoomHubService,
             IWalletRepository walletRepository,
             IWalletTransactionRepository walletTransactionRepository,
+            IUserRepository userRepository,
             IUnitOfWork unitOfWork,
             IUserContext userContext,
             IPublisher publisher,
@@ -41,6 +43,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.KickPlayer
             _matchRoomHubService = matchRoomHubService;
             _walletRepository = walletRepository;
             _walletTransactionRepository = walletTransactionRepository;
+            _userRepository = userRepository;
             _unitOfWork = unitOfWork;
             _userContext = userContext;
             _publisher = publisher;
@@ -87,8 +90,12 @@ namespace Kickify.Application.Features.MatchRooms.Commands.KickPlayer
                 return Result.Failure<KickPlayerResponse>(MatchRoomErrors.PlayerNotInRoom(request.TargetUserId));
             }
 
-            // Get user name before removal for notification
-            var kickedUserName = targetParticipant.User?.FullName ?? "Unknown Player";
+            // ==========================================
+            // [+] CẬP NHẬT: LẤY TÊN USER TỪ REPOSITORY ĐỂ TRÁNH LỖI NULL
+            // ==========================================
+            var kickedUser = await _userRepository.GetByIdAsync(request.TargetUserId);
+            var kickedUserName = kickedUser?.FullName ?? kickedUser?.Email ?? "Unknown Player";
+            // ==========================================
 
             try
             {
