@@ -1,9 +1,10 @@
-using Kickify.Application.Abstractions.Authentication;
+﻿using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Application.Abstractions.Services;
 using Kickify.Domain.Common;
+using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
 using Kickify.Domain.Errors;
 using Kickify.Domain.Event;
@@ -17,6 +18,9 @@ namespace Kickify.Application.Features.MatchRooms.Commands.KickPlayer
         private readonly IMatchRoomRepository _matchRoomRepository;
         private readonly IRoomParticipantRepository _roomParticipantRepository;
         private readonly IMatchRoomHubService _matchRoomHubService;
+        private readonly IWalletRepository _walletRepository;
+        private readonly IWalletTransactionRepository _walletTransactionRepository;
+        private readonly IUserRepository _userRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IUserContext _userContext;
         private readonly IPublisher _publisher;
@@ -26,6 +30,9 @@ namespace Kickify.Application.Features.MatchRooms.Commands.KickPlayer
             IMatchRoomRepository matchRoomRepository,
             IRoomParticipantRepository roomParticipantRepository,
             IMatchRoomHubService matchRoomHubService,
+            IWalletRepository walletRepository,
+            IWalletTransactionRepository walletTransactionRepository,
+            IUserRepository userRepository,
             IUnitOfWork unitOfWork,
             IUserContext userContext,
             IPublisher publisher,
@@ -34,6 +41,9 @@ namespace Kickify.Application.Features.MatchRooms.Commands.KickPlayer
             _matchRoomRepository = matchRoomRepository;
             _roomParticipantRepository = roomParticipantRepository;
             _matchRoomHubService = matchRoomHubService;
+            _walletRepository = walletRepository;
+            _walletTransactionRepository = walletTransactionRepository;
+            _userRepository = userRepository;
             _unitOfWork = unitOfWork;
             _userContext = userContext;
             _publisher = publisher;
@@ -80,8 +90,12 @@ namespace Kickify.Application.Features.MatchRooms.Commands.KickPlayer
                 return Result.Failure<KickPlayerResponse>(MatchRoomErrors.PlayerNotInRoom(request.TargetUserId));
             }
 
-            // Get user name before removal for notification
-            var kickedUserName = targetParticipant.User?.FullName ?? "Unknown Player";
+            // ==========================================
+            // [+] CẬP NHẬT: LẤY TÊN USER TỪ REPOSITORY ĐỂ TRÁNH LỖI NULL
+            // ==========================================
+            var kickedUser = await _userRepository.GetByIdAsync(request.TargetUserId);
+            var kickedUserName = kickedUser?.FullName ?? kickedUser?.Email ?? "Unknown Player";
+            // ==========================================
 
             try
             {
@@ -98,6 +112,39 @@ namespace Kickify.Application.Features.MatchRooms.Commands.KickPlayer
                             request.TargetUserId, targetParticipant.TeamAssignment, newCaptainId.Value);
                     }
                 }
+
+                // ==========================================
+                // [+] THÊM MỚI: REFUND LOGIC CHO NGƯỜI BỊ KICK
+                // ==========================================
+                if (targetParticipant.DepositPaid && targetParticipant.DepositAmount.HasValue && targetParticipant.DepositAmount.Value > 0)
+                {
+                    var refundAmount = targetParticipant.DepositAmount.Value;
+                    room.TotalDepositCollected -= refundAmount; // Trừ tiền khỏi tổng phòng
+
+                    var wallet = await _walletRepository.GetByUserIdAsync(request.TargetUserId, cancellationToken);
+                    if (wallet != null)
+                    {
+                        wallet.Balance += refundAmount;
+                        _walletRepository.Update(wallet);
+
+                        var refundTx = new WalletTransaction
+                        {
+                            TransactionId = Guid.NewGuid(),
+                            WalletId = wallet.WalletId,
+                            TransactionType = TransactionType.Refund,
+                            Amount = refundAmount,
+                            BalanceAfter = wallet.Balance,
+                            ReferenceId = room.RoomId,
+                            Description = $"Refund (100%) for being kicked from room {room.RoomName ?? room.RoomId.ToString()}",
+                            CreatedAt = DateTime.UtcNow
+                        };
+                        await _walletTransactionRepository.AddAsync(refundTx);
+                    }
+
+                    _logger.LogInformation("Refunded {RefundAmount} to kicked User {UserId}. New room total: {TotalDeposit}",
+                        refundAmount, request.TargetUserId, room.TotalDepositCollected);
+                }
+                // ==========================================
 
                 // 6. Remove the participant
                 _roomParticipantRepository.Remove(targetParticipant);
@@ -133,6 +180,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.KickPlayer
                     kickedUserName,
                     room.FilledSlots,
                     room.TotalSlots,
+                    room.TotalDepositCollected,
                     cancellationToken);
 
                 return Result.Success(new KickPlayerResponse(

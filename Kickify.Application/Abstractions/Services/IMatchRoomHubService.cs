@@ -28,6 +28,7 @@ public interface IMatchRoomHubService
         int totalSlots,
         bool isRoomDeleted,
         Guid? newHostId,
+        decimal totalDepositCollected,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -59,6 +60,7 @@ public interface IMatchRoomHubService
         string kickedUserName,
         int filledSlots,
         int totalSlots,
+        decimal totalDepositCollected,
         CancellationToken cancellationToken = default);
 
     /// <summary>

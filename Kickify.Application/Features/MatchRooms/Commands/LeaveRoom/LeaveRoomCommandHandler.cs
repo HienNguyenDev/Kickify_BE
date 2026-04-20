@@ -252,6 +252,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.LeaveRoom
                     room.TotalSlots,
                     isRoomDeleted,
                     newHostId,
+                    room.TotalDepositCollected,
                     cancellationToken);
 
                 return Result.Success(new LeaveRoomResponse(
