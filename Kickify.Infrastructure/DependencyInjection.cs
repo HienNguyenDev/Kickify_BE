@@ -109,6 +109,7 @@ namespace Kickify.Infrastructure
             services.AddScoped<IAuthenticationServices, AuthenticationServices>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<IUserContext, UserContext>();
+            services.AddScoped<ICurrentUserReader, CurrentUserReader>();
             services.AddScoped<IJwtProvider, JwtProvider>();
             services.AddScoped<IPasswordHasher, PasswordHasher>();
             services.AddScoped<EmailTemplateService>();
