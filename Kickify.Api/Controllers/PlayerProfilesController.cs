@@ -6,6 +6,7 @@ using Kickify.Application.Features.PlayerProfiles.Queries.GetAllPlayerProfiles;
 using Kickify.Application.Features.PlayerProfiles.Queries.GetLeaderboard;
 using Kickify.Application.Features.PlayerProfiles.Queries.GetMyEloBreakdown;
 using Kickify.Application.Features.PlayerProfiles.Queries.GetMyRadarSnapshot;
+using Kickify.Application.Features.PlayerProfiles.Queries.GetPlayerRadarSnapshot;
 using Kickify.Application.Features.PlayerProfiles.Queries.GetMyRank;
 using Kickify.Application.Features.PlayerProfiles.Queries.GetPlayerProfileById;
 using Kickify.Application.Features.MatchFeedbacks.Queries.GetMyReceivedFeedbacks;
@@ -86,6 +87,17 @@ namespace Kickify.Api.Controllers
         public async Task<IResult> GetMyRadarChart(CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(new GetMyRadarSnapshotQuery(), cancellationToken);
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Get radar chart axes for any user (public). AI assessments and summary are only included when the caller is that user.
+        /// </summary>
+        [HttpGet("{userId:guid}/radar-chart")]
+        [AllowAnonymous]
+        public async Task<IResult> GetPlayerRadarChart(Guid userId, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(new GetPlayerRadarSnapshotQuery(userId), cancellationToken);
             return result.MatchOk();
         }
 
