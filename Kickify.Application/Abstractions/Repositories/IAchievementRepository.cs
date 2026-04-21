@@ -23,4 +23,13 @@ public interface IAchievementRepository : IGenericRepository<Achievement>
     Task<List<(Achievement Achievement, DateTime? EarnedAt)>> GetAllWithUserProgressAsync(
         Guid userId,
         CancellationToken cancellationToken = default);
+
+    Task<bool> HasUserClaimedAsync(
+        Guid userId,
+        Guid achievementId,
+        CancellationToken cancellationToken = default);
+
+    Task AddPlayerAchievementAsync(
+        PlayerAchievement playerAchievement,
+        CancellationToken cancellationToken = default);
 }

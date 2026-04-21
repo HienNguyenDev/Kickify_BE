@@ -19,4 +19,12 @@ public static class AchievementErrors
     public static readonly Error InvalidCriteriaType = Error.Conflict(
         "Achievement.InvalidCriteriaType",
         "Invalid criteria type");
+
+    public static readonly Error AlreadyClaimed = Error.Conflict(
+        "Achievement.AlreadyClaimed",
+        "Achievement has already been claimed");
+
+    public static Error ClaimConditionNotMet(string achievementName) => Error.Conflict(
+        "Achievement.ClaimConditionNotMet",
+        $"Claim conditions are not met for achievement '{achievementName}'");
 }
