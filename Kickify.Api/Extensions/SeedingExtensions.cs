@@ -62,8 +62,8 @@ public static class SeedingExtensions
             {
                 AchievementId = Guid.NewGuid(),
                 Name = "Crowd Favorite",
-                Description = "Receive 10 positive feedback from other players.",
-                CriteriaType = CriteriaType.Feedback,
+                Description = "Receive 10 feedbacks from other players.",
+                CriteriaType = CriteriaType.ReceivedFeedback,
                 CriteriaValue = 10,
                 BadgeIconUrl = "https://via.placeholder.com/128?text=CrowdFav"
             },
@@ -71,7 +71,7 @@ public static class SeedingExtensions
             {
                 AchievementId = Guid.NewGuid(),
                 Name = "Superstar",
-                Description = "Receive 50 positive feedback from other players.",
+                Description = "Give feedback to 50 different players.",
                 CriteriaType = CriteriaType.Feedback,
                 CriteriaValue = 50,
                 BadgeIconUrl = "https://via.placeholder.com/128?text=Superstar"
@@ -84,15 +84,6 @@ public static class SeedingExtensions
                 CriteriaType = CriteriaType.Fairplay,
                 CriteriaValue = 20,
                 BadgeIconUrl = "https://via.placeholder.com/128?text=FairPlay"
-            },
-            new()
-            {
-                AchievementId = Guid.NewGuid(),
-                Name = "Trailblazer",
-                Description = "Be one of the first 100 users to join Kickify.",
-                CriteriaType = CriteriaType.Other,
-                CriteriaValue = 1,
-                BadgeIconUrl = "https://via.placeholder.com/128?text=Trailblazer"
             }
         };
 

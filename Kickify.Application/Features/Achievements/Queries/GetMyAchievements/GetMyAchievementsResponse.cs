@@ -12,7 +12,10 @@ public record MyAchievementItemDto(
     string? Description,
     string? BadgeIconUrl,
     string CriteriaType,
-    int CriteriaValue,
+    int TargetValue,
+    int CurrentProgress,
+    decimal ProgressPercent,
+    string Status,
     bool IsUnlocked,
     DateTime? EarnedAt
 );
