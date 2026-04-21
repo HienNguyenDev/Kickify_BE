@@ -108,6 +108,29 @@ public class MatchRoomHubService : IMatchRoomHubService
             .SendAsync("RoomStatusChanged", payload, cancellationToken);
     }
 
+    public async Task NotifyAutoCloseCountdownTickAsync(
+        Guid roomId,
+        int secondsRemaining,
+        DateTime closesAtUtc,
+        string reason,
+        CancellationToken cancellationToken = default)
+    {
+        var payload = new
+        {
+            RoomId = roomId,
+            SecondsRemaining = secondsRemaining,
+            ClosesAtUtc = closesAtUtc,
+            Reason = reason,
+            TickAt = DateTime.UtcNow
+        };
+
+        LogOutboundEvent("AutoCloseCountdownTick", $"Group: room_{roomId}", payload);
+
+        await _hubContext.Clients
+            .Group($"room_{roomId}")
+            .SendAsync("AutoCloseCountdownTick", payload, cancellationToken);
+    }
+
     public async Task NotifyParticipantUpdatedAsync(
         Guid roomId,
         Guid userId,
