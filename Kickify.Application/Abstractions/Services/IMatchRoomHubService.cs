@@ -1,4 +1,4 @@
-﻿namespace Kickify.Application.Abstractions.Services;
+namespace Kickify.Application.Abstractions.Services;
 
 /// <summary>
 /// Service for sending real-time notifications to match room participants
@@ -37,6 +37,16 @@ public interface IMatchRoomHubService
     Task NotifyRoomStatusChangedAsync(
         Guid roomId,
         string newStatus,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Notify room members about remaining time before dynamic auto-close.
+    /// </summary>
+    Task NotifyAutoCloseCountdownTickAsync(
+        Guid roomId,
+        int secondsRemaining,
+        DateTime closesAtUtc,
+        string reason,
         CancellationToken cancellationToken = default);
 
     /// <summary>

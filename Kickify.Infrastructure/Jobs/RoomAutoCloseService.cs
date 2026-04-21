@@ -14,6 +14,9 @@ namespace Kickify.Infrastructure.Jobs;
 
 public class RoomAutoCloseService : IRoomAutoCloseService
 {
+    private static readonly TimeSpan CountdownWindow = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan CountdownTickInterval = TimeSpan.FromMinutes(1);
+    private const string DynamicAutoCloseReason = "DynamicAutoClose";
     private readonly IBackgroundJobClient _backgroundJobClient;
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly ILogger<RoomAutoCloseService> _logger;
@@ -30,9 +33,17 @@ public class RoomAutoCloseService : IRoomAutoCloseService
 
     public void ScheduleAutoClose(Guid roomId, TimeSpan delay)
     {
+        if (delay < TimeSpan.Zero)
+        {
+            delay = TimeSpan.Zero;
+        }
+
+        var closesAtUtc = DateTime.UtcNow.Add(delay);
         var jobId = _backgroundJobClient.Schedule(
             () => CloseRoomAsync(roomId),
             delay);
+
+        ScheduleCountdownStart(roomId, delay, closesAtUtc);
 
         using var scope = _serviceScopeFactory.CreateScope();
         var matchRoomRepository = scope.ServiceProvider.GetRequiredService<IMatchRoomRepository>();
@@ -57,6 +68,42 @@ public class RoomAutoCloseService : IRoomAutoCloseService
     {
         CancelAutoClose(oldJobId);
         ScheduleAutoClose(roomId, delay);
+    }
+
+    public async Task BroadcastAutoCloseCountdownTickAsync(Guid roomId, DateTime closesAtUtc)
+    {
+        try
+        {
+            using var scope = _serviceScopeFactory.CreateScope();
+            var matchRoomRepository = scope.ServiceProvider.GetRequiredService<IMatchRoomRepository>();
+            var matchRoomHubService = scope.ServiceProvider.GetRequiredService<IMatchRoomHubService>();
+
+            var room = await matchRoomRepository.GetByIdAsync(roomId);
+            if (room == null || room.Status != RoomStatus.Open)
+            {
+                return;
+            }
+
+            var secondsRemaining = Math.Max(0, (int)Math.Ceiling((closesAtUtc - DateTime.UtcNow).TotalSeconds));
+            await matchRoomHubService.NotifyAutoCloseCountdownTickAsync(
+                roomId,
+                secondsRemaining,
+                closesAtUtc,
+                DynamicAutoCloseReason,
+                CancellationToken.None);
+
+            if (secondsRemaining > 0)
+            {
+                var nextDelay = TimeSpan.FromSeconds(Math.Min(CountdownTickInterval.TotalSeconds, secondsRemaining));
+                _backgroundJobClient.Schedule(
+                    () => BroadcastAutoCloseCountdownTickAsync(roomId, closesAtUtc),
+                    nextDelay);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error broadcasting auto-close countdown tick for room {RoomId}", roomId);
+        }
     }
 
     public async Task CloseRoomAsync(Guid roomId)
@@ -154,5 +201,18 @@ public class RoomAutoCloseService : IRoomAutoCloseService
         {
             _logger.LogError(ex, "Error while auto-closing room {RoomId}", roomId);
         }
+    }
+
+    private void ScheduleCountdownStart(Guid roomId, TimeSpan closeDelay, DateTime closesAtUtc)
+    {
+        var countdownStartDelay = closeDelay - CountdownWindow;
+        if (countdownStartDelay < TimeSpan.Zero)
+        {
+            countdownStartDelay = TimeSpan.Zero;
+        }
+
+        _backgroundJobClient.Schedule(
+            () => BroadcastAutoCloseCountdownTickAsync(roomId, closesAtUtc),
+            countdownStartDelay);
     }
 }
