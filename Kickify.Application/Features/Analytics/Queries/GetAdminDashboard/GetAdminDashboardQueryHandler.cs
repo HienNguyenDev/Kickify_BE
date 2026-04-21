@@ -30,6 +30,11 @@ public class GetAdminDashboardQueryHandler
         var todayEndUtc = ToUtc(todayLocal.AddDays(1), tz);
         var yesterdayStartUtc = ToUtc(yesterdayLocal, tz);
 
+        // MatchDate / BookingDate are PostgreSQL "date" columns. Comparing them to timestamptz
+        // boundaries can miscount the current calendar day; use same-calendar-day midnight values
+        // (Unspecified) like GetVenueDashboard does for BookingDate.
+        var tomorrowLocalExclusive = todayLocal.AddDays(1);
+
         // ════════════════════════════════════════════
         // KPI: Active Users Today
         // ════════════════════════════════════════════
@@ -42,10 +47,10 @@ public class GetAdminDashboardQueryHandler
         // KPI: Matches Today
         // ════════════════════════════════════════════
         var matchesToday = await _db.MatchRooms
-            .CountAsync(m => m.MatchDate >= todayStartUtc && m.MatchDate < todayEndUtc,
+            .CountAsync(m => m.MatchDate >= todayLocal && m.MatchDate < tomorrowLocalExclusive,
                 cancellationToken);
         var matchesYesterday = await _db.MatchRooms
-            .CountAsync(m => m.MatchDate >= yesterdayStartUtc && m.MatchDate < todayStartUtc,
+            .CountAsync(m => m.MatchDate >= yesterdayLocal && m.MatchDate < todayLocal,
                 cancellationToken);
         var matchesTodayChangePct = CalcChangePct(matchesToday, matchesYesterday);
 
@@ -73,15 +78,13 @@ public class GetAdminDashboardQueryHandler
         // ════════════════════════════════════════════
         var thirtyDaysAgoLocal = todayLocal.AddDays(-30);
         var sixtyDaysAgoLocal = todayLocal.AddDays(-60);
-        var thirtyDaysAgoUtc = ToUtc(thirtyDaysAgoLocal, tz);
-        var sixtyDaysAgoUtc = ToUtc(sixtyDaysAgoLocal, tz);
 
         // Use all paid (Confirmed+Completed) bookings by BookingDate – consistent with
         // how venue-owner dashboard counts revenue via BookingIncome wallet transactions.
         var revenue30d = await CompletedBookingRevenue.SumPaidAmountAsync(
-            _db.Bookings, thirtyDaysAgoUtc, todayEndUtc, cancellationToken);
+            _db.Bookings, thirtyDaysAgoLocal, tomorrowLocalExclusive, cancellationToken);
         var revenuePrev30d = await CompletedBookingRevenue.SumPaidAmountAsync(
-            _db.Bookings, sixtyDaysAgoUtc, thirtyDaysAgoUtc, cancellationToken);
+            _db.Bookings, sixtyDaysAgoLocal, thirtyDaysAgoLocal, cancellationToken);
         var revenue30dChangePct = CalcChangePct(revenue30d, revenuePrev30d);
 
         var kpi = new AdminKpiDto(
@@ -96,7 +99,6 @@ public class GetAdminDashboardQueryHandler
         var chartStartLocal = todayLocal.AddDays(-(request.ChartDays - 1));
         var prevChartStartLocal = chartStartLocal.AddDays(-request.ChartDays);
 
-        var chartStartUtc = ToUtc(chartStartLocal, tz);
         var prevChartStartUtc = ToUtc(prevChartStartLocal, tz);
 
         // Use Users.CreatedAt as the stable source for growth.
@@ -136,7 +138,7 @@ public class GetAdminDashboardQueryHandler
         // Chart: Matches by Day
         // ════════════════════════════════════════════
         var matchRooms = await _db.MatchRooms
-            .Where(m => m.MatchDate >= chartStartUtc && m.MatchDate < todayEndUtc)
+            .Where(m => m.MatchDate >= chartStartLocal && m.MatchDate < tomorrowLocalExclusive)
             .Select(m => m.MatchDate)
             .ToListAsync(cancellationToken);
 
@@ -144,10 +146,8 @@ public class GetAdminDashboardQueryHandler
         for (int i = 0; i < request.ChartDays; i++)
         {
             var day = chartStartLocal.AddDays(i);
-            var dayStart = ToUtc(day, tz);
-            var dayEnd = ToUtc(day.AddDays(1), tz);
 
-            var count = matchRooms.Count(d => d >= dayStart && d < dayEnd);
+            var count = matchRooms.Count(d => d.Date == day.Date);
             matchesByDay.Add(new MatchesByDayItemDto(day.ToString("yyyy-MM-dd"), count));
         }
 
@@ -156,7 +156,7 @@ public class GetAdminDashboardQueryHandler
         // ════════════════════════════════════════════
         var revenueRows = await _db.Bookings
             .AsNoTracking()
-            .WherePaidBetween(chartStartUtc, todayEndUtc)
+            .WherePaidBetween(chartStartLocal, tomorrowLocalExclusive)
             .Select(b => new { b.TotalAmount, BookingDate = b.BookingDate })
             .ToListAsync(cancellationToken);
 
@@ -164,10 +164,8 @@ public class GetAdminDashboardQueryHandler
         for (int i = 0; i < request.ChartDays; i++)
         {
             var day = chartStartLocal.AddDays(i);
-            var dayStart = ToUtc(day, tz);
-            var dayEnd = ToUtc(day.AddDays(1), tz);
             var dayRevenue = revenueRows
-                .Where(r => r.BookingDate >= dayStart && r.BookingDate < dayEnd)
+                .Where(r => r.BookingDate.Date == day.Date)
                 .Sum(r => r.TotalAmount);
 
             revenueTrend.Add(new RevenueTrendItemDto(day.ToString("yyyy-MM-dd"), Math.Max(0m, dayRevenue)));
@@ -195,7 +193,7 @@ public class GetAdminDashboardQueryHandler
         var todayMatchEntities = await _db.MatchRooms
             .Include(m => m.Field)
                 .ThenInclude(f => f!.Venue)
-            .Where(m => m.MatchDate >= todayStartUtc && m.MatchDate < todayEndUtc)
+            .Where(m => m.MatchDate >= todayLocal && m.MatchDate < tomorrowLocalExclusive)
             .OrderBy(m => m.StartTime)
             .Take(request.TodayMatchesPageSize)
             .ToListAsync(cancellationToken);
