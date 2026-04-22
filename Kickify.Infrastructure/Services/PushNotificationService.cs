@@ -177,4 +177,36 @@ public class PushNotificationService : IPushNotificationService
             _logger.LogError(ex, "Firebase topic push notification failed. Topic: {Topic}, ErrorCode: {ErrorCode}", topic, ex.ErrorCode);
         }
     }
+
+    public async Task SubscribeToTopicAsync(string fcmToken, string topic, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await FirebaseMessaging.DefaultInstance.SubscribeToTopicAsync(
+                new List<string> { fcmToken }, topic);
+            _logger.LogInformation(
+                "Subscribed token to topic '{Topic}'. Success: {SuccessCount}, Failure: {FailureCount}",
+                topic, response.SuccessCount, response.FailureCount);
+        }
+        catch (FirebaseMessagingException ex)
+        {
+            _logger.LogError(ex, "Failed to subscribe token to topic '{Topic}'. ErrorCode: {ErrorCode}", topic, ex.ErrorCode);
+        }
+    }
+
+    public async Task UnsubscribeFromTopicAsync(string fcmToken, string topic, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await FirebaseMessaging.DefaultInstance.UnsubscribeFromTopicAsync(
+                new List<string> { fcmToken }, topic);
+            _logger.LogInformation(
+                "Unsubscribed token from topic '{Topic}'. Success: {SuccessCount}, Failure: {FailureCount}",
+                topic, response.SuccessCount, response.FailureCount);
+        }
+        catch (FirebaseMessagingException ex)
+        {
+            _logger.LogError(ex, "Failed to unsubscribe token from topic '{Topic}'. ErrorCode: {ErrorCode}", topic, ex.ErrorCode);
+        }
+    }
 }

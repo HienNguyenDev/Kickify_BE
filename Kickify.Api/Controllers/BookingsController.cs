@@ -1,5 +1,6 @@
 using Kickify.Api.Extensions;
 using Kickify.Api.Requests;
+using Kickify.Application.Features.Bookings.Commands.CreateCheckInPayment;
 using Kickify.Application.Features.Bookings.Commands.ProcessPayment;
 using Kickify.Application.Features.Bookings.Queries.CheckAvailability;
 using Kickify.Application.Features.Bookings.Queries.CheckConsecutiveSlots;
@@ -37,7 +38,6 @@ namespace Kickify.Api.Controllers
         {
             var query = new GetAllBookingsQuery(fieldId, date, page, pageSize);
             var result = await _sender.Send(query, cancellationToken);
-
             return result.MatchOk();
         }
 
@@ -49,10 +49,8 @@ namespace Kickify.Api.Controllers
         {
             var query = new GetBookingByIdQuery(bookingId);
             var result = await _sender.Send(query, cancellationToken);
-
             return result.MatchOk();
         }
-
 
         /// <summary>
         /// Get booking preview with pricing calculation
@@ -66,16 +64,8 @@ namespace Kickify.Api.Controllers
             [FromQuery] int numberOfPlayers,
             CancellationToken cancellationToken)
         {
-            var query = new GetBookingPreviewQuery(
-                fieldId,
-                date,
-                startTime,
-                durationMinutes,
-                numberOfPlayers
-            );
-
+            var query = new GetBookingPreviewQuery(fieldId, date, startTime, durationMinutes, numberOfPlayers);
             var result = await _sender.Send(query, cancellationToken);
-
             return result.MatchOk();
         }
 
@@ -94,13 +84,12 @@ namespace Kickify.Api.Controllers
         {
             var query = new GetVenueOwnerBookingsQuery(fieldId, date, status, page, pageSize);
             var result = await _sender.Send(query, cancellationToken);
-
             return result.MatchOk();
         }
 
         /// <summary>
-        /// Process payment for a room participant (with race condition handling)
-        /// Uses current authenticated user from token
+        /// Process payment for a room participant using wallet balance.
+        /// Uses current authenticated user from token.
         /// </summary>
         [HttpPost("process-payment")]
         [Authorize]
@@ -108,13 +97,26 @@ namespace Kickify.Api.Controllers
             [FromBody] ProcessPaymentRequest request,
             CancellationToken cancellationToken)
         {
-            var command = new ProcessPaymentCommand(
-                request.RoomId
-            );
-
+            var command = new ProcessPaymentCommand(request.RoomId);
             var result = await _sender.Send(command, cancellationToken);
-
             return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Create a VNPay payment URL for direct room check-in (bypasses wallet balance).
+        /// The user scans/redirects to VNPay. On successful IPN callback the check-in is
+        /// processed automatically. If the room is later cancelled, the amount is refunded
+        /// to the user's in-app wallet.
+        /// </summary>
+        [HttpPost("{roomId:guid}/payment/vnpay")]
+        [Authorize]
+        public async Task<IResult> CreateCheckInPaymentVnPay(
+            Guid roomId,
+            CancellationToken cancellationToken)
+        {
+            var command = new CreateCheckInPaymentCommand(roomId);
+            var result = await _sender.Send(command, cancellationToken);
+            return result.MatchCreated(_ => $"/api/bookings/{roomId}");
         }
     }
 }
