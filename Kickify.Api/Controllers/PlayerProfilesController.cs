@@ -91,7 +91,7 @@ namespace Kickify.Api.Controllers
         }
 
         /// <summary>
-        /// Get radar chart axes for any user (public). AI assessments and summary are only included when the caller is that user.
+        /// Get radar chart axes for any user (public). AI assessments are only included when the caller is that user.
         /// </summary>
         [HttpGet("{userId:guid}/radar-chart")]
         [AllowAnonymous]
