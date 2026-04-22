@@ -59,5 +59,13 @@ namespace Kickify.Domain.Errors
         public static Error NotEligibleForRevenueReport(Guid bookingId) => Error.Problem(
             "Bookings.NotEligibleForRevenueReport",
             $"Booking '{bookingId}' does not have completed match revenue (match not finished or booking cancelled).");
+
+        public static Error NoDepositRequired(Guid roomId) => Error.Conflict(
+            "Bookings.NoDepositRequired",
+            $"Room '{roomId}' does not require a deposit.");
+
+        public static readonly Error PendingCheckInPaymentExists = Error.Conflict(
+            "Bookings.PendingCheckInPaymentExists",
+            "A pending VNPay check-in payment already exists. Complete or wait for it to expire before creating a new one.");
     }
 }

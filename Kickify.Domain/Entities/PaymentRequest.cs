@@ -20,8 +20,19 @@ namespace Kickify.Domain.Entities
         public DateTime? CompletedAt { get; set; }
         public DateTime ExpiredAt { get; set; }
 
+        /// <summary>
+        /// Purpose of this payment: Deposit (top-up wallet) or CheckIn (direct room check-in via VNPay).
+        /// </summary>
+        public PaymentPurpose Purpose { get; set; } = PaymentPurpose.Deposit;
+
+        /// <summary>
+        /// Populated when Purpose == CheckIn. Points to the room being paid for.
+        /// </summary>
+        public Guid? RoomId { get; set; }
+
         // Navigation
         public User? User { get; set; } = null!;
         public Wallet? Wallet { get; set; }
+        public MatchRoom? Room { get; set; }
     }
 }
