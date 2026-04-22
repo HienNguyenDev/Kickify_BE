@@ -48,7 +48,7 @@ public class GetPlayerRadarSnapshotQueryHandler : IQueryHandler<GetPlayerRadarSn
         else
         {
             assessments = new List<RadarAssessmentItem>();
-            summary = string.Empty;
+            summary = snapshot.Summary;
         }
 
         return Result.Success(new GetMyRadarSnapshotResponse(
