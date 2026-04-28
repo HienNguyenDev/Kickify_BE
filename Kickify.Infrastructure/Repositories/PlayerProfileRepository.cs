@@ -31,6 +31,9 @@ namespace Kickify.Infrastructure.Repositories
             int? maxElo = null,
             decimal? minTrustScore = null,
             string? searchTerm = null,
+            List<string>? positions = null,
+            string? preferredFoot = null,
+            bool highFormOnly = false,
             int page = 1,
             int pageSize = 10,
             CancellationToken cancellationToken = default)
@@ -66,6 +69,29 @@ namespace Kickify.Infrastructure.Repositories
                     (p.User.FullName != null && p.User.FullName.ToLower().Contains(lowerSearchTerm)) ||
                     p.User.Email.ToLower().Contains(lowerSearchTerm)
                 );
+            }
+
+            // Filter by preferred positions (User.PreferredPositions is a comma-separated string e.g. "FW,MF")
+            if (positions is { Count: > 0 })
+            {
+                query = query.Where(p =>
+                    p.User.PreferredPositions != null &&
+                    positions.Any(pos => p.User.PreferredPositions.Contains(pos)));
+            }
+
+            // Filter by preferred foot (exact match, case-insensitive)
+            if (!string.IsNullOrWhiteSpace(preferredFoot))
+            {
+                var lowerFoot = preferredFoot.ToLower();
+                query = query.Where(p =>
+                    p.User.PreferredFoot != null &&
+                    p.User.PreferredFoot.ToLower() == lowerFoot);
+            }
+
+            // High form only: players with current win streak >= 2
+            if (highFormOnly)
+            {
+                query = query.Where(p => p.WinStreak >= 2);
             }
 
             var total = await query.CountAsync(cancellationToken);
@@ -117,8 +143,8 @@ namespace Kickify.Infrastructure.Repositories
             // ELO DESC, UpdatedAt ASC, UserId ASC.
             var rank = await _dbSet
                 .AsNoTracking()
-                .CountAsync(p => 
-                    p.CurrentElo > myProfile.CurrentElo || 
+                .CountAsync(p =>
+                    p.CurrentElo > myProfile.CurrentElo ||
                     (p.CurrentElo == myProfile.CurrentElo && p.UpdatedAt < myProfile.UpdatedAt) ||
                     (p.CurrentElo == myProfile.CurrentElo && p.UpdatedAt == myProfile.UpdatedAt && p.UserId.CompareTo(myProfile.UserId) < 0),
                     cancellationToken);
