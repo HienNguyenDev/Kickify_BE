@@ -10,5 +10,12 @@ namespace Kickify.Application.Features.PlayerProfiles.Queries.GetAllPlayerProfil
         public int? MaxElo { get; set; }
         public decimal? MinTrustScore { get; set; }
         public string? SearchTerm { get; set; }
+        public List<string>? Positions { get; set; }
+        public string? PreferredFoot { get; set; }
+        public bool HighFormOnly { get; set; } = false;
+        /// <summary>
+        /// Optional list of player IDs (from ChromaDB) to show first in results.
+        /// </summary>
+        public List<string>? PrioritisePlayerIds { get; set; }
     }
 }

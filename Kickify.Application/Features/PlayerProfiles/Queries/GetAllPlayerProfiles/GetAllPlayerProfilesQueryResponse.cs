@@ -28,6 +28,7 @@ namespace Kickify.Application.Features.PlayerProfiles.Queries.GetAllPlayerProfil
         public int WinStreak { get; set; }
         public int MaxWinStreak { get; set; }
         public string? PreferredPositions { get; set; }
+        public string? PreferredFoot { get; set; }
         public DateTime CreatedAt { get; set; }
     }
 }
