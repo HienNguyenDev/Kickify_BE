@@ -63,18 +63,18 @@ namespace Kickify.Infrastructure
                     };
 
                     o.Events = new JwtBearerEvents
-    {
-        OnMessageReceived = context =>
-        {
-            var accessToken = context.Request.Query["access_token"];
-            var path = context.HttpContext.Request.Path;
-            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
-            {
-                context.Token = accessToken;
-            }
-            return Task.CompletedTask;
-        }
-    };
+                    {
+                        OnMessageReceived = context =>
+                        {
+                            var accessToken = context.Request.Query["access_token"];
+                            var path = context.HttpContext.Request.Path;
+                            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                            {
+                                context.Token = accessToken;
+                            }
+                            return Task.CompletedTask;
+                        }
+                    };
                 });
 
             services.AddHttpContextAccessor();
@@ -126,6 +126,15 @@ namespace Kickify.Infrastructure
 
             // AI Sentiment Analysis Service
             services.AddHttpClient<ISentimentAnalysisService, SentimentAnalysisService>((sp, client) =>
+            {
+                var config = sp.GetRequiredService<IConfiguration>();
+                var baseUrl = config["SentimentAnalysis:BaseUrl"] ?? "http://localhost:8000";
+                client.BaseAddress = new Uri(baseUrl);
+                client.Timeout = TimeSpan.FromSeconds(30);
+            });
+
+            // AI Suggestion Service (shared base URL with sentiment analysis)
+            services.AddHttpClient<IAiSuggestionService, AiSuggestionService>((sp, client) =>
             {
                 var config = sp.GetRequiredService<IConfiguration>();
                 var baseUrl = config["SentimentAnalysis:BaseUrl"] ?? "http://localhost:8000";
