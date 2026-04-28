@@ -49,13 +49,15 @@ namespace Kickify.Api.Controllers
                 FieldType: f.FieldType,
                 SurfaceType: f.SurfaceType,
                 HourlyRate: f.HourlyRate,
-                PeakHourSurcharge: f.PeakHourSurcharge,
-                PeakStartTime: f.PeakStartTime,
-                PeakEndTime: f.PeakEndTime,
                 WeekendSurcharge: f.WeekendSurcharge,
                 HolidaySurcharge: f.HolidaySurcharge,
-                PeakDaysOfWeek: f.PeakDaysOfWeek,
-                IsPeakHourSurchargePercentage: f.IsPeakHourSurchargePercentage,
+                PeakHours: f.PeakHours?.Select(ph => new CreateFieldPeakHourDto(
+                    ph.StartTime,
+                    ph.EndTime,
+                    ph.SurchargeAmount,
+                    ph.IsPercentage,
+                    ph.ApplicableDays
+                )).ToList(),
                 IsWeekendSurchargePercentage: f.IsWeekendSurchargePercentage,
                 IsHolidaySurchargePercentage: f.IsHolidaySurchargePercentage
             )).ToList();
@@ -149,13 +151,15 @@ namespace Kickify.Api.Controllers
                 FieldType: request.FieldType,
                 SurfaceType: request.SurfaceType,
                 HourlyRate: request.HourlyRate,
-                PeakHourSurcharge: request.PeakHourSurcharge,
-                PeakStartTime: request.PeakStartTime,
-                PeakEndTime: request.PeakEndTime,
                 WeekendSurcharge: request.WeekendSurcharge,
                 HolidaySurcharge: request.HolidaySurcharge,
-                PeakDaysOfWeek: request.PeakDaysOfWeek,
-                IsPeakHourSurchargePercentage: request.IsPeakHourSurchargePercentage,
+                PeakHours: request.PeakHours?.Select(ph => new AddFieldPeakHourDto(
+                    ph.StartTime,
+                    ph.EndTime,
+                    ph.SurchargeAmount,
+                    ph.IsPercentage,
+                    ph.ApplicableDays
+                )).ToList(),
                 IsWeekendSurchargePercentage: request.IsWeekendSurchargePercentage,
                 IsHolidaySurchargePercentage: request.IsHolidaySurchargePercentage
             );

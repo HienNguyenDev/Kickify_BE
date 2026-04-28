@@ -1,4 +1,5 @@
 using Kickify.Domain.Common;
+using Kickify.Domain.Enums;
 
 namespace Kickify.Domain.Errors
 {
@@ -74,5 +75,25 @@ namespace Kickify.Domain.Errors
         public static readonly Error InvalidEvidenceFileType = Error.Conflict(
             "Venues.InvalidEvidenceFileType",
             "Invalid file type. Allowed types: images (jpg, png, etc.), PDF, DOCX.");
+
+        public static Error InvalidPeakHourTimeFormat(string fieldName, int peakHourIndex, string? startTime, string? endTime) => Error.Conflict(
+            "Venues.InvalidPeakHourTimeFormat",
+            $"Field '{fieldName}' peak hour #{peakHourIndex}: invalid time format. StartTime='{startTime}', EndTime='{endTime}'. Expected format HH:mm:ss.");
+
+        public static Error InvalidPeakHourTimeRange(string fieldName, int peakHourIndex, TimeSpan startTime, TimeSpan endTime) => Error.Conflict(
+            "Venues.InvalidPeakHourTimeRange",
+            $"Field '{fieldName}' peak hour #{peakHourIndex}: StartTime '{startTime}' must be earlier than EndTime '{endTime}'.");
+
+        public static Error InvalidPeakHourApplicableDay(string fieldName, int peakHourIndex, string day) => Error.Conflict(
+            "Venues.InvalidPeakHourApplicableDay",
+            $"Field '{fieldName}' peak hour #{peakHourIndex}: invalid ApplicableDay '{day}'. Allowed values: Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday.");
+
+        public static Error PeakHourApplicableDaysRequired(string fieldName, int peakHourIndex) => Error.Conflict(
+            "Venues.PeakHourApplicableDaysRequired",
+            $"Field '{fieldName}' peak hour #{peakHourIndex}: ApplicableDays is required and cannot be empty.");
+
+        public static Error PeakHourDayOutsideVenueOpenDays(string fieldName, int peakHourIndex, DayOfWeekEnum day) => Error.Conflict(
+            "Venues.PeakHourDayOutsideVenueOpenDays",
+            $"Field '{fieldName}' peak hour #{peakHourIndex}: day '{day}' is not in venue open days.");
     }
 }

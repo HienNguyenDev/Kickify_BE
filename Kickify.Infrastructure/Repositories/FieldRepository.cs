@@ -17,6 +17,7 @@ namespace Kickify.Infrastructure.Repositories
         {
             return await _dbSet
                 .AsNoTracking()
+                .Include(f => f.PeakHours)
                 .Include(f => f.Venue)
                     .ThenInclude(v => v.IgnoredHolidays)
                 .Include(f => f.Venue)
@@ -28,6 +29,7 @@ namespace Kickify.Infrastructure.Repositories
         {
             return await _dbSet
                 .AsNoTracking()
+                .Include(f => f.PeakHours)
                 .Where(f => f.VenueId == venueId)
                 .OrderBy(f => f.FieldName)
                 .ToListAsync(cancellationToken);
@@ -57,6 +59,7 @@ namespace Kickify.Infrastructure.Repositories
             CancellationToken cancellationToken = default)
         {
             return await _dbSet
+                .Include(f => f.PeakHours)
                 .Include(f => f.Venue)
                     .ThenInclude(v => v.VenueOperatingHours)
                 .FirstOrDefaultAsync(f => f.FieldId == fieldId, cancellationToken);
@@ -71,6 +74,7 @@ namespace Kickify.Infrastructure.Repositories
         {
             var query = _dbSet
                 .AsNoTracking()
+                .Include(f => f.PeakHours)
                 .Include(f => f.Venue)
                 .AsQueryable();
 
@@ -103,6 +107,7 @@ namespace Kickify.Infrastructure.Repositories
         {
             var query = _dbSet
                 .AsNoTracking()
+                .Include(f => f.PeakHours)
                 .Include(f => f.Venue)
                 .Where(f => f.Venue.OwnerId == ownerId);
 
