@@ -1,4 +1,4 @@
-using AutoMapper;
+﻿using AutoMapper;
 using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
@@ -81,19 +81,73 @@ namespace Kickify.Application.Features.Venues.Commands.UpdateVenue
             {
                 resultHours = await UpdateOperatingHoursAsync(request.VenueId, request.OperatingHours, cancellationToken);
 
-                var newOpenDays = resultHours
-                    .Where(h => !h.IsClosed)
-                    .Select(h => h.DayOfWeek)
-                    .Distinct()
-                    .ToList();
+                // Merge with all existing hours from DB so we have a complete picture of ALL days,
+                // not just the days the frontend sent. This prevents accidentally removing peak hours
+                // for days that weren't part of this update request.
+                var allExistingHours = await _operatingHourRepository.GetByVenueIdAsync(request.VenueId, cancellationToken);
+                var coveredDays = resultHours.Select(h => h.DayOfWeek).ToHashSet();
+                foreach (var existingHour in allExistingHours)
+                {
+                    if (!coveredDays.Contains(existingHour.DayOfWeek))
+                    {
+                        resultHours.Add(existingHour);
+                    }
+                }
 
+                // TASK 3: Clean up orphaned peak hours for closed days AND shrunk operating hours
                 foreach (var childField in venue.Fields)
                 {
-                    childField.PeakDaysOfWeek = childField.PeakDaysOfWeek
-                        .Intersect(newOpenDays)
-                        .ToList();
+                    var peakHoursToRemove = new List<FieldPeakHour>();
+                    var isFieldUpdated = false;
 
-                    childField.UpdatedAt = DateTime.UtcNow;
+                    foreach (var peakHour in childField.PeakHours)
+                    {
+                        var daysToRemove = new List<DayOfWeekEnum>();
+
+                        foreach (var day in peakHour.ApplicableDays)
+                        {
+                            var operatingHour = resultHours.FirstOrDefault(h => h.DayOfWeek == day);
+
+                            if (operatingHour == null || operatingHour.IsClosed)
+                            {
+                                daysToRemove.Add(day);
+                            }
+                            else if (operatingHour.OpenTime == null || operatingHour.CloseTime == null)
+                            {
+                                daysToRemove.Add(day);
+                            }
+                            else if (peakHour.StartTime < operatingHour.OpenTime.Value ||
+                                     peakHour.EndTime > operatingHour.CloseTime.Value)
+                            {
+                                daysToRemove.Add(day);
+                            }
+                        }
+
+                        if (daysToRemove.Count > 0)
+                        {
+                            // Reassign with a NEW list instance to ensure EF Core's ValueComparer
+                            // detects the change on the PostgreSQL integer[] column.
+                            peakHour.ApplicableDays = peakHour.ApplicableDays
+                                .Where(d => !daysToRemove.Contains(d))
+                                .ToList();
+                            isFieldUpdated = true;
+
+                            if (peakHour.ApplicableDays.Count == 0)
+                            {
+                                peakHoursToRemove.Add(peakHour);
+                            }
+                        }
+                    }
+
+                    foreach (var peakHour in peakHoursToRemove)
+                    {
+                        childField.PeakHours.Remove(peakHour);
+                    }
+
+                    if (isFieldUpdated)
+                    {
+                        childField.UpdatedAt = DateTime.UtcNow;
+                    }
                 }
             }
             else

@@ -21,24 +21,44 @@ namespace Kickify.Application.Features.Venues.Commands.AddField
             RuleFor(x => x.HourlyRate)
                 .GreaterThan(0).WithMessage("HourlyRate must be greater than 0");
 
-            RuleFor(x => x.PeakHourSurcharge)
-                .GreaterThanOrEqualTo(0).WithMessage("PeakHourSurcharge must be greater than or equal to 0");
-
             RuleFor(x => x.WeekendSurcharge)
                 .GreaterThanOrEqualTo(0).WithMessage("WeekendSurcharge must be greater than or equal to 0");
 
             RuleFor(x => x.HolidaySurcharge)
                 .GreaterThanOrEqualTo(0).WithMessage("HolidaySurcharge must be greater than or equal to 0");
 
-            RuleFor(x => x)
-                .Must(x => x.PeakStartTime.HasValue == x.PeakEndTime.HasValue)
-                .WithMessage("PeakStartTime and PeakEndTime must either both be provided or both be empty");
+            RuleForEach(x => x.PeakHours!).ChildRules(peak =>
+            {
+                peak.RuleFor(p => p.StartTime)
+                    .NotEmpty().WithMessage("Peak hour StartTime is required")
+                    .Must(value => TimeSpan.TryParse(value, out _))
+                    .WithMessage("Peak hour StartTime must be in HH:mm:ss format");
 
-            RuleFor(x => x)
-                .Must(x => !x.PeakStartTime.HasValue || !x.PeakEndTime.HasValue || x.PeakStartTime.Value < x.PeakEndTime.Value)
-                .WithMessage("PeakStartTime must be earlier than PeakEndTime");
+                peak.RuleFor(p => p.EndTime)
+                    .NotEmpty().WithMessage("Peak hour EndTime is required")
+                    .Must(value => TimeSpan.TryParse(value, out _))
+                    .WithMessage("Peak hour EndTime must be in HH:mm:ss format");
 
-            
+                peak.RuleFor(p => p)
+                    .Must(p => TimeSpan.TryParse(p.StartTime, out var start) &&
+                               TimeSpan.TryParse(p.EndTime, out var end) &&
+                               start < end)
+                    .WithMessage("Peak hour StartTime must be earlier than EndTime");
+
+                peak.RuleFor(p => p.SurchargeAmount)
+                    .GreaterThanOrEqualTo(0).WithMessage("Peak hour surcharge must be greater than or equal to 0");
+
+                peak.RuleFor(p => p.ApplicableDays)
+                    .NotEmpty().WithMessage("Peak hour ApplicableDays is required");
+
+                peak.RuleFor(p => p.ApplicableDays)
+                    .Must(days => days.Distinct(StringComparer.OrdinalIgnoreCase).Count() == days.Count)
+                    .WithMessage("Peak hour ApplicableDays must not contain duplicate values");
+
+                peak.RuleForEach(p => p.ApplicableDays)
+                    .Must(day => Enum.TryParse<Kickify.Domain.Enums.DayOfWeekEnum>(day, true, out _))
+                    .WithMessage("Peak hour ApplicableDays contains invalid day value");
+            }).When(x => x.PeakHours is { Count: > 0 });
         }
     }
 }

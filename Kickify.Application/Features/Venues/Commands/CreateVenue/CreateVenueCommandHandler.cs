@@ -117,17 +117,95 @@ public class CreateVenueCommandHandler : ICommandHandler<CreateVenueCommand, Cre
                     FieldType = fieldType,
                     SurfaceType = fieldDto.SurfaceType,
                     HourlyRate = fieldDto.HourlyRate,
-                    PeakHourSurcharge = fieldDto.PeakHourSurcharge,
-                    PeakStartTime = fieldDto.PeakStartTime,
-                    PeakEndTime = fieldDto.PeakEndTime,
                     WeekendSurcharge = fieldDto.WeekendSurcharge,
                     HolidaySurcharge = fieldDto.HolidaySurcharge,
-                    PeakDaysOfWeek = venueOpenDays.ToList(),
-                    IsPeakHourSurchargePercentage = false,
-                    IsWeekendSurchargePercentage = false,
-                    IsHolidaySurchargePercentage = false,
+                    IsWeekendSurchargePercentage = fieldDto.IsWeekendSurchargePercentage ?? false,
+                    IsHolidaySurchargePercentage = fieldDto.IsHolidaySurchargePercentage ?? false,
                     CreatedAt = DateTime.UtcNow
                 };
+
+                if (fieldDto.PeakHours is { Count: > 0 })
+                {
+                    for (var peakHourIndex = 0; peakHourIndex < fieldDto.PeakHours.Count; peakHourIndex++)
+                    {
+                        var peakHourDto = fieldDto.PeakHours[peakHourIndex];
+                        var displayIndex = peakHourIndex + 1;
+
+                        if (!TimeSpan.TryParse(peakHourDto.StartTime, out var startTime) ||
+                            !TimeSpan.TryParse(peakHourDto.EndTime, out var endTime))
+                        {
+                            return Result.Failure<CreateVenueResponse>(
+                                VenueErrors.InvalidPeakHourTimeFormat(
+                                    fieldDto.Name,
+                                    displayIndex,
+                                    peakHourDto.StartTime,
+                                    peakHourDto.EndTime));
+                        }
+
+                        if (startTime >= endTime)
+                        {
+                            return Result.Failure<CreateVenueResponse>(
+                                VenueErrors.InvalidPeakHourTimeRange(
+                                    fieldDto.Name,
+                                    displayIndex,
+                                    startTime,
+                                    endTime));
+                        }
+
+                        if (peakHourDto.ApplicableDays == null || peakHourDto.ApplicableDays.Count == 0)
+                        {
+                            return Result.Failure<CreateVenueResponse>(
+                                VenueErrors.PeakHourApplicableDaysRequired(fieldDto.Name, displayIndex));
+                        }
+
+                        var parsedDays = new List<DayOfWeekEnum>();
+                        foreach (var dayValue in peakHourDto.ApplicableDays)
+                        {
+                            if (!Enum.TryParse<DayOfWeekEnum>(dayValue, true, out var parsedDay))
+                            {
+                                return Result.Failure<CreateVenueResponse>(
+                                    VenueErrors.InvalidPeakHourApplicableDay(
+                                        fieldDto.Name,
+                                        displayIndex,
+                                        dayValue));
+                            }
+
+                            var operatingHour = request.OperatingHours.FirstOrDefault(h => h.DayOfWeek == (int)parsedDay && !h.IsClosed);
+                            if (operatingHour == null)
+                            {
+                                return Result.Failure<CreateVenueResponse>(
+                                    VenueErrors.PeakHourDayOutsideVenueOpenDays(
+                                        fieldDto.Name,
+                                        displayIndex,
+                                        parsedDay));
+                            }
+                            
+                            if (operatingHour.OpenTime.HasValue && operatingHour.CloseTime.HasValue)
+                            {
+                                if (startTime < operatingHour.OpenTime.Value || endTime > operatingHour.CloseTime.Value)
+                                {
+                                    return Result.Failure<CreateVenueResponse>(FieldErrors.PeakHourOutsideOperatingHours);
+                                }
+                            }
+                            else
+                            {
+                                return Result.Failure<CreateVenueResponse>(FieldErrors.PeakHourOutsideOperatingHours);
+                            }
+
+                            parsedDays.Add(parsedDay);
+                        }
+
+                        field.PeakHours.Add(new FieldPeakHour
+                        {
+                            Id = Guid.NewGuid(),
+                            StartTime = startTime,
+                            EndTime = endTime,
+                            SurchargeAmount = peakHourDto.SurchargeAmount,
+                            IsPercentage = peakHourDto.IsPercentage,
+                            ApplicableDays = parsedDays.Distinct().ToList()
+                        });
+                    }
+                }
 
                 venue.Fields.Add(field);
             }
@@ -168,13 +246,16 @@ public class CreateVenueCommandHandler : ICommandHandler<CreateVenueCommand, Cre
                     f.FieldType.ToString(),
                     f.SurfaceType,
                     f.HourlyRate,
-                    f.PeakHourSurcharge,
-                    f.PeakStartTime,
-                    f.PeakEndTime,
                     f.WeekendSurcharge,
                     f.HolidaySurcharge,
-                    f.PeakDaysOfWeek,
-                    f.IsPeakHourSurchargePercentage,
+                    f.PeakHours.Select(ph => new FieldPeakHourResponseDto(
+                        ph.Id,
+                        ph.StartTime,
+                        ph.EndTime,
+                        ph.SurchargeAmount,
+                        ph.IsPercentage,
+                        ph.ApplicableDays
+                    )).ToList(),
                     f.IsWeekendSurchargePercentage,
                     f.IsHolidaySurchargePercentage
                 )).ToList(),
