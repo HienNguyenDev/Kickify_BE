@@ -8,14 +8,18 @@ namespace Kickify.Application.Features.Venues.Commands.AddField
           string FieldType,
           string? SurfaceType,
           decimal HourlyRate,
-          decimal PeakHourSurcharge,
-          TimeSpan? PeakStartTime,
-          TimeSpan? PeakEndTime,
           decimal WeekendSurcharge,
           decimal HolidaySurcharge,
-          List<Kickify.Domain.Enums.DayOfWeekEnum>? PeakDaysOfWeek,
-          bool? IsPeakHourSurchargePercentage,
+          List<AddFieldPeakHourDto>? PeakHours,
           bool? IsWeekendSurchargePercentage,
           bool? IsHolidaySurchargePercentage
       ) : ICommand<AddFieldResponse>;
+
+    public record AddFieldPeakHourDto(
+        string StartTime,
+        string EndTime,
+        decimal SurchargeAmount,
+        bool IsPercentage,
+        List<string> ApplicableDays
+    );
 }

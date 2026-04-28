@@ -21,14 +21,19 @@ namespace Kickify.Application.Features.Venues.Commands.CreateVenue
         string FieldType,
         string? SurfaceType,
         decimal HourlyRate,
-        decimal PeakHourSurcharge,
-        TimeSpan? PeakStartTime,
-        TimeSpan? PeakEndTime,
         decimal WeekendSurcharge,
         decimal HolidaySurcharge,
-        List<Kickify.Domain.Enums.DayOfWeekEnum> PeakDaysOfWeek,
-        bool IsPeakHourSurchargePercentage,
+        List<FieldPeakHourResponseDto> PeakHours,
         bool IsWeekendSurchargePercentage,
         bool IsHolidaySurchargePercentage
+    );
+
+    public record FieldPeakHourResponseDto(
+        Guid Id,
+        TimeSpan StartTime,
+        TimeSpan EndTime,
+        decimal SurchargeAmount,
+        bool IsPercentage,
+        List<Kickify.Domain.Enums.DayOfWeekEnum> ApplicableDays
     );
 }

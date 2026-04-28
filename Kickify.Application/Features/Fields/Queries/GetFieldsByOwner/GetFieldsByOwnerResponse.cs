@@ -15,16 +15,21 @@ namespace Kickify.Application.Features.Fields.Queries.GetFieldsByOwner
         string FieldType,
         string? SurfaceType,
         decimal HourlyRate,
-        decimal PeakHourSurcharge,
-        TimeSpan? PeakStartTime,
-        TimeSpan? PeakEndTime,
         decimal WeekendSurcharge,
         decimal HolidaySurcharge,
         bool IsActive,
         DateTime CreatedAt,
-        List<Kickify.Domain.Enums.DayOfWeekEnum> PeakDaysOfWeek,
-        bool IsPeakHourSurchargePercentage,
+        List<OwnerFieldPeakHourResponseDto> PeakHours,
         bool IsWeekendSurchargePercentage,
         bool IsHolidaySurchargePercentage
+    );
+
+    public record OwnerFieldPeakHourResponseDto(
+        Guid Id,
+        TimeSpan StartTime,
+        TimeSpan EndTime,
+        decimal SurchargeAmount,
+        bool IsPercentage,
+        List<Kickify.Domain.Enums.DayOfWeekEnum> ApplicableDays
     );
 }

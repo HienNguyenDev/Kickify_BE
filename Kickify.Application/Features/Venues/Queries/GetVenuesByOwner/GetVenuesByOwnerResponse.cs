@@ -36,18 +36,23 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenuesByOwner
         string FieldType,
         string? SurfaceType,
         decimal HourlyRate,
-        decimal PeakHourSurcharge,
-        TimeSpan? PeakStartTime,
-        TimeSpan? PeakEndTime,
+        List<OwnerVenueFieldPeakHourResponseDto> PeakHours,
         decimal WeekendSurcharge,
         decimal HolidaySurcharge,
-        List<Kickify.Domain.Enums.DayOfWeekEnum> PeakDaysOfWeek,
-        bool IsPeakHourSurchargePercentage,
         bool IsWeekendSurchargePercentage,
         bool IsHolidaySurchargePercentage,
         bool IsActive,
         DateTime CreatedAt,
         DateTime UpdatedAt
+    );
+
+    public record OwnerVenueFieldPeakHourResponseDto(
+        Guid Id,
+        TimeSpan StartTime,
+        TimeSpan EndTime,
+        decimal SurchargeAmount,
+        bool IsPercentage,
+        List<Kickify.Domain.Enums.DayOfWeekEnum> ApplicableDays
     );
 
     public record OwnerVenuePhotoDto(

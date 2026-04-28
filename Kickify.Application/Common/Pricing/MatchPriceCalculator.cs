@@ -38,17 +38,18 @@ public static class MatchPriceCalculator
             isWeekendApplied = true;
         }
 
-        // Peak-hour surcharge is independent and only applies on configured peak days.
-        var isPeakDay = field.PeakDaysOfWeek?.Contains((DayOfWeekEnum)matchDate.DayOfWeek) == true;
-        var isInsidePeakWindow =
-            field.PeakStartTime.HasValue &&
-            field.PeakEndTime.HasValue &&
-            startTime >= field.PeakStartTime.Value &&
-            startTime < field.PeakEndTime.Value;
+        // Peak-hour surcharge is independent and can be configured for multiple time windows.
+        var endTime = startTime.Add(TimeSpan.FromMinutes(durationMinutes));
+        var matchDay = (DayOfWeekEnum)matchDate.DayOfWeek;
+        
+        var activePeakHour = field.PeakHours.FirstOrDefault(peak =>
+            peak.ApplicableDays.Contains(matchDay) &&
+            startTime < peak.EndTime && // Match bắt đầu trước khi Peak kết thúc
+            endTime > peak.StartTime);  // Match kết thúc sau khi Peak bắt đầu
 
-        if (isPeakDay && isInsidePeakWindow)
+        if (activePeakHour != null)
         {
-            var peakFee = CalculateFee(field.HourlyRate, field.PeakHourSurcharge, field.IsPeakHourSurchargePercentage);
+            var peakFee = CalculateFee(field.HourlyRate, activePeakHour.SurchargeAmount, activePeakHour.IsPercentage);
             totalSurcharge += peakFee;
             peakSurcharge += peakFee;
             isPeakApplied = true;
