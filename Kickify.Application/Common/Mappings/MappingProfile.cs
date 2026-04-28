@@ -46,16 +46,12 @@ namespace Kickify.Application.Common.Mappings
                 .ForMember(dest => dest.FieldName, opt => opt.Condition((src, dest, srcMember) => src.FieldName != null))
                 .ForMember(dest => dest.SurfaceType, opt => opt.Condition((src, dest, srcMember) => src.SurfaceType != null))
                 .ForMember(dest => dest.HourlyRate, opt => opt.Condition((src, dest, srcMember) => src.HourlyRate.HasValue))
-                .ForMember(dest => dest.PeakHourSurcharge, opt => opt.Condition((src, dest, srcMember) => src.PeakHourSurcharge.HasValue))
-                .ForMember(dest => dest.PeakStartTime, opt => opt.Condition((src, dest, srcMember) => src.PeakStartTime.HasValue))
-                .ForMember(dest => dest.PeakEndTime, opt => opt.Condition((src, dest, srcMember) => src.PeakEndTime.HasValue))
                 .ForMember(dest => dest.WeekendSurcharge, opt => opt.Condition((src, dest, srcMember) => src.WeekendSurcharge.HasValue))
                 .ForMember(dest => dest.HolidaySurcharge, opt => opt.Condition((src, dest, srcMember) => src.HolidaySurcharge.HasValue))
                 .ForMember(dest => dest.IsActive, opt => opt.Condition((src, dest, srcMember) => src.IsActive.HasValue))
                 // Special handling for FieldType enum - handled manually in handler
                 .ForMember(dest => dest.FieldType, opt => opt.Ignore())
-                .ForMember(dest => dest.PeakDaysOfWeek, opt => opt.Ignore())
-                .ForMember(dest => dest.IsPeakHourSurchargePercentage, opt => opt.Ignore())
+                .ForMember(dest => dest.PeakHours, opt => opt.Ignore())
                 .ForMember(dest => dest.IsWeekendSurchargePercentage, opt => opt.Ignore())
                 .ForMember(dest => dest.IsHolidaySurchargePercentage, opt => opt.Ignore())
                 // Ignore properties that should not be mapped

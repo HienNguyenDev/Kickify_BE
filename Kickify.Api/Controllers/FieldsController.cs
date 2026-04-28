@@ -148,14 +148,16 @@ namespace Kickify.Api.Controllers
                 request.FieldType,
                 request.SurfaceType,
                 request.HourlyRate,
-                request.PeakHourSurcharge,
-                request.PeakStartTime,
-                request.PeakEndTime,
                 request.WeekendSurcharge,
                 request.HolidaySurcharge,
                 request.IsActive,
-                request.PeakDaysOfWeek,
-                request.IsPeakHourSurchargePercentage,
+                request.PeakHours?.Select(ph => new UpdateFieldPeakHourDto(
+                    ph.StartTime,
+                    ph.EndTime,
+                    ph.SurchargeAmount,
+                    ph.IsPercentage,
+                    ph.ApplicableDays
+                )).ToList(),
                 request.IsWeekendSurchargePercentage,
                 request.IsHolidaySurchargePercentage
             );

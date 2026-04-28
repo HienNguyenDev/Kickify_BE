@@ -1,7 +1,5 @@
 using Kickify.Domain.Entities;
-using Kickify.Domain.Enums;
 using Kickify.Infrastructure.Database;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -37,16 +35,6 @@ public class FieldConfiguration : IEntityTypeConfiguration<Field>
             .HasColumnType("decimal(10,2)")
             .IsRequired();
 
-        builder.Property(f => f.PeakHourSurcharge)
-            .HasColumnType("decimal(10,2)")
-            .HasDefaultValue(0);
-
-        builder.Property(f => f.PeakStartTime)
-            .HasColumnType("time");
-
-        builder.Property(f => f.PeakEndTime)
-            .HasColumnType("time");
-
         builder.Property(f => f.WeekendSurcharge)
             .HasColumnType("decimal(10,2)")
             .HasDefaultValue(0);
@@ -54,26 +42,6 @@ public class FieldConfiguration : IEntityTypeConfiguration<Field>
         builder.Property(f => f.HolidaySurcharge)
             .HasColumnType("decimal(10,2)")
             .HasDefaultValue(0);
-
-        var peakDaysComparer = new ValueComparer<List<DayOfWeekEnum>>(
-            (left, right) =>
-                ReferenceEquals(left, right) ||
-                (left != null && right != null && left.SequenceEqual(right)),
-            list =>
-                list == null
-                    ? 0
-                    : list.Aggregate(0, (current, item) => HashCode.Combine(current, item.GetHashCode())),
-            list => list == null ? new List<DayOfWeekEnum>() : list.ToList());
-
-        builder.Property(f => f.PeakDaysOfWeek)
-            .HasColumnType("integer[]")
-            .HasConversion(
-                v => v.Select(d => (int)d).ToArray(),
-                v => v.Select(d => (DayOfWeekEnum)d).ToList())
-            .Metadata.SetValueComparer(peakDaysComparer);
-
-        builder.Property(f => f.IsPeakHourSurchargePercentage)
-            .HasDefaultValue(false);
 
         builder.Property(f => f.IsWeekendSurchargePercentage)
             .HasDefaultValue(false);
@@ -102,5 +70,10 @@ public class FieldConfiguration : IEntityTypeConfiguration<Field>
             .WithOne(b => b.Field)
             .HasForeignKey(b => b.FieldId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasMany(f => f.PeakHours)
+            .WithOne(ph => ph.Field)
+            .HasForeignKey(ph => ph.FieldId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

@@ -20,6 +20,7 @@ namespace Kickify.Infrastructure.Repositories
                 .Include(v => v.Owner)
                 .Include(v => v.IgnoredHolidays)
                 .Include(v => v.Fields)
+                    .ThenInclude(f => f.PeakHours)
                 .Include(v => v.VenueOperatingHours)
                 .Include(v => v.VenuePhotos.OrderByDescending(p => p.DisplayOrder).Take(5))
                 .Include(v => v.VenueReviews.OrderByDescending(r => r.CreatedAt))
@@ -90,11 +91,13 @@ namespace Kickify.Infrastructure.Repositories
             {
                 query = query.Where(v => v.Fields.Any(f => f.FieldType == fieldType.Value && f.IsActive));
 
-                query = query.Include(v => v.Fields.Where(f => f.FieldType == fieldType.Value && f.IsActive));
+                query = query.Include(v => v.Fields.Where(f => f.FieldType == fieldType.Value && f.IsActive))
+                    .ThenInclude(f => f.PeakHours);
             }
             else
             {
-                query = query.Include(v => v.Fields.Where(f => f.IsActive));
+                query = query.Include(v => v.Fields.Where(f => f.IsActive))
+                    .ThenInclude(f => f.PeakHours);
             }
 
             // Filter by availability on specific date (if provided)
@@ -136,6 +139,7 @@ namespace Kickify.Infrastructure.Repositories
             return await _dbSet
                 .Include(v => v.IgnoredHolidays)
                 .Include(v => v.Fields)
+                    .ThenInclude(f => f.PeakHours)
                 .FirstOrDefaultAsync(v => v.VenueId == venueId, cancellationToken);
         }
 
@@ -165,6 +169,7 @@ namespace Kickify.Infrastructure.Repositories
             var query = _dbSet
                 .AsNoTracking()
                 .Include(v => v.Fields)
+                    .ThenInclude(f => f.PeakHours)
                 .Include(v => v.VenueOperatingHours)
                 .Include(v => v.VenuePhotos)
                 .Where(v => v.OwnerId == ownerId);

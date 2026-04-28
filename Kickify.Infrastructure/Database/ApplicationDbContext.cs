@@ -23,6 +23,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<VenuePhoto> VenuePhotos { get; set; }
     public DbSet<VenueOperatingHour> VenueOperatingHours { get; set; }
     public DbSet<Field> Fields { get; set; }
+    public DbSet<FieldPeakHour> FieldPeakHours { get; set; }
     public DbSet<VenueReview> VenueReviews { get; set; }
     public DbSet<VenueEvidence> VenueEvidences { get; set; }
 

@@ -32,11 +32,19 @@ namespace Kickify.Domain.Errors
             "Fields.PeakHourOnClosedVenueDay",
             "Không thể áp dụng giờ cao điểm cho ngày mà khu sân đang đóng cửa.");
 
+        public static readonly Error InvalidPeakHourTimeRange = Error.Problem(
+            "Fields.InvalidPeakHourTimeRange",
+            "Khung giờ cao điểm không hợp lệ. EndTime phải lớn hơn StartTime.");
+
         public static readonly Error VenueSuspended = Error.Conflict(
             "Fields.VenueSuspended",
             "The venue this field belongs to is currently suspended");
         public static readonly Error VenueArchived = Error.Problem(
             "Fields.VenueArchived",
             "The venue this field belongs to is currently archived");
+
+        public static readonly Error PeakHourOutsideOperatingHours = Error.Conflict(
+            "Fields.PeakHourOutsideOperatingHours",
+            "Khung giờ cao điểm phải nằm trong thời gian hoạt động của sân.");
     }
 }

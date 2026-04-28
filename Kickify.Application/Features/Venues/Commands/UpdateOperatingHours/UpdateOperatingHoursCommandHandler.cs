@@ -147,6 +147,34 @@ public class UpdateOperatingHoursCommandHandler : ICommandHandler<UpdateOperatin
             await _operatingHourRepository.AddRangeAsync(newHoursToAdd, cancellationToken);
         }
 
+        // TASK 3: Clean up orphaned peak hours
+        var newlyClosedDays = resultHours.Where(h => h.IsClosed).Select(h => h.DayOfWeek).ToList();
+        if (newlyClosedDays.Count > 0)
+        {
+            var venueToUpdate = await _venueRepository.GetVenueForUpdateAsync(request.VenueId, cancellationToken);
+            if (venueToUpdate != null)
+            {
+                foreach (var field in venueToUpdate.Fields)
+                {
+                    var peakHoursToRemove = new List<FieldPeakHour>();
+                    foreach (var peakHour in field.PeakHours)
+                    {
+                        peakHour.ApplicableDays = peakHour.ApplicableDays
+                            .Where(day => !newlyClosedDays.Contains(day))
+                            .ToList();
+                        if (peakHour.ApplicableDays.Count == 0)
+                        {
+                            peakHoursToRemove.Add(peakHour);
+                        }
+                    }
+                    foreach (var peakHour in peakHoursToRemove)
+                    {
+                        field.PeakHours.Remove(peakHour);
+                    }
+                }
+            }
+        }
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         var response = new UpdateOperatingHoursResponse
