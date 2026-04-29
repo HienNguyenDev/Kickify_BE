@@ -69,7 +69,12 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById
         DateTime? CheckInTime,
         bool IsCaptain,
         DateTime JoinDate,
-        bool HasLeftFeedback
+        bool HasLeftFeedback,
+        decimal? CheckInLatitude,
+        decimal? CheckInLongitude,
+        string? CheckInMethod,
+        string? CheckInPhotoUrl,
+        double? DistanceFromVenueMeters
     );
 
     public record RoomFormationsDto(

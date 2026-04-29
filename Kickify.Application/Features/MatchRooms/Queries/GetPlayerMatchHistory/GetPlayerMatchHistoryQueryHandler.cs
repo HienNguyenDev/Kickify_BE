@@ -73,6 +73,8 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetPlayerMatchHistory
                     venuePhotos = venuePhotosDict[room.Field.Venue.VenueId];
                 }
 
+                var participantInfo = room.RoomParticipants.FirstOrDefault(p => p.UserId == request.TargetUserId);
+
                 return new PlayerMatchRoomItemDto(
                     room.RoomId,
                     room.HostId,
@@ -92,7 +94,12 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetPlayerMatchHistory
                     room.CreatedAt,
                     room.TotalSlots,
                     room.FilledSlots,
-                    venuePhotos
+                    venuePhotos,
+                    participantInfo?.CheckInLatitude,
+                    participantInfo?.CheckInLongitude,
+                    participantInfo?.CheckInMethod,
+                    participantInfo?.CheckInPhotoUrl,
+                    participantInfo?.DistanceFromVenueMeters
                 );
             }).ToList();
 

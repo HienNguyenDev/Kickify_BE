@@ -135,6 +135,20 @@ namespace Kickify.Api.Controllers
         }
 
         /// <summary>
+        /// Suggest match rooms by natural-language query using AI parser.
+        /// </summary>
+        // [HttpGet("ai-suggest")]
+        // public async Task<IResult> GetAiSuggestedRooms(
+        //     [FromQuery] string query,
+        //     CancellationToken cancellationToken = default)
+        // {
+        //     var aiQuery = new GetAiSuggestedRoomsQuery(query);
+        //     var result = await _sender.Send(aiQuery, cancellationToken);
+
+        //     return result.MatchOk();
+        // }
+
+        /// <summary>
         /// Join a room
         /// </summary>
         [HttpPost("{id}/join")]
@@ -426,6 +440,32 @@ namespace Kickify.Api.Controllers
             var command = new Kickify.Application.Features.MatchRooms.Commands.RespondTransferHost.RespondTransferHostCommand(
                 id,
                 request.IsAccepted);
+
+            var result = await _sender.Send(command, cancellationToken);
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Check-in to a match room (via GPS or Photo)
+        /// </summary>
+        [HttpPost("{id}/check-in")]
+        [Consumes("multipart/form-data")]
+        public async Task<IResult> CheckIn(
+            [FromRoute] Guid id,
+            [FromForm] CheckInMatchRoomRequest request,
+            CancellationToken cancellationToken)
+        {
+            var command = new Kickify.Application.Features.MatchRooms.Commands.CheckIn.CheckInMatchRoomCommand
+            {
+                RoomId = id,
+                Latitude = request.Latitude,
+                Longitude = request.Longitude,
+                Photo = request.Photo != null ? new Kickify.Application.Abstractions.Services.FileUploadRequest(
+                    request.Photo.OpenReadStream(),
+                    request.Photo.FileName,
+                    request.Photo.ContentType,
+                    request.Photo.Length) : null
+            };
 
             var result = await _sender.Send(command, cancellationToken);
             return result.MatchOk();
