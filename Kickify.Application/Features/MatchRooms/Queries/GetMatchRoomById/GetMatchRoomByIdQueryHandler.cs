@@ -82,7 +82,12 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById
                 p.CheckInTime,
                 p.IsCaptain,
                 p.JoinDate,
-                usersWhoLeftFeedback.Contains(p.UserId)
+                usersWhoLeftFeedback.Contains(p.UserId),
+                p.CheckInLatitude,
+                p.CheckInLongitude,
+                p.CheckInMethod,
+                p.CheckInPhotoUrl,
+                p.DistanceFromVenueMeters
             )).ToList();
 
             // RULE: Calculate totalDepositCollected from participants with depositPaid = true

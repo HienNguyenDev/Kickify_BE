@@ -8,6 +8,28 @@ namespace Kickify.Domain.Errors
             "MatchRoom.NotFound",
             $"Room with ID {roomId} not found");
 
+       
+
+        public static readonly Error InvalidCheckInMethod = Error.Conflict(
+            "MatchRoomErrors.InvalidCheckInMethod",
+            "Please provide either a Photo or valid GPS coordinates to check in.");
+
+        public static readonly Error VenueLocationMissing = Error.Conflict(
+            "MatchRoomErrors.VenueLocationMissing",
+            "The venue does not have its location coordinates registered, cannot check in via GPS.");
+
+        public static readonly Error RoomNotLockedForCheckIn = Error.Conflict(
+            "MatchRoomErrors.RoomNotLockedForCheckIn",
+            "You can only check into a room that is locked.");
+
+        public static  Error TooFarFromVenue(double distance) => Error.Conflict(
+            "MatchRoom.TooFar", 
+            $"Bạn đang cách sân {Math.Round(distance)}m (Vượt quá bán kính 200m). Vui lòng di chuyển lại gần sân hoặc sử dụng tính năng Chụp ảnh Check-in.");
+
+        public static  Error WayTooFarEvenForPhoto(double distance) => Error.Conflict(
+            "MatchRoom.WayTooFar", 
+            $"Vị trí của bạn cách sân quá xa ({Math.Round(distance)}m). Vượt quá giới hạn cho phép (300m) nên không thể sử dụng tính năng chụp ảnh check-in.");
+
         public static readonly Error NotOpen = Error.Conflict(
             "MatchRoom.NotOpen",
             "Room is not open for joining");
