@@ -86,7 +86,6 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById
                 p.CheckInLatitude,
                 p.CheckInLongitude,
                 p.CheckInMethod,
-                p.CheckInPhotoUrl,
                 p.DistanceFromVenueMeters
             )).ToList();
 

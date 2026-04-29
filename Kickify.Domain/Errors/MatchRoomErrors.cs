@@ -1,4 +1,4 @@
-﻿using Kickify.Domain.Common;
+using Kickify.Domain.Common;
 
 namespace Kickify.Domain.Errors
 {
@@ -25,6 +25,10 @@ namespace Kickify.Domain.Errors
         public static  Error TooFarFromVenue(double distance) => Error.Conflict(
             "MatchRoom.TooFar", 
             $"Bạn đang cách sân {Math.Round(distance)}m (Vượt quá bán kính 200m). Vui lòng di chuyển lại gần sân hoặc sử dụng tính năng Chụp ảnh Check-in.");
+
+        public static  Error TooFarFromVenueGpsOnly(double distance) => Error.Conflict(
+            "MatchRoom.TooFar", 
+            $"Bạn đang cách sân {Math.Round(distance)}m (Vượt quá bán kính 300m cho phép). Vui lòng di chuyển lại gần sân để check-in.");
 
         public static  Error WayTooFarEvenForPhoto(double distance) => Error.Conflict(
             "MatchRoom.WayTooFar", 

@@ -34,7 +34,7 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetPlayerMatchHistory
         decimal? CheckInLatitude,
         decimal? CheckInLongitude,
         string? CheckInMethod,
-        string? CheckInPhotoUrl,
+        //string? CheckInPhotoUrl,
         double? DistanceFromVenueMeters
     );
 
