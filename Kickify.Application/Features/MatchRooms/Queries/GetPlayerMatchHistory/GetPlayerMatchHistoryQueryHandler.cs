@@ -98,7 +98,6 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetPlayerMatchHistory
                     participantInfo?.CheckInLatitude,
                     participantInfo?.CheckInLongitude,
                     participantInfo?.CheckInMethod,
-                    participantInfo?.CheckInPhotoUrl,
                     participantInfo?.DistanceFromVenueMeters
                 );
             }).ToList();

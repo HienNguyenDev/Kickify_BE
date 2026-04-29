@@ -130,7 +130,6 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMyMatchRooms
                     myParticipant?.CheckInLatitude,
                     myParticipant?.CheckInLongitude,
                     myParticipant?.CheckInMethod,
-                    myParticipant?.CheckInPhotoUrl,
                     myParticipant?.DistanceFromVenueMeters
                 );
             }).ToList();

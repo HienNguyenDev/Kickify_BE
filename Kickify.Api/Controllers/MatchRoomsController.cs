@@ -445,26 +445,46 @@ namespace Kickify.Api.Controllers
             return result.MatchOk();
         }
 
+        // /// <summary>
+        // /// Check-in to a match room (via GPS or Photo)
+        // /// </summary>
+        // [HttpPost("{id}/check-in-legacy")]
+        // [Consumes("multipart/form-data")]
+        // public async Task<IResult> CheckInLegacy(
+        //     [FromRoute] Guid id,
+        //     [FromForm] CheckInMatchRoomRequest request,
+        //     CancellationToken cancellationToken)
+        // {
+        //     var command = new Kickify.Application.Features.MatchRooms.Commands.CheckIn.CheckInMatchRoomCommand
+        //     {
+        //         RoomId = id,
+        //         Latitude = request.Latitude,
+        //         Longitude = request.Longitude,
+        //         Photo = request.Photo != null ? new Kickify.Application.Abstractions.Services.FileUploadRequest(
+        //             request.Photo.OpenReadStream(),
+        //             request.Photo.FileName,
+        //             request.Photo.ContentType,
+        //             request.Photo.Length) : null
+        //     };
+        //
+        //     var result = await _sender.Send(command, cancellationToken);
+        //     return result.MatchOk();
+        // }
+
         /// <summary>
-        /// Check-in to a match room (via GPS or Photo)
+        /// Check-in to a match room (via GPS only)
         /// </summary>
         [HttpPost("{id}/check-in")]
-        [Consumes("multipart/form-data")]
         public async Task<IResult> CheckIn(
             [FromRoute] Guid id,
-            [FromForm] CheckInMatchRoomRequest request,
+            [FromForm] Kickify.Api.Requests.CheckInMatchRoomGpsRequest request,
             CancellationToken cancellationToken)
         {
-            var command = new Kickify.Application.Features.MatchRooms.Commands.CheckIn.CheckInMatchRoomCommand
+            var command = new Kickify.Application.Features.MatchRooms.Commands.CheckIn.CheckInMatchRoomGpsCommand
             {
                 RoomId = id,
                 Latitude = request.Latitude,
-                Longitude = request.Longitude,
-                Photo = request.Photo != null ? new Kickify.Application.Abstractions.Services.FileUploadRequest(
-                    request.Photo.OpenReadStream(),
-                    request.Photo.FileName,
-                    request.Photo.ContentType,
-                    request.Photo.Length) : null
+                Longitude = request.Longitude
             };
 
             var result = await _sender.Send(command, cancellationToken);
