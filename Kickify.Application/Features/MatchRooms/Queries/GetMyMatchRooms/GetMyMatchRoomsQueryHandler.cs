@@ -98,8 +98,8 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMyMatchRooms
                     venuePhotos = venuePhotosDict[room.Field.Venue.VenueId];
                 }
 
-                var myTeam = room.RoomParticipants.FirstOrDefault(p => p.UserId == userId)?.TeamAssignment
-                    ?? TeamAssignment.Unassigned;
+                var myParticipant = room.RoomParticipants.FirstOrDefault(p => p.UserId == userId);
+                var myTeam = myParticipant?.TeamAssignment ?? TeamAssignment.Unassigned;
                 var myMatchOutcome = ResolveMyMatchOutcome(room.FinalResult, myTeam);
 
                 return new MyMatchRoomItemDto(
@@ -126,7 +126,12 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMyMatchRooms
                     myMatchOutcome,
                     room.CreatedAt,
                     reviewedMatchIds.Contains(room.RoomId),
-                    venuePhotos
+                    venuePhotos,
+                    myParticipant?.CheckInLatitude,
+                    myParticipant?.CheckInLongitude,
+                    myParticipant?.CheckInMethod,
+                    myParticipant?.CheckInPhotoUrl,
+                    myParticipant?.DistanceFromVenueMeters
                 );
             }).ToList();
 

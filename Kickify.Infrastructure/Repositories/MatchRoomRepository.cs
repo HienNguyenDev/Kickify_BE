@@ -27,6 +27,8 @@ namespace Kickify.Infrastructure.Repositories
         public async Task<MatchRoom?> GetRoomWithParticipantsForUpdateAsync(Guid roomId, CancellationToken cancellationToken = default)
         {
             return await _dbSet
+                .Include(r => r.Field)
+                    .ThenInclude(f => f.Venue)
                 .Include(r => r.RoomParticipants)
                 .FirstOrDefaultAsync(r => r.RoomId == roomId, cancellationToken);
         }

@@ -30,7 +30,12 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetPlayerMatchHistory
         DateTime CreatedAt,
         int TotalSlots,
         int FilledSlots,
-        List<PlayerRoomVenuePhotoDto> VenuePhotos
+        List<PlayerRoomVenuePhotoDto> VenuePhotos,
+        decimal? CheckInLatitude,
+        decimal? CheckInLongitude,
+        string? CheckInMethod,
+        string? CheckInPhotoUrl,
+        double? DistanceFromVenueMeters
     );
 
     public record PlayerRoomVenuePhotoDto(
