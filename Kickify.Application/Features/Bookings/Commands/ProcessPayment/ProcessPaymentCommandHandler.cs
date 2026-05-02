@@ -8,7 +8,6 @@ using Kickify.Domain.Common;
 using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
 using Kickify.Domain.Errors;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -19,7 +18,6 @@ public class ProcessPaymentCommandHandler : ICommandHandler<ProcessPaymentComman
     private readonly IMatchRoomRepository _matchRoomRepository;
     private readonly IRoomParticipantRepository _roomParticipantRepository;
     private readonly IBookingRepository _bookingRepository;
-    private readonly IFieldRepository _fieldRepository;
     private readonly IVenueRepository _venueRepository;
     private readonly IWalletRepository _walletRepository;
     private readonly IWalletTransactionRepository _walletTransactionRepository;
@@ -36,7 +34,6 @@ public class ProcessPaymentCommandHandler : ICommandHandler<ProcessPaymentComman
         IMatchRoomRepository matchRoomRepository,
         IRoomParticipantRepository roomParticipantRepository,
         IBookingRepository bookingRepository,
-        IFieldRepository fieldRepository,
         IVenueRepository venueRepository,
         IWalletRepository walletRepository,
         IWalletTransactionRepository walletTransactionRepository,
@@ -52,7 +49,6 @@ public class ProcessPaymentCommandHandler : ICommandHandler<ProcessPaymentComman
         _matchRoomRepository = matchRoomRepository;
         _roomParticipantRepository = roomParticipantRepository;
         _bookingRepository = bookingRepository;
-        _fieldRepository = fieldRepository;
         _venueRepository = venueRepository;
         _walletRepository = walletRepository;
         _walletTransactionRepository = walletTransactionRepository;
@@ -144,9 +140,7 @@ public class ProcessPaymentCommandHandler : ICommandHandler<ProcessPaymentComman
         {
             _logger.LogInformation("All participants paid for room {RoomId}. Creating booking...", request.RoomId);
 
-            // Get field details
-            var field = await _fieldRepository.GetFieldWithVenueAsync(room.FieldId!.Value, cancellationToken);
-            if (field == null)
+            if (room.Field == null)
             {
                 return Result.Failure<ProcessPaymentResponse>(FieldErrors.NotFound(room.FieldId));
             }
@@ -162,6 +156,10 @@ public class ProcessPaymentCommandHandler : ICommandHandler<ProcessPaymentComman
 
             try
             {
+                // Reuse the Field instance already tracked on room (GetBookingByRoom uses AsNoTracking
+                // and includes Field — Update(booking) would otherwise attach a second Field with the same key).
+                booking.Field = room.Field;
+
                 // Update booking status
                 booking.Status = BookingStatus.Confirmed;
                 _bookingRepository.Update(booking);

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -27,7 +27,6 @@ public class ProcessPaymentCommandHandlerTests
     private readonly Mock<IMatchRoomRepository> _matchRoomRepositoryMock = new();
     private readonly Mock<IRoomParticipantRepository> _roomParticipantRepositoryMock = new();
     private readonly Mock<IBookingRepository> _bookingRepositoryMock = new();
-    private readonly Mock<IFieldRepository> _fieldRepositoryMock = new();
     private readonly Mock<IVenueRepository> _venueRepositoryMock = new();
     private readonly Mock<IWalletRepository> _walletRepositoryMock = new();
     private readonly Mock<IWalletTransactionRepository> _walletTransactionRepositoryMock = new();
@@ -48,7 +47,6 @@ public class ProcessPaymentCommandHandlerTests
             _matchRoomRepositoryMock.Object,
             _roomParticipantRepositoryMock.Object,
             _bookingRepositoryMock.Object,
-            _fieldRepositoryMock.Object,
             _venueRepositoryMock.Object,
             _walletRepositoryMock.Object,
             _walletTransactionRepositoryMock.Object,
@@ -363,6 +361,7 @@ public class ProcessPaymentCommandHandlerTests
             DepositPaid = true
         };
 
+        var fieldId = Guid.NewGuid();
         var room = new MatchRoom
         {
             RoomId = roomId,
@@ -371,7 +370,8 @@ public class ProcessPaymentCommandHandlerTests
             TotalSlots = 2,
             RoomParticipants = new List<RoomParticipant> { participant1, participant2 },
             AutoCloseJobId = "job-123",
-            FieldId = Guid.NewGuid(),
+            FieldId = fieldId,
+            Field = new Field { FieldId = fieldId, VenueId = Guid.NewGuid() },
             MatchDate = DateTime.Today,
             StartTime = new TimeSpan(10, 0, 0)
         };
@@ -390,11 +390,6 @@ public class ProcessPaymentCommandHandlerTests
         _walletRepositoryMock
             .Setup(x => x.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(wallet);
-
-        var field = new Field { FieldId = room.FieldId.Value, VenueId = Guid.NewGuid() };
-        _fieldRepositoryMock
-            .Setup(x => x.GetFieldWithVenueAsync(room.FieldId.Value, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(field);
 
         var booking = new Booking { BookingId = Guid.NewGuid(), RoomId = roomId };
         _bookingRepositoryMock
@@ -424,12 +419,14 @@ public class ProcessPaymentCommandHandlerTests
         _userContextMock.Setup(uc => uc.UserId).Returns(userId);
         _userRepositoryMock.Setup(repo => repo.GetByIdAsync(userId)).ReturnsAsync(user);
 
+        var fieldId = Guid.NewGuid();
         var room = new MatchRoom
         {
             RoomId = roomId,
             Status = RoomStatus.Open,
             DepositPerPerson = 100,
-            FieldId = Guid.NewGuid(),
+            FieldId = fieldId,
+            Field = new Field { FieldId = fieldId },
             FilledSlots = 2,
             TotalSlots = 2,
             MatchDate = DateTime.Today,
@@ -447,10 +444,6 @@ public class ProcessPaymentCommandHandlerTests
         var wallet = new Wallet { WalletId = Guid.NewGuid(), UserId = userId, Balance = 200 };
         _walletRepositoryMock.Setup(repo => repo.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(wallet);
-
-        var field = new Field { FieldId = room.FieldId.Value };
-        _fieldRepositoryMock.Setup(repo => repo.GetFieldWithVenueAsync(room.FieldId.Value, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(field);
 
         var booking = new Booking { BookingId = Guid.NewGuid(), BookingDate = DateTime.Today, StartTime = new TimeSpan(10, 0, 0), EndTime = new TimeSpan(11, 0, 0) };
         _bookingRepositoryMock.Setup(repo => repo.GetBookingByRoomAsync(roomId, It.IsAny<CancellationToken>()))
