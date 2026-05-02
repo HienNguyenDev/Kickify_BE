@@ -45,7 +45,7 @@ public class MatchFeedbackConfiguration : IEntityTypeConfiguration<MatchFeedback
         builder.Property(mf => mf.ResponseDate)
             .HasColumnType("timestamp with time zone");
 
-        // Indexes
+        // One feedback row per (match, reviewer, reviewee); additional opponents via separate reviewees / requests.
         builder.HasIndex(mf => mf.MatchId);
         builder.HasIndex(mf => mf.RevieweeId);
         builder.HasIndex(mf => new { mf.MatchId, mf.ReviewerId, mf.RevieweeId })

@@ -26,8 +26,8 @@ public class MatchFeedbacksController : ControllerBase
     }
 
     /// <summary>
-    /// Gui tat ca feedback cua 1 reviewer danh cho cac dong doi trong 1 request.
-    /// Vi du tran 5v5: gui 4 feedback cua 1 nguoi toi 4 nguoi con lai.
+    /// Gửi feedback trong giai đoạn Reviewing: một request có thể chứa nhiều người nhận (mỗi RevieweeId một lần trong payload).
+    /// Mỗi cặp reviewer → một reviewee chỉ được một feedback cho trận đó; có thể gọi thêm request để review các đối thủ/đồng đội khác chưa được gửi.
     /// </summary>
     [HttpPost]
     public async Task<IResult> CreateMatchFeedback([FromBody] CreateMatchFeedbackRequest request, CancellationToken cancellationToken)

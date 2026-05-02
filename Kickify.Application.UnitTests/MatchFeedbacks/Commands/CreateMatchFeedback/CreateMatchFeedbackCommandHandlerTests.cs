@@ -148,12 +148,11 @@ public class CreateMatchFeedbackCommandHandlerTests
     [Fact]
     public async Task Handle_CreateFeedback_WhenAlreadyReviewed_ShouldReturnError_UTCID44()
     {
-        // Arrange
         var reviewerId = Guid.NewGuid();
         var revieweeId = Guid.NewGuid();
-        var command = new CreateMatchFeedbackCommand 
-        { 
-            MatchId = Guid.NewGuid(), 
+        var command = new CreateMatchFeedbackCommand
+        {
+            MatchId = Guid.NewGuid(),
             ReviewerId = reviewerId,
             Feedbacks = new List<FeedbackItemDto>
             {
@@ -165,18 +164,15 @@ public class CreateMatchFeedbackCommandHandlerTests
 
         _matchRoomRepositoryMock.Setup(repo => repo.GetByIdAsync(command.MatchId))
             .ReturnsAsync(matchRoom);
-            
-        _roomParticipantRepositoryMock.Setup(repo => repo.IsUserInRoomAsync(command.MatchId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true); // Both in match
 
-        // User already reviewed this target
+        _roomParticipantRepositoryMock.Setup(repo => repo.IsUserInRoomAsync(command.MatchId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
         _matchFeedbackRepositoryMock.Setup(repo => repo.HasUserReviewedAsync(command.MatchId, reviewerId, revieweeId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
-        // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeFalse();
         result.Error.Should().Be(MatchFeedbackErrors.AlreadyReviewed);
         _unitOfWorkMock.Verify(uow => uow.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -210,7 +206,7 @@ public class CreateMatchFeedbackCommandHandlerTests
             .ReturnsAsync(true); // Everyone in match
 
         _matchFeedbackRepositoryMock.Setup(repo => repo.HasUserReviewedAsync(command.MatchId, reviewerId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false); // No prior reviews
+            .ReturnsAsync(false);
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);

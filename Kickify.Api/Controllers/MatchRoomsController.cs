@@ -320,12 +320,12 @@ namespace Kickify.Api.Controllers
         }
 
         /// <summary>
-        /// Vote for match result
+        /// Submit match result (host only)
         /// </summary>
         /// <remarks>
-        /// Voting is only allowed during the Reviewing phase (after match ends).
-        /// When every participant has voted, the room moves to Completed immediately (majority wins).
-        /// Otherwise, the reviewing period closes after 22 hours and the majority vote applies.
+        /// Only the room host may call this during the Reviewing phase (after match ends).
+        /// The vote is stored for final tally; the room stays in Reviewing until the scheduled end of the reviewing window (22 hours after match end), then becomes Completed.
+        /// At that time, the host&apos;s vote takes precedence when present; otherwise majority of stored votes applies for legacy data.
         /// </remarks>
         [HttpPost("{id}/vote-result")]
         public async Task<IResult> VoteMatchResult(
