@@ -209,6 +209,10 @@ namespace Kickify.Domain.Errors
             "MatchRoom.AlreadyVoted",
             "You have already voted for this match result");
 
+        public static readonly Error OnlyHostCanSubmitMatchResult = Error.Conflict(
+            "MatchRoom.OnlyHostCanSubmitMatchResult",
+            "Only the match room host can submit the match result");
+
         public static readonly Error VoteNotAllowed = Error.Conflict(
             "MatchRoom.VoteNotAllowed",
             "Voting is only allowed during the reviewing phase");

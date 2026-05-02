@@ -249,18 +249,31 @@ public class MatchLifecycleService : IMatchLifecycleService
 
         if (votes.Count > 0)
         {
-            // Tìm kết quả có nhiều vote nhất
-            var winningResult = votes
-                .GroupBy(v => v.Vote)
-                .OrderByDescending(g => g.Count())
-                .First()
-                .Key;
+            // Ưu tiên phiếu của host (nguồn chính); fallback đa số cho phòng Reviewing còn dữ liệu vote cũ trước khi đổi rule.
+            var hostVote = votes.FirstOrDefault(v => v.UserId == room.HostId);
+            MatchResult winningResult;
+            int confirmationCount;
+
+            if (hostVote != null)
+            {
+                winningResult = hostVote.Vote;
+                confirmationCount = 1;
+            }
+            else
+            {
+                winningResult = votes
+                    .GroupBy(v => v.Vote)
+                    .OrderByDescending(g => g.Count())
+                    .First()
+                    .Key;
+                confirmationCount = votes.Count;
+            }
 
             room.FinalResult = winningResult;
-            room.ResultConfirmedBy = votes.Count;
+            room.ResultConfirmedBy = confirmationCount;
 
-            _logger.LogInformation("Room {RoomId} final result determined: {Result} with {VoteCount} votes",
-                roomId, winningResult, votes.Count);
+            _logger.LogInformation("Room {RoomId} final result determined: {Result} (confirmation metric: {ConfirmationCount}, total vote rows: {VoteRows})",
+                roomId, winningResult, confirmationCount, votes.Count);
         }
         else
         {
@@ -278,28 +291,6 @@ public class MatchLifecycleService : IMatchLifecycleService
 
         // Trigger post-match processing ngay khi reviewing đóng.
         _backgroundJobClient.Enqueue(() => ProcessPostMatchAsync(roomId));
-    }
-
-    public async Task TryFinalizeReviewingWhenAllVotesAsync(Guid roomId)
-    {
-        using var scope = _serviceScopeFactory.CreateScope();
-        var matchRoomRepository = scope.ServiceProvider.GetRequiredService<IMatchRoomRepository>();
-        var matchResultVoteRepository = scope.ServiceProvider.GetRequiredService<IMatchResultVoteRepository>();
-
-        var room = await matchRoomRepository.GetByIdAsync(roomId);
-        if (room is null || room.Status != RoomStatus.Reviewing)
-        {
-            return;
-        }
-
-        var voteCount = await matchResultVoteRepository.GetVoteCountByRoomAsync(roomId, CancellationToken.None);
-        if (voteCount < room.FilledSlots || room.FilledSlots <= 0)
-        {
-            return;
-        }
-
-        CancelAllJobs(null, null, room.FinalizeResultJobId);
-        await CloseReviewingPeriodAsync(roomId);
     }
 
     /// <summary>
