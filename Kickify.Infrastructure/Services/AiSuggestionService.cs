@@ -52,9 +52,17 @@ public class AiSuggestionService : IAiSuggestionService
 
             var f = dto.ParsedFilter;
 
-            DateTime? date = null;
-            if (!string.IsNullOrWhiteSpace(f.Date) && DateTime.TryParse(f.Date, out var parsedDate))
-                date = parsedDate.Date;
+            List<DateTime>? dates = null;
+            if (f.Dates is { Count: > 0 })
+            {
+                dates = f.Dates
+                    .Where(s => !string.IsNullOrWhiteSpace(s) && DateTime.TryParse(s, out _))
+                    .Select(s => DateTime.Parse(s).Date)
+                    .Distinct()
+                    .OrderBy(d => d)
+                    .ToList();
+                if (dates.Count == 0) dates = null;
+            }
 
             TimeSpan? timeFrom = null;
             if (!string.IsNullOrWhiteSpace(f.TimeFrom) && TimeSpan.TryParse(f.TimeFrom, out var tf))
@@ -67,7 +75,7 @@ public class AiSuggestionService : IAiSuggestionService
             return new RoomQueryParseResult(
                 IsRelevant: f.IsRelevant,
                 MatchFormat: string.IsNullOrWhiteSpace(f.MatchFormat) ? null : f.MatchFormat,
-                Date: date,
+                Dates: dates,
                 TimeFrom: timeFrom,
                 TimeTo: timeTo,
                 LocationName: string.IsNullOrWhiteSpace(f.LocationName) ? null : f.LocationName,
@@ -176,7 +184,7 @@ public class AiSuggestionService : IAiSuggestionService
     {
         public bool IsRelevant { get; set; }
         public string? MatchFormat { get; set; }
-        public string? Date { get; set; }
+        public List<string>? Dates { get; set; }
         public string? TimeFrom { get; set; }
         public string? TimeTo { get; set; }
         public string? LocationName { get; set; }

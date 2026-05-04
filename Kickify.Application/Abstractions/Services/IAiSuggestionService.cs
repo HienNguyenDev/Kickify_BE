@@ -38,7 +38,7 @@ public record PlayerQueryParseRequest(
 public record RoomQueryParseResult(
     bool IsRelevant,
     string? MatchFormat,
-    DateTime? Date,
+    List<DateTime>? Dates,
     TimeSpan? TimeFrom,
     TimeSpan? TimeTo,
     string? LocationName,

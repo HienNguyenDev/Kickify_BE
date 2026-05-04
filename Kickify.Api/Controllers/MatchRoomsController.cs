@@ -102,7 +102,7 @@ namespace Kickify.Api.Controllers
         /// </summary>
         [HttpGet]
         public async Task<IResult> GetRooms(
-            [FromQuery] DateTime? date,
+            [FromQuery] List<DateTime>? dates,
             [FromQuery] string? matchFormat,
             [FromQuery] bool? availableOnly,
             [FromQuery] decimal? latitude,
@@ -112,7 +112,7 @@ namespace Kickify.Api.Controllers
             [FromQuery] int pageSize = 10,
             CancellationToken cancellationToken = default)
         {
-            var query = new GetMatchRoomsQuery(date, matchFormat, availableOnly, latitude, longitude, radiusKm, page, pageSize);
+            var query = new GetMatchRoomsQuery(dates, matchFormat, availableOnly, latitude, longitude, radiusKm, page, pageSize);
 
             var result = await _sender.Send(query, cancellationToken);
 

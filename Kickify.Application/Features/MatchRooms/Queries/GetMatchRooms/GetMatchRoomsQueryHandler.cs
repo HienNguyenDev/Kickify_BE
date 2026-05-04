@@ -20,7 +20,7 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRooms
         public async Task<Result<GetMatchRoomsResponse>> Handle(GetMatchRoomsQuery request, CancellationToken cancellationToken)
         {
             var (rooms, total) = await _matchRoomRepository.SearchRoomsAsync(
-                request.Date,
+                request.Dates,
                 request.MatchFormat,
                 request.AvailableOnly,
                 request.Latitude,
