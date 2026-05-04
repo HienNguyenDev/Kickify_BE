@@ -3,7 +3,7 @@ using Kickify.Application.Abstractions.Messaging;
 namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRooms
 {
     public record GetMatchRoomsQuery(
-        DateTime? Date,
+        List<DateTime>? Dates,
         string? MatchFormat,
         bool? AvailableOnly,
         decimal? Latitude,

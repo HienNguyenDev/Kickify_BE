@@ -9,7 +9,7 @@ namespace Kickify.Application.Abstractions.Repositories
         Task<MatchRoom?> GetRoomWithParticipantsForUpdateAsync(Guid roomId, CancellationToken cancellationToken = default);
         Task<MatchRoom?> GetRoomWithDetailsAsync(Guid roomId, CancellationToken cancellationToken = default);
         Task<(IEnumerable<MatchRoom> Rooms, int Total)> SearchRoomsAsync(
-            DateTime? date,
+            List<DateTime>? dates,
             string? matchFormat,
             bool? availableOnly,
             decimal? latitude,

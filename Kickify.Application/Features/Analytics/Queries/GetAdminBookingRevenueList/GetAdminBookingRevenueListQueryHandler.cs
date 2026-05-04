@@ -49,8 +49,8 @@ public class GetAdminBookingRevenueListQueryHandler
                 b.PlatformFee,
                 b.VenueAmount,
                 b.BookingDate,
-                b.Status,
-                b.MatchRoom.Status))
+                b.Status.ToString(),
+                b.MatchRoom.Status.ToString()))
             .ToListAsync(cancellationToken);
 
         return Result.Success(new GetAdminBookingRevenueListResponse(
