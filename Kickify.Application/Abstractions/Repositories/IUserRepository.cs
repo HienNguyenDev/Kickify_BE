@@ -22,7 +22,10 @@ namespace Kickify.Application.Abstractions.Repositories
             int pageSize = 10,
             bool includeDeleted = false,
             CancellationToken cancellationToken = default);
-        Task<User?> GetUserWithDetailsAsync(Guid userId, CancellationToken cancellationToken = default);
+        Task<User?> GetUserWithDetailsAsync(
+            Guid userId,
+            bool includeDeleted = false,
+            CancellationToken cancellationToken = default);
         Task<User?> GetUserByEmailIgnoreFilterAsync(string email);
     }
 }
