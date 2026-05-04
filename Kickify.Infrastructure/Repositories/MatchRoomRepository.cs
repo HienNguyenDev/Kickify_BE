@@ -47,7 +47,7 @@ namespace Kickify.Infrastructure.Repositories
         }
 
         public async Task<(IEnumerable<MatchRoom> Rooms, int Total)> SearchRoomsAsync(
-            DateTime? date,
+            List<DateTime>? dates,
             string? matchFormat,
             bool? availableOnly,
             decimal? latitude,
@@ -64,10 +64,11 @@ namespace Kickify.Infrastructure.Repositories
                     .ThenInclude(f => f!.Venue)
                 .AsQueryable();
 
-            // Filter by date
-            if (date.HasValue)
+            // Filter by specific dates list (any match on a listed day)
+            if (dates is { Count: > 0 })
             {
-                query = query.Where(r => r.MatchDate.Date == date.Value.Date);
+                var dateDates = dates.Select(d => d.Date).ToList();
+                query = query.Where(r => dateDates.Contains(r.MatchDate.Date));
             }
 
             // Filter by match format

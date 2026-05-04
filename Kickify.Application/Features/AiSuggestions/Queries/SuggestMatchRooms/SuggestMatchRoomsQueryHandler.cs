@@ -55,7 +55,7 @@ public class SuggestMatchRoomsQueryHandler
         var longitude = request.Longitude.HasValue ? (decimal?)request.Longitude.Value : null;
 
         var searchQuery = new GetMatchRoomsQuery(
-            Date: parseResult.Date,
+            Dates: parseResult.Dates,
             MatchFormat: parseResult.MatchFormat,
             AvailableOnly: parseResult.AvailableOnly,
             Latitude: latitude,

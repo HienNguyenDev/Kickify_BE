@@ -19,6 +19,6 @@ public record AdminBookingRevenueListItemDto(
     decimal PlatformFee,
     decimal VenueAmount,
     DateTime CompletedAtUtc,
-    BookingStatus BookingStatus,
-    RoomStatus MatchRoomStatus
+    string BookingStatus,
+    string MatchRoomStatus
 );

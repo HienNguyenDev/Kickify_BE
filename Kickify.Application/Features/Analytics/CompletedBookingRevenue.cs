@@ -11,7 +11,7 @@ namespace Kickify.Application.Features.Analytics;
 public static class CompletedBookingRevenue
 {
     public static bool IsCompletedRevenueBooking(Booking b) =>
-        b.MatchRoom.Status == RoomStatus.Completed
+        (b.MatchRoom.Status == RoomStatus.Completed || b.MatchRoom.Status == RoomStatus.Reviewing)
         && (b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.Completed);
 
     public static IQueryable<Booking> WhereCompletedRevenue(this IQueryable<Booking> bookings) =>
