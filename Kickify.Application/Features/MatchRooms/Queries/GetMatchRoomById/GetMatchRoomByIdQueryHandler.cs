@@ -10,7 +10,7 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById
 {
     public class GetMatchRoomByIdQueryHandler : IQueryHandler<GetMatchRoomByIdQuery, GetMatchRoomByIdResponse>
     {
-        private const decimal SkillImbalanceEloThreshold = 200m;
+        private const decimal SkillImbalanceEloThreshold = 100m;
 
         private readonly IMatchRoomRepository _matchRoomRepository;
         private readonly IMatchFormationRepository _matchFormationRepository;
