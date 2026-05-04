@@ -34,7 +34,9 @@ namespace Kickify.Application.Features.Users.Commands.DeleteUser
                 return Result.Failure<DeleteUserCommandResponse>(UserErrors.NotFound(request.UserId));
             }
 
-            _userRepository.Remove(user);
+            user.IsActive = false;
+            user.DeletedAt ??= DateTime.UtcNow;
+            _userRepository.Update(user);
             if (!string.IsNullOrEmpty(user.IdentityId))
             {
                 await _authenticationServices.DeleteUserAsync(user.IdentityId);

@@ -18,6 +18,8 @@ namespace Kickify.Application.Features.Users.Queries.GetUserById
         public string? PreferredFoot { get; set; }
         public bool IsEmailVerified { get; set; }
         public bool IsActive { get; set; }
+        public DateTime? BannedUntil { get; set; }
+        public DateTime? DeletedAt { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
         
