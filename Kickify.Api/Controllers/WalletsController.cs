@@ -135,8 +135,8 @@ public class WalletsController : ControllerBase
         var callbackData = _vnPayService.ProcessCallback(Request.Query);
 
         var redirectUrl = callbackData.IsSuccess
-            ? $"https://kickify.site/payment/success?txnRef={callbackData.TxnRef}&amount={callbackData.Amount}"
-            : $"https://kickify.site/payment/failure?code={callbackData.ResponseCode}";
+            ? $"https://kickify.vercel.app/payment/success?txnRef={callbackData.TxnRef}&amount={callbackData.Amount}"
+            : $"https://kickify.vercel.app/payment/failure?code={callbackData.ResponseCode}";
 
         return Redirect(redirectUrl);
     }
