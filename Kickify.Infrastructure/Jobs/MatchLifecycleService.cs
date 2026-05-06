@@ -990,28 +990,46 @@ public class MatchLifecycleService : IMatchLifecycleService
             // Apply platform commission: venue owner receives (1 - commissionRate) of total collected.
             // 5 % stays in the platform's merchant account as revenue.
             var commission = Math.Round(room.TotalDepositCollected * 0.05m, 0);
-            var transferAmount = room.TotalDepositCollected - commission;
-            ownerWallet.Balance += transferAmount;
+            var totalDeposit = room.TotalDepositCollected;
+
+            // Credit full amount first, then deduct commission → net = 95%, two clean audit rows
+            ownerWallet.Balance += totalDeposit;
+            var balanceAfterIncome = ownerWallet.Balance;
+
+            ownerWallet.Balance -= commission;
+            var balanceAfterCommission = ownerWallet.Balance;
+
             walletRepository.Update(ownerWallet);
 
-            // 4. Ghi log lịch sử giao dịch (Biến TransactionType.BookingIncome nhớ đảm bảo đã có trong Enum của bạn)
-            var transaction = new WalletTransaction
+            // 4a. BookingIncome: full deposit credited
+            await walletTransactionRepository.AddAsync(new WalletTransaction
             {
                 TransactionId = Guid.NewGuid(),
                 WalletId = ownerWallet.WalletId,
                 TransactionType = TransactionType.BookingIncome,
-                Amount = transferAmount,
-                BalanceAfter = ownerWallet.Balance,
-                ReferenceId = room.RoomId, // Có thể link tới BookingId nếu bạn include Booking vào Room
-                Description = $"Booking income from room {room.RoomName ?? room.RoomId.ToString()} (after 5% platform commission)",
+                Amount = totalDeposit,
+                BalanceAfter = balanceAfterIncome,
+                ReferenceId = room.RoomId,
+                Description = $"Booking income from room {room.RoomName ?? room.RoomId.ToString()}",
                 CreatedAt = DateTime.UtcNow
-            };
+            });
 
-            await walletTransactionRepository.AddAsync(transaction);
+            // 4b. BookingCommission: 5% platform fee deducted
+            await walletTransactionRepository.AddAsync(new WalletTransaction
+            {
+                TransactionId = Guid.NewGuid(),
+                WalletId = ownerWallet.WalletId,
+                TransactionType = TransactionType.BookingCommission,
+                Amount = -commission,
+                BalanceAfter = balanceAfterCommission,
+                ReferenceId = room.RoomId,
+                Description = $"Platform commission 5% for room {room.RoomName ?? room.RoomId.ToString()}",
+                CreatedAt = DateTime.UtcNow
+            });
 
             _logger.LogInformation(
-                "Escrow released: {VenueAmount} to VenueOwner {OwnerId}, commission {Commission} retained. Room {RoomId}",
-                transferAmount, venue.OwnerId, commission, room.RoomId);
+                "Escrow released: {TotalDeposit} credited, commission {Commission} deducted, net {Net} to VenueOwner {OwnerId}. Room {RoomId}",
+                totalDeposit, commission, balanceAfterCommission - (balanceAfterIncome - totalDeposit), venue.OwnerId, room.RoomId);
         }
         catch (Exception ex)
         {
