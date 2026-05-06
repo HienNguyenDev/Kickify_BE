@@ -29,7 +29,7 @@ public class EloConfigurationConfiguration : IEntityTypeConfiguration<EloConfigu
             .HasColumnType("decimal(5,2)")
             .IsRequired();
 
-        builder.Property(ec => ec.K3WinRate)
+        builder.Property(ec => ec.K3WinStreak)
             .HasColumnType("decimal(5,2)")
             .IsRequired();
 

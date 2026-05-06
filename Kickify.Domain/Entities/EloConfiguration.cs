@@ -8,7 +8,7 @@ public class EloConfiguration : BaseEntity
     public string VersionName { get; set; } = string.Empty;
     public decimal K1MatchResult { get; set; }
     public decimal K2FeedbackSentiment { get; set; }
-    public decimal K3WinRate { get; set; }
+    public decimal K3WinStreak { get; set; }
     public decimal K4Contribution { get; set; }
     public decimal K5Trust { get; set; }
     public DateTime EffectiveFrom { get; set; }

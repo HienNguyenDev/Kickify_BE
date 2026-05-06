@@ -29,7 +29,7 @@ public class UpdateActiveEloConfigurationCommandHandler : ICommandHandler<Update
 
         activeConfig.K1MatchResult = request.K1MatchResult;
         activeConfig.K2FeedbackSentiment = request.K2FeedbackSentiment;
-        activeConfig.K3WinRate = request.K3WinRate;
+        activeConfig.K3WinStreak = request.K3WinStreak;
         activeConfig.K4Contribution = request.K4Contribution;
         activeConfig.K5Trust = request.K5Trust;
 
@@ -40,7 +40,7 @@ public class UpdateActiveEloConfigurationCommandHandler : ICommandHandler<Update
             activeConfig.ConfigId,
             activeConfig.K1MatchResult,
             activeConfig.K2FeedbackSentiment,
-            activeConfig.K3WinRate,
+            activeConfig.K3WinStreak,
             activeConfig.K4Contribution,
             activeConfig.K5Trust,
             activeConfig.IsActive,

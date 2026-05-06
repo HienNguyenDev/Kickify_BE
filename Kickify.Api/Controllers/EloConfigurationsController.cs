@@ -39,7 +39,7 @@ public class EloConfigurationsController : ControllerBase
         var command = new UpdateActiveEloConfigurationCommand(
             request.K1MatchResult,
             request.K2FeedbackSentiment,
-            request.K3WinRate,
+            request.K3WinStreak,
             request.K4Contribution,
             request.K5Trust);
 

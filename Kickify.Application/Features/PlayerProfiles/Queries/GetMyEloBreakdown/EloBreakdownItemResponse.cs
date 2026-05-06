@@ -7,7 +7,7 @@ public record EloBreakdownItemResponse(
     int EloChange,
     decimal? K1MatchResultComponent,
     decimal? K2FeedbackSentimentComponent,
-    decimal? K3WinRateComponent,
+    decimal? K3WinStreakComponent,
     decimal? K4ContributionComponent,
     decimal? K5TrustComponent,
     string? CalculationDetails,
