@@ -11,5 +11,6 @@ public enum TransactionType
     Penalty,
     Compensation,
     WithdrawalFee,
-    PremiumPurchase
+    PremiumPurchase,
+    BookingCommission
 }
