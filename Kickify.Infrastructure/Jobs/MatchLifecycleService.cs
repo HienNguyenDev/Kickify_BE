@@ -499,14 +499,14 @@ public class MatchLifecycleService : IMatchLifecycleService
                     profile.CurrentElo,
                     profile.TrustScore,
                     isLegend,
-                    new EloRecentMatches(recentTotal, recentWins),
+                    new EloRecentMatches(recentTotal, recentWins, profile.WinStreak),
                     new EloContribution(
                         submittedFeedback,
                         fullFeedbackCoverage)),
                 new EloKFactors(
                     activeEloConfig.K1MatchResult,
                     activeEloConfig.K2FeedbackSentiment,
-                    activeEloConfig.K3WinRate,
+                    activeEloConfig.K3WinStreak,
                     activeEloConfig.K4Contribution,
                     activeEloConfig.K5Trust),
                 feedbackForPlayer.Select(f => new EloCalculationFeedback(
@@ -543,7 +543,7 @@ public class MatchLifecycleService : IMatchLifecycleService
                 existingEloHistory.EloChange = eloResponse.Elo.New - eloBefore;
                 existingEloHistory.K1MatchResultComponent = eloResponse.Breakdown.K1MatchResult.Delta;
                 existingEloHistory.K2FeedbackSentimentComponent = eloResponse.Breakdown.K2FeedbackSentiment.Delta;
-                existingEloHistory.K3WinRateComponent = eloResponse.Breakdown.K3WinRate.Delta;
+                existingEloHistory.K3WinStreakComponent = eloResponse.Breakdown.K3WinStreak.Delta;
                 existingEloHistory.K4ContributionComponent = eloResponse.Breakdown.K4Contribution.Delta;
                 existingEloHistory.K5TrustComponent = eloResponse.Breakdown.K5Trust.Delta;
                 existingEloHistory.CalculationDetails = JsonSerializer.Serialize(eloResponse.Breakdown);
@@ -801,7 +801,7 @@ public class MatchLifecycleService : IMatchLifecycleService
 
         var componentSum = response.Breakdown.K1MatchResult.Delta
             + response.Breakdown.K2FeedbackSentiment.Delta
-            + response.Breakdown.K3WinRate.Delta
+            + response.Breakdown.K3WinStreak.Delta
             + response.Breakdown.K4Contribution.Delta
             + response.Breakdown.K5Trust.Delta;
 

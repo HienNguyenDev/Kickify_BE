@@ -41,7 +41,7 @@ public class GetMyEloBreakdownQueryHandler : IQueryHandler<GetMyEloBreakdownQuer
                 x.EloChange,
                 x.K1MatchResultComponent,
                 x.K2FeedbackSentimentComponent,
-                x.K3WinRateComponent,
+                x.K3WinStreakComponent,
                 x.K4ContributionComponent,
                 x.K5TrustComponent,
                 x.CalculationDetails,

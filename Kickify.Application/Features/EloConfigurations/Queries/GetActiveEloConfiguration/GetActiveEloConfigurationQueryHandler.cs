@@ -32,7 +32,7 @@ public class GetActiveEloConfigurationQueryHandler : IQueryHandler<GetActiveEloC
             activeConfig.ConfigId,
             activeConfig.K1MatchResult,
             activeConfig.K2FeedbackSentiment,
-            activeConfig.K3WinRate,
+            activeConfig.K3WinStreak,
             activeConfig.K4Contribution,
             activeConfig.K5Trust,
             activeConfig.IsActive,
