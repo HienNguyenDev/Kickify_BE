@@ -1,8 +1,11 @@
 namespace Kickify.Application.Features.Holidays.Commands.CreateHoliday;
 
-public record CreateHolidayResponse(
+public record HolidayDto(
     Guid Id,
     DateTime Date,
-    string Name,
-    DateTime CreatedAt
+    string Name
+);
+
+public record CreateHolidayResponse(
+    List<HolidayDto> Holidays
 );
