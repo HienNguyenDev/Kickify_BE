@@ -1,4 +1,5 @@
 using Kickify.Application.Abstractions.Jobs;
+using Kickify.Application.Common;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
@@ -124,6 +125,10 @@ public class ProcessPaymentVnPayCommandHandler : ICommandHandler<ProcessPaymentV
             {
                 booking.Field = room.Field;
                 booking.Status = BookingStatus.Confirmed;
+                    var totalAmount = room.RoomParticipants.Sum(p => p.DepositAmount ?? 0);
+                    booking.TotalAmount = totalAmount;
+                    booking.PlatformFee = Math.Round(totalAmount * PlatformConstants.BookingCommissionRate, 0);
+                    booking.VenueAmount = totalAmount - booking.PlatformFee;
                 _bookingRepository.Update(booking);
 
                 room.Status = RoomStatus.Locked;

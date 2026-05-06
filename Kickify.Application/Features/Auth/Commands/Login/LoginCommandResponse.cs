@@ -15,6 +15,8 @@ namespace Kickify.Application.Features.Auth.Commands.Login
         public string AvatarUrl { get; set; } = string.Empty;
         public bool IsEmailVerified { get; set; }
         public bool IsActive { get; set; }
+        public bool IsPremium { get; set; }
+        public DateTime? PremiumExpireAt { get; set; }
         public string AccessToken { get; set; } = string.Empty;
         public string RefreshToken { get; set; } = string.Empty;
     }

@@ -11,6 +11,11 @@ namespace Kickify.Domain.Enums
         /// User is paying the check-in deposit for a match room directly via VNPay
         /// (bypasses wallet balance).
         /// </summary>
-        CheckIn
+           CheckIn,
+
+           /// <summary>
+           /// User is purchasing a 30-day Premium subscription directly via VNPay.
+           /// </summary>
+           PremiumPurchase
     }
 }

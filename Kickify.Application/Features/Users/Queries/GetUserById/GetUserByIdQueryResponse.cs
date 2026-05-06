@@ -22,6 +22,8 @@ namespace Kickify.Application.Features.Users.Queries.GetUserById
         public DateTime? DeletedAt { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+        public bool IsPremium { get; set; }
+        public DateTime? PremiumExpireAt { get; set; }
         
         // PlayerProfile information
         public PlayerProfileDto? PlayerProfile { get; set; }

@@ -71,6 +71,13 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.FcmToken)
             .HasMaxLength(500);
 
+            builder.Property(u => u.IsPremium)
+                .HasDefaultValue(false);
+
+            builder.Property(u => u.PremiumExpireAt)
+                .HasColumnType("timestamp with time zone")
+                .IsRequired(false);
+
         builder.HasIndex(u => u.Email)
             .IsUnique()
             .HasFilter("\"DeletedAt\" IS NULL");

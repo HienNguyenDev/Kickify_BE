@@ -41,6 +41,8 @@ namespace Kickify.Application.Features.Users.Queries.GetAllUsers
                 BannedUntil = u.BannedUntil,
                 DeletedAt = u.DeletedAt,
                 CreatedAt = u.CreatedAt,
+                IsPremium = u.IsPremium,
+                PremiumExpireAt = u.PremiumExpireAt,
                 PlayerProfile = u.PlayerProfile != null ? new PlayerProfileDto
                 {
                     ProfileId = u.PlayerProfile.ProfileId,
