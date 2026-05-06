@@ -83,6 +83,37 @@ public class HolidayRepository : GenericRepository<Holiday>, IHolidayRepository
         await _dbSet.AddRangeAsync(holidays);
     }
 
+    public async Task<(IReadOnlyList<Holiday> Items, int TotalCount)> SearchHolidaysAsync(
+        string? keyword,
+        int? year,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _dbSet.AsNoTracking().AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(keyword))
+        {
+            var loweredKeyword = keyword.Trim().ToLower();
+            query = query.Where(h => h.Name.ToLower().Contains(loweredKeyword));
+        }
+
+        if (year.HasValue)
+        {
+            query = query.Where(h => h.Date.Year == year.Value);
+        }
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .OrderBy(h => h.Date)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, totalCount);
+    }
+
     public async Task<bool> HardDeleteByIdAsync(Guid holidayId, CancellationToken cancellationToken = default)
     {
         var affectedRows = await _dbSet

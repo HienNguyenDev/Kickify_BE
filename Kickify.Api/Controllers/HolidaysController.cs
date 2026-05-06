@@ -25,9 +25,15 @@ public class HolidaysController : ControllerBase
     /// Get all system holidays.
     /// </summary>
     [HttpGet]
-    public async Task<IResult> GetAll(CancellationToken cancellationToken)
+    public async Task<IResult> GetAll(
+        [FromQuery] string? keyword,
+        [FromQuery] int? year,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
     {
-        var result = await _sender.Send(new GetAllHolidaysQuery(), cancellationToken);
+        var query = new GetAllHolidaysQuery(keyword, year, page, pageSize);
+        var result = await _sender.Send(query, cancellationToken);
         return result.MatchOk();
     }
 
