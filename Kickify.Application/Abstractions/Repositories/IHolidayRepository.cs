@@ -9,5 +9,7 @@ public interface IHolidayRepository : IGenericRepository<Holiday>
     Task<IReadOnlyList<Holiday>> GetByIdsAsync(IEnumerable<Guid> holidayIds, CancellationToken cancellationToken = default);
     Task<Holiday?> GetByDateAsync(DateTime date, CancellationToken cancellationToken = default);
     Task<bool> ExistsByDateAsync(DateTime date, Guid? excludeHolidayId = null, CancellationToken cancellationToken = default);
+    Task<List<DateTime>> GetExistingDatesAsync(IEnumerable<DateTime> dates, CancellationToken cancellationToken = default);
+    Task AddRangeAsync(IEnumerable<Holiday> holidays);
     Task<bool> HardDeleteByIdAsync(Guid holidayId, CancellationToken cancellationToken = default);
 }

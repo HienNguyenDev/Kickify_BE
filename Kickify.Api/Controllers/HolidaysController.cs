@@ -38,7 +38,7 @@ public class HolidaysController : ControllerBase
     [HttpPost]
     public async Task<IResult> Create([FromBody] CreateHolidayRequest request, CancellationToken cancellationToken)
     {
-        var command = new CreateHolidayCommand(request.Date, request.Name);
+        var command = new CreateHolidayCommand(request.StartDate, request.EndDate, request.Name);
         var result = await _sender.Send(command, cancellationToken);
         return result.MatchOk();
     }

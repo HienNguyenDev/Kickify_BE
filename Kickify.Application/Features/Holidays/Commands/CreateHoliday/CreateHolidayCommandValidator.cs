@@ -10,7 +10,10 @@ public class CreateHolidayCommandValidator : AbstractValidator<CreateHolidayComm
             .NotEmpty().WithMessage("Name is required")
             .MaximumLength(200).WithMessage("Name must not exceed 200 characters");
 
-        RuleFor(x => x.Date)
-            .NotEqual(default(DateTime)).WithMessage("Date is required");
+        RuleFor(x => x.StartDate)
+            .NotEqual(default(DateTime)).WithMessage("StartDate is required");
+
+        RuleFor(x => x.EndDate)
+            .NotEqual(default(DateTime)).WithMessage("EndDate is required");
     }
 }

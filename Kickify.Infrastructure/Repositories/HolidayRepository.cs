@@ -58,6 +58,31 @@ public class HolidayRepository : GenericRepository<Holiday>, IHolidayRepository
         return await query.AnyAsync(cancellationToken);
     }
 
+    public async Task<List<DateTime>> GetExistingDatesAsync(IEnumerable<DateTime> dates, CancellationToken cancellationToken = default)
+    {
+        var matchDates = dates
+            .Select(d => d.Date)
+            .Distinct()
+            .ToList();
+
+        if (matchDates.Count == 0)
+        {
+            return new List<DateTime>();
+        }
+
+        return await _dbSet
+            .AsNoTracking()
+            .Where(h => matchDates.Contains(h.Date))
+            .Select(h => h.Date)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task AddRangeAsync(IEnumerable<Holiday> holidays)
+    {
+        await _dbSet.AddRangeAsync(holidays);
+    }
+
     public async Task<bool> HardDeleteByIdAsync(Guid holidayId, CancellationToken cancellationToken = default)
     {
         var affectedRows = await _dbSet
