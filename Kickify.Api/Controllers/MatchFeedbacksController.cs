@@ -1,8 +1,11 @@
 using Kickify.Api.Extensions;
 using Kickify.Api.Requests;
+using Kickify.Application.Abstractions.Authentication;
+using Kickify.Application.Abstractions.Repositories;
 using Kickify.Application.Abstractions.Services;
 using Kickify.Application.Features.MatchFeedbacks.Commands.CreateMatchFeedback;
 using Kickify.Application.Features.MatchFeedbacks.Commands.RespondToFeedback;
+using Kickify.Domain.Errors;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,13 +19,19 @@ public class MatchFeedbacksController : ControllerBase
 {
     private readonly ISender _mediator;
     private readonly ISentimentAnalysisService _sentimentAnalysisService;
+    private readonly IUserRepository _userRepository;
+    private readonly IUserContext _userContext;
 
     public MatchFeedbacksController(
         ISender mediator,
-        ISentimentAnalysisService sentimentAnalysisService)
+        ISentimentAnalysisService sentimentAnalysisService,
+        IUserRepository userRepository,
+        IUserContext userContext)
     {
         _mediator = mediator;
         _sentimentAnalysisService = sentimentAnalysisService;
+        _userRepository = userRepository;
+        _userContext = userContext;
     }
 
     /// <summary>
@@ -71,6 +80,15 @@ public class MatchFeedbacksController : ControllerBase
         [FromBody] GenerateFeedbackSuggestionRequest request,
         CancellationToken cancellationToken)
     {
+        // Premium guard
+        var user = await _userRepository.GetByIdAsync(_userContext.UserId);
+        if (user is null || !user.IsPremium)
+            return Results.Problem(title: "Premium Required",
+                detail: PremiumErrors.PremiumRequired.Description, statusCode: StatusCodes.Status403Forbidden);
+        if (user.PremiumExpireAt.HasValue && user.PremiumExpireAt < DateTime.UtcNow)
+            return Results.Problem(title: "Premium Expired",
+                detail: PremiumErrors.PremiumExpired.Description, statusCode: StatusCodes.Status403Forbidden);
+
         var aiRequest = new FeedbackSuggestionRequest(
             StarRating: request.StarRating,
             Count: request.Count,

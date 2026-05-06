@@ -987,7 +987,10 @@ public class MatchLifecycleService : IMatchLifecycleService
             }
 
             // 3. Thực hiện cộng tiền
-            var transferAmount = room.TotalDepositCollected;
+            // Apply platform commission: venue owner receives (1 - commissionRate) of total collected.
+            // 5 % stays in the platform's merchant account as revenue.
+            var commission = Math.Round(room.TotalDepositCollected * 0.05m, 0);
+            var transferAmount = room.TotalDepositCollected - commission;
             ownerWallet.Balance += transferAmount;
             walletRepository.Update(ownerWallet);
 
@@ -1000,13 +1003,15 @@ public class MatchLifecycleService : IMatchLifecycleService
                 Amount = transferAmount,
                 BalanceAfter = ownerWallet.Balance,
                 ReferenceId = room.RoomId, // Có thể link tới BookingId nếu bạn include Booking vào Room
-                Description = $"Booking income from room {room.RoomName ?? room.RoomId.ToString()} (Match Started)",
+                Description = $"Booking income from room {room.RoomName ?? room.RoomId.ToString()} (after 5% platform commission)",
                 CreatedAt = DateTime.UtcNow
             };
 
             await walletTransactionRepository.AddAsync(transaction);
 
-            _logger.LogInformation("Prepared Escrow Release of {Amount} to VenueOwner {OwnerId} for Room {RoomId}", transferAmount, venue.OwnerId, room.RoomId);
+            _logger.LogInformation(
+                "Escrow released: {VenueAmount} to VenueOwner {OwnerId}, commission {Commission} retained. Room {RoomId}",
+                transferAmount, venue.OwnerId, commission, room.RoomId);
         }
         catch (Exception ex)
         {

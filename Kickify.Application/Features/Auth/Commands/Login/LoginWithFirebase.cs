@@ -149,6 +149,8 @@ namespace Kickify.Application.Features.Auth.Commands.Login
                 AvatarUrl = user.AvatarUrl,
                 IsEmailVerified = user.IsEmailVerified,
                 IsActive = user.IsActive,
+                IsPremium = user.IsPremium,
+                PremiumExpireAt = user.PremiumExpireAt,
                 CreatedAt = user.CreatedAt
             };
             return Result.Success(response);
@@ -172,6 +174,8 @@ namespace Kickify.Application.Features.Auth.Commands.Login
         public string? RefreshToken { get; set; }
         public bool IsEmailVerified { get; set; }
         public bool IsActive { get; set; }
+        public bool IsPremium { get; set; }
+        public DateTime? PremiumExpireAt { get; set; }
     }
 
     public class LoginWithFirebaseCommandValidator : AbstractValidator<LoginWithFirebaseCommand>

@@ -24,6 +24,12 @@ public class User : Entity
     public DateTime? BannedUntil { get; set; }
     public string? FcmToken { get; set; }
 
+        /// <summary>True when user has an active Premium subscription.</summary>
+        public bool IsPremium { get; set; } = false;
+
+        /// <summary>UTC timestamp when the current Premium subscription expires. Null if never purchased.</summary>
+        public DateTime? PremiumExpireAt { get; set; }
+
     // Navigation properties
     public PlayerProfile? PlayerProfile { get; set; }
     public Wallet? Wallet { get; set; }

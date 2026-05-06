@@ -49,6 +49,8 @@ namespace Kickify.Application.Features.Users.Queries.GetUserById
                 DeletedAt = user.DeletedAt,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt,
+                IsPremium = user.IsPremium,
+                PremiumExpireAt = user.PremiumExpireAt,
                 PlayerProfile = user.PlayerProfile != null ? new PlayerProfileDto
                 {
                     ProfileId = user.PlayerProfile.ProfileId,
