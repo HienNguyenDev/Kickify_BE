@@ -40,6 +40,7 @@ public class GetPostByIdQueryHandler : IQueryHandler<GetPostByIdQuery, GetPostBy
             UserId = post.UserId,
             UserFullName = post.User?.FullName ?? string.Empty,
             UserAvatarUrl = post.User?.AvatarUrl,
+            IsPremium = post.User?.IsPremium ?? false,
             Content = post.Content,
             TotalMedia = post.TotalMedia,
             TotalLikes = post.TotalLikes,
@@ -67,6 +68,7 @@ public class GetPostByIdQueryHandler : IQueryHandler<GetPostByIdQuery, GetPostBy
                     UserId = pl.UserId,
                     FullName = pl.User?.FullName,
                     AvatarUrl = pl.User?.AvatarUrl,
+                    IsPremium = pl.User?.IsPremium ?? false,
                     LikedAt = pl.CreatedAt
                 }).ToList(),
             Comments = BuildCommentTree(post.Comments)
@@ -98,6 +100,7 @@ public class GetPostByIdQueryHandler : IQueryHandler<GetPostByIdQuery, GetPostBy
             UserId = comment.UserId,
             UserFullName = comment.User?.FullName,
             UserAvatarUrl = comment.User?.AvatarUrl,
+            IsPremium = comment.User?.IsPremium ?? false,
             Content = comment.Content,
             TotalLikes = comment.TotalLikes,
             TotalReplies = CountDescendants(comment.CommentId, lookup),
