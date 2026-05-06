@@ -1,7 +1,10 @@
+using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
+using Kickify.Application.Abstractions.Repositories;
 using Kickify.Application.Abstractions.Services;
 using Kickify.Application.Features.MatchRooms.Queries.GetMatchRooms;
 using Kickify.Domain.Common;
+using Kickify.Domain.Errors;
 using MediatR;
 
 namespace Kickify.Application.Features.AiSuggestions.Queries.SuggestMatchRooms;
@@ -11,19 +14,32 @@ public class SuggestMatchRoomsQueryHandler
 {
     private readonly IAiSuggestionService _aiSuggestionService;
     private readonly ISender _sender;
+    private readonly IUserRepository _userRepository;
+    private readonly IUserContext _userContext;
 
     public SuggestMatchRoomsQueryHandler(
         IAiSuggestionService aiSuggestionService,
-        ISender sender)
+        ISender sender,
+        IUserRepository userRepository,
+        IUserContext userContext)
     {
         _aiSuggestionService = aiSuggestionService;
         _sender = sender;
+        _userRepository = userRepository;
+        _userContext = userContext;
     }
 
     public async Task<Result<GetMatchRoomsResponse>> Handle(
         SuggestMatchRoomsQuery request,
         CancellationToken cancellationToken)
     {
+        // ── Premium guard ──────────────────────────────────────────────────
+        var user = await _userRepository.GetByIdAsync(_userContext.UserId);
+        if (user is null || !user.IsPremium)
+            return Result.Failure<GetMatchRoomsResponse>(PremiumErrors.PremiumRequired);
+        if (user.PremiumExpireAt.HasValue && user.PremiumExpireAt < DateTime.UtcNow)
+            return Result.Failure<GetMatchRoomsResponse>(PremiumErrors.PremiumExpired);
+
         var now = DateTime.UtcNow.AddHours(7); // GMT+7
 
         var parseResult = await _aiSuggestionService.ParseRoomQueryAsync(

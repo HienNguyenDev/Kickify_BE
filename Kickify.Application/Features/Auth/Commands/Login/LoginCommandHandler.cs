@@ -74,6 +74,8 @@ namespace Kickify.Application.Features.Auth.Commands.Login
                 AvatarUrl = user.AvatarUrl,
                 IsEmailVerified = user.IsEmailVerified,
                 IsActive = user.IsActive,
+                IsPremium = user.IsPremium,
+                PremiumExpireAt = user.PremiumExpireAt,
                 AccessToken = token,
                 RefreshToken = refreshToken.Token,
             };

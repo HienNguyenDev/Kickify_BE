@@ -9,5 +9,7 @@ public enum TransactionType
     Refund,
     Withdrawal,
     Penalty,
-    Compensation
+    Compensation,
+    WithdrawalFee,
+    PremiumPurchase
 }

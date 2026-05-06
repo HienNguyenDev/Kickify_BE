@@ -3,6 +3,7 @@ using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Application.DTOs;
 using Kickify.Application.Features.Bookings.Commands.ProcessPayment;
+using Kickify.Application.Common;
 using Kickify.Domain.Common;
 using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
@@ -93,6 +94,11 @@ public class ProcessDepositIpnCommandHandler : ICommandHandler<ProcessDepositIpn
             {
                 return await ProcessCheckInAsync(paymentRequest, callback, cancellationToken);
             }
+
+                if (paymentRequest.Purpose == PaymentPurpose.PremiumPurchase)
+                {
+                    return await ProcessPremiumPurchaseAsync(paymentRequest, callback, cancellationToken);
+                }
 
             // Wallet deposit (original path)
             await ProcessWalletDepositAsync(paymentRequest, callback);
@@ -226,4 +232,50 @@ public class ProcessDepositIpnCommandHandler : ICommandHandler<ProcessDepositIpn
             CreatedAt = DateTime.UtcNow
         });
     }
+
+        // ── Premium purchase ──────────────────────────────────────────────────────
+        private async Task<Result<ProcessDepositIpnCommandResponse>> ProcessPremiumPurchaseAsync(
+            PaymentRequest paymentRequest,
+            VnPayCallbackData callback,
+            CancellationToken cancellationToken)
+        {
+            // Mark PaymentRequest completed
+            paymentRequest.Status = PaymentStatus.Completed;
+            paymentRequest.VnpayTransactionNo = callback.VnpayTransactionId.ToString();
+            paymentRequest.CompletedAt = DateTime.UtcNow;
+            _paymentRequestRepository.Update(paymentRequest);
+
+            // Activate Premium on User
+            var wallet = await _walletRepository.GetByIdAsync(paymentRequest.WalletId);
+            if (wallet is null)
+            {
+                _logger.LogError("Premium IPN: wallet {WalletId} not found for user {UserId}", paymentRequest.WalletId, paymentRequest.UserId);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                return Result.Success(new ProcessDepositIpnCommandResponse { Success = false, RspCode = "99", Message = "Wallet not found" });
+            }
+
+            // Record the premium purchase transaction (informational – no wallet balance change)
+            await _walletTransactionRepository.AddAsync(new WalletTransaction
+            {
+                TransactionId = Guid.NewGuid(),
+                WalletId = wallet.WalletId,
+                TransactionType = TransactionType.PremiumPurchase,
+                Amount = -paymentRequest.Amount,
+                BalanceAfter = wallet.Balance,
+                TransactionCode = callback.VnpayTransactionId.ToString(),
+                ReferenceId = paymentRequest.PaymentRequestId,
+                Description = $"Kickify Premium 30 days - VNPay {callback.BankCode}",
+                CreatedAt = DateTime.UtcNow
+            });
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            // Activate premium via a MediatR command so User is updated properly
+            var activateCommand = new Kickify.Application.Features.Premium.Commands.ActivatePremium.ActivatePremiumCommand(paymentRequest.UserId);
+            await _mediator.Send(activateCommand, cancellationToken);
+
+            _logger.LogInformation("Premium activated for user {UserId} via VNPay TxnRef={TxnRef}", paymentRequest.UserId, callback.TxnRef);
+
+            return Result.Success(new ProcessDepositIpnCommandResponse { Success = true, RspCode = "00", Message = "Premium activated" });
+        }
 }

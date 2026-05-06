@@ -1,4 +1,5 @@
 using Kickify.Application.Abstractions.Authentication;
+using Kickify.Application.Common;
 using Kickify.Application.Abstractions.Jobs;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
@@ -153,6 +154,8 @@ public class ProcessPaymentCommandHandler : ICommandHandler<ProcessPaymentComman
 
             // Calculate total amount
             var totalAmount = room.RoomParticipants.Sum(p => p.DepositAmount ?? 0);
+            var platformFee = Math.Round(totalAmount * PlatformConstants.BookingCommissionRate, 0);
+            var venueAmount = totalAmount - platformFee;
 
             try
             {
@@ -162,6 +165,9 @@ public class ProcessPaymentCommandHandler : ICommandHandler<ProcessPaymentComman
 
                 // Update booking status
                 booking.Status = BookingStatus.Confirmed;
+                booking.TotalAmount = totalAmount;
+                booking.PlatformFee = platformFee;
+                booking.VenueAmount = venueAmount;
                 _bookingRepository.Update(booking);
 
                 // Transfer payment to venue owner's wallet

@@ -2,6 +2,7 @@ using System.Text.Json;
 using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
+using Kickify.Application.Abstractions.Repositories;
 using Kickify.Application.Features.PlayerProfiles.Queries.GetMyRadarSnapshot;
 using Kickify.Domain.Common;
 using Microsoft.EntityFrameworkCore;
@@ -12,13 +13,16 @@ public class GetPlayerRadarSnapshotQueryHandler : IQueryHandler<GetPlayerRadarSn
 {
     private readonly IApplicationDbContext _dbContext;
     private readonly ICurrentUserReader _currentUserReader;
+    private readonly IUserRepository _userRepository;
 
     public GetPlayerRadarSnapshotQueryHandler(
         IApplicationDbContext dbContext,
-        ICurrentUserReader currentUserReader)
+        ICurrentUserReader currentUserReader,
+        IUserRepository userRepository)
     {
         _dbContext = dbContext;
         _currentUserReader = currentUserReader;
+        _userRepository = userRepository;
     }
 
     public async Task<Result<GetMyRadarSnapshotResponse>> Handle(
@@ -37,9 +41,18 @@ public class GetPlayerRadarSnapshotQueryHandler : IQueryHandler<GetPlayerRadarSn
         var viewerId = _currentUserReader.TryGetUserId();
         var isOwner = viewerId.HasValue && viewerId.Value == request.UserId;
 
+        // Premium check: only the owner who has active Premium sees AI assessments + summary
+        var ownerIsPremium = false;
+        if (isOwner && viewerId.HasValue)
+        {
+            var viewer = await _userRepository.GetByIdAsync(viewerId.Value);
+            ownerIsPremium = viewer is { IsPremium: true } &&
+                             (viewer.PremiumExpireAt is null || viewer.PremiumExpireAt > DateTime.UtcNow);
+        }
+
         List<RadarAssessmentItem> assessments;
         string summary;
-        if (isOwner)
+        if (isOwner && ownerIsPremium)
         {
             assessments = JsonSerializer.Deserialize<List<RadarAssessmentItem>>(snapshot.AssessmentsJson)
                 ?? new List<RadarAssessmentItem>();
@@ -48,7 +61,7 @@ public class GetPlayerRadarSnapshotQueryHandler : IQueryHandler<GetPlayerRadarSn
         else
         {
             assessments = new List<RadarAssessmentItem>();
-            summary = snapshot.Summary;
+            summary = string.Empty; // non-premium / non-owner: hide AI summary
         }
 
         return Result.Success(new GetMyRadarSnapshotResponse(
