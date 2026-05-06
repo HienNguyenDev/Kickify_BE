@@ -8,6 +8,7 @@ public class GetPostByIdQueryResponse
     public Guid UserId { get; set; }
     public string UserFullName { get; set; } = string.Empty;
     public string? UserAvatarUrl { get; set; }
+    public bool IsPremium { get; set; }
     public string Content { get; set; } = string.Empty;
     public int TotalMedia { get; set; }
     public int TotalLikes { get; set; }
@@ -39,6 +40,7 @@ public class PostLikeUserDto
     public Guid UserId { get; set; }
     public string? FullName { get; set; }
     public string? AvatarUrl { get; set; }
+    public bool IsPremium { get; set; }
     public DateTime LikedAt { get; set; }
 }
 
@@ -48,6 +50,7 @@ public class PostCommentDto
     public Guid UserId { get; set; }
     public string? UserFullName { get; set; }
     public string? UserAvatarUrl { get; set; }
+    public bool IsPremium { get; set; }
     public string Content { get; set; } = string.Empty;
     public int TotalLikes { get; set; }
     public int TotalReplies { get; set; }
