@@ -18,6 +18,7 @@ using Kickify.Application.Features.MatchRooms.Queries.GetMatchRooms;
 using Kickify.Application.Features.MatchRooms.Queries.GetMyMatchRooms;
 using Kickify.Application.Features.MatchRooms.Queries.GetPlayerMatchHistory;
 using Kickify.Application.Features.MatchRooms.Queries.GetRecommendedMatchRooms;
+using Kickify.Application.Features.MatchRooms.Queries.GetVenueMatchRooms;
 using Kickify.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -488,6 +489,26 @@ namespace Kickify.Api.Controllers
             };
 
             var result = await _sender.Send(command, cancellationToken);
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Get match rooms played on fields owned by the current venue owner.
+        /// Supports optional filters: venueId, fieldId, date, status.
+        /// </summary>
+        [HttpGet("venue")]
+        [Authorize(Roles = "VenueOwner")]
+        public async Task<IResult> GetVenueMatchRooms(
+            [FromQuery] Guid? venueId,
+            [FromQuery] Guid? fieldId,
+            [FromQuery] DateTime? date,
+            [FromQuery] string? status,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
+            CancellationToken cancellationToken = default)
+        {
+            var query = new GetVenueMatchRoomsQuery(venueId, fieldId, date, status, page, pageSize);
+            var result = await _sender.Send(query, cancellationToken);
             return result.MatchOk();
         }
     }
