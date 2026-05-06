@@ -89,9 +89,8 @@ public class GetReportsAnalyticsQueryHandler
         var totalBookingsChangePct = CalcChangePctOrZero(totalBookings, totalBookingsPrev);
 
         // ════════════════════════════════════════════
-        // Summary: Monthly Revenue
+        // Summary: Monthly Platform Fee Revenue
         // ════════════════════════════════════════════
-        // Use the last complete month within the selected period
         var currentMonthStart = new DateTime(toLocal.Year, toLocal.Month, 1);
         var currentMonthEnd = currentMonthStart.AddMonths(1);
         var prevMonthStart = currentMonthStart.AddMonths(-1);
@@ -100,10 +99,16 @@ public class GetReportsAnalyticsQueryHandler
         var currentMonthEndUtc = ToUtc(currentMonthEnd, tz);
         var prevMonthStartUtc = ToUtc(prevMonthStart, tz);
 
-        var monthlyRevenue = await CompletedBookingRevenue.SumTotalAmountAsync(
-            _db.Bookings, currentMonthStartUtc, currentMonthEndUtc, cancellationToken);
-        var prevMonthlyRevenue = await CompletedBookingRevenue.SumTotalAmountAsync(
-            _db.Bookings, prevMonthStartUtc, currentMonthStartUtc, cancellationToken);
+        var platformFeeTypes = new[] { TransactionType.BookingCommission, TransactionType.WithdrawalFee, TransactionType.PremiumPurchase };
+
+        var monthlyRevenue = await _db.WalletTransactions
+            .Where(t => platformFeeTypes.Contains(t.TransactionType) && t.Amount > 0
+                && t.CreatedAt >= currentMonthStartUtc && t.CreatedAt < currentMonthEndUtc)
+            .SumAsync(t => t.Amount, cancellationToken);
+        var prevMonthlyRevenue = await _db.WalletTransactions
+            .Where(t => platformFeeTypes.Contains(t.TransactionType) && t.Amount > 0
+                && t.CreatedAt >= prevMonthStartUtc && t.CreatedAt < currentMonthStartUtc)
+            .SumAsync(t => t.Amount, cancellationToken);
         var monthlyRevenueChangePct = CalcChangePct(monthlyRevenue, prevMonthlyRevenue);
 
         var summary = new ReportsAnalyticsSummaryDto(
@@ -187,12 +192,21 @@ public class GetReportsAnalyticsQueryHandler
         bookingsByVenueType = bookingsByVenueType.OrderBy(x => x.Type).ToList();
 
         // ════════════════════════════════════════════
-        // Revenue Analysis Tab: Monthly Revenue & Bookings (completed matches only)
+        // Revenue Analysis Tab: Monthly Platform Fee Revenue & Bookings
         // ════════════════════════════════════════════
-        var completedBookingRevenueRows = await _db.Bookings
+        var platformFeeRevenueRows = await _db.WalletTransactions
             .AsNoTracking()
-            .WhereRecognizedBetween(fromUtc, toUtcExclusive)
-            .Select(b => new { b.TotalAmount, CompletedAt = b.MatchRoom.UpdatedAt })
+            .Where(t => platformFeeTypes.Contains(t.TransactionType) && t.Amount > 0
+                && t.CreatedAt >= fromUtc && t.CreatedAt < toUtcExclusive)
+            .Select(t => new { t.Amount, t.CreatedAt })
+            .ToListAsync(cancellationToken);
+
+        // Count confirmed/completed bookings per month for context
+        var bookingDatesInPeriod = await _db.Bookings
+            .AsNoTracking()
+            .Where(b => (b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.Completed)
+                && b.BookingDate >= fromUtc && b.BookingDate < toUtcExclusive)
+            .Select(b => b.BookingDate)
             .ToListAsync(cancellationToken);
 
         var monthlyRevenueAndBookings = new List<MonthlyRevenueAndBookingsDto>();
@@ -203,14 +217,14 @@ public class GetReportsAnalyticsQueryHandler
             var mStart = ToUtc(revMonthCursor, tz);
             var mEnd = ToUtc(revMonthCursor.AddMonths(1), tz);
 
-            var revenueInMonth = completedBookingRevenueRows
-                .Where(x => x.CompletedAt >= mStart && x.CompletedAt < mEnd)
-                .Sum(x => x.TotalAmount);
-            var completedBookingsInMonth = completedBookingRevenueRows
-                .Count(x => x.CompletedAt >= mStart && x.CompletedAt < mEnd);
+            var revenueInMonth = platformFeeRevenueRows
+                .Where(x => x.CreatedAt >= mStart && x.CreatedAt < mEnd)
+                .Sum(x => x.Amount);
+            var bookingsInMonth = bookingDatesInPeriod
+                .Count(d => d >= mStart && d < mEnd);
 
             monthlyRevenueAndBookings.Add(new MonthlyRevenueAndBookingsDto(
-                revMonthCursor.ToString("yyyy-MM"), revenueInMonth, completedBookingsInMonth));
+                revMonthCursor.ToString("yyyy-MM"), revenueInMonth, bookingsInMonth));
 
             revMonthCursor = revMonthCursor.AddMonths(1);
         }
