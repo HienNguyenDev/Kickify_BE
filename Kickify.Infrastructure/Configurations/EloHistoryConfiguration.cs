@@ -37,7 +37,7 @@ public class EloHistoryConfiguration : IEntityTypeConfiguration<EloHistory>
         builder.Property(eh => eh.K2FeedbackSentimentComponent)
             .HasColumnType("decimal(6,2)");
 
-        builder.Property(eh => eh.K3WinRateComponent)
+        builder.Property(eh => eh.K3WinStreakComponent)
             .HasColumnType("decimal(6,2)");
 
         builder.Property(eh => eh.K4ContributionComponent)

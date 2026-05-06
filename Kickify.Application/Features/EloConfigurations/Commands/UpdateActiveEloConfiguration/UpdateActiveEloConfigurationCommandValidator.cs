@@ -8,7 +8,7 @@ public class UpdateActiveEloConfigurationCommandValidator : AbstractValidator<Up
     {
         RuleFor(x => x.K1MatchResult).GreaterThanOrEqualTo(0);
         RuleFor(x => x.K2FeedbackSentiment).GreaterThanOrEqualTo(0);
-        RuleFor(x => x.K3WinRate).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.K3WinStreak).GreaterThanOrEqualTo(0);
         RuleFor(x => x.K4Contribution).GreaterThanOrEqualTo(0);
         RuleFor(x => x.K5Trust).GreaterThanOrEqualTo(0);
     }

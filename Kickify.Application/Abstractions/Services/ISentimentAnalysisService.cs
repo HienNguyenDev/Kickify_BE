@@ -64,7 +64,7 @@ public record EloCalculationRequest(
 public record EloKFactors(
     decimal K1MatchResult,
     decimal K2FeedbackSentiment,
-    decimal K3WinRate,
+    decimal K3WinStreak,
     decimal K4Contribution,
     decimal K5Trust);
 
@@ -85,7 +85,8 @@ public record EloCalculationPlayer(
 
 public record EloRecentMatches(
     int Total,
-    int Wins);
+    int Wins,
+    int WinStreak);
 
 public record EloContribution(
     bool SubmittedFeedback,
@@ -121,7 +122,7 @@ public record EloResult(
 public record EloBreakdown(
     EloBreakdownComponent K1MatchResult,
     EloBreakdownComponent K2FeedbackSentiment,
-    EloBreakdownComponent K3WinRate,
+    EloBreakdownComponent K3WinStreak,
     EloBreakdownComponent K4Contribution,
     EloBreakdownComponent K5Trust);
 

@@ -10,7 +10,7 @@ public class EloHistory
     public int EloChange { get; set; }
     public decimal? K1MatchResultComponent { get; set; }
     public decimal? K2FeedbackSentimentComponent { get; set; }
-    public decimal? K3WinRateComponent { get; set; }
+    public decimal? K3WinStreakComponent { get; set; }
     public decimal? K4ContributionComponent { get; set; }
     public decimal? K5TrustComponent { get; set; }
     public string? CalculationDetails { get; set; } // JSON with all coefficients
