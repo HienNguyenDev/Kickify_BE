@@ -74,17 +74,21 @@ public class GetAdminDashboardQueryHandler
         var pendingReportsChangeAbs = pendingReports - pendingReportsYesterday;
 
         // ════════════════════════════════════════════
-        // KPI: Revenue 30d
+        // KPI: Platform Fee Revenue 30d
         // ════════════════════════════════════════════
-        var thirtyDaysAgoLocal = todayLocal.AddDays(-30);
-        var sixtyDaysAgoLocal = todayLocal.AddDays(-60);
+        var thirtyDaysAgoUtc = nowUtc.AddDays(-30);
+        var sixtyDaysAgoUtc = nowUtc.AddDays(-60);
 
-        // Use all paid (Confirmed+Completed) bookings by BookingDate – consistent with
-        // how venue-owner dashboard counts revenue via BookingIncome wallet transactions.
-        var revenue30d = await CompletedBookingRevenue.SumPaidAmountAsync(
-            _db.Bookings, thirtyDaysAgoLocal, tomorrowLocalExclusive, cancellationToken);
-        var revenuePrev30d = await CompletedBookingRevenue.SumPaidAmountAsync(
-            _db.Bookings, sixtyDaysAgoLocal, thirtyDaysAgoLocal, cancellationToken);
+        var platformFeeTypes = new[] { TransactionType.BookingCommission, TransactionType.WithdrawalFee, TransactionType.PremiumPurchase };
+
+        var revenue30d = await _db.WalletTransactions
+            .Where(t => platformFeeTypes.Contains(t.TransactionType) && t.Amount > 0
+                && t.CreatedAt >= thirtyDaysAgoUtc && t.CreatedAt <= nowUtc)
+            .SumAsync(t => t.Amount, cancellationToken);
+        var revenuePrev30d = await _db.WalletTransactions
+            .Where(t => platformFeeTypes.Contains(t.TransactionType) && t.Amount > 0
+                && t.CreatedAt >= sixtyDaysAgoUtc && t.CreatedAt < thirtyDaysAgoUtc)
+            .SumAsync(t => t.Amount, cancellationToken);
         var revenue30dChangePct = CalcChangePct(revenue30d, revenuePrev30d);
 
         var kpi = new AdminKpiDto(
@@ -152,21 +156,25 @@ public class GetAdminDashboardQueryHandler
         }
 
         // ════════════════════════════════════════════
-        // Chart: Revenue Trend (completed field bookings, by completion day in timezone)
+        // Chart: Platform Fee Revenue Trend (by day)
         // ════════════════════════════════════════════
-        var revenueRows = await _db.Bookings
+        var chartStartUtc = ToUtc(chartStartLocal, tz);
+        var platformFeeRows = await _db.WalletTransactions
             .AsNoTracking()
-            .WherePaidBetween(chartStartLocal, tomorrowLocalExclusive)
-            .Select(b => new { b.TotalAmount, BookingDate = b.BookingDate })
+            .Where(t => platformFeeTypes.Contains(t.TransactionType) && t.Amount > 0
+                && t.CreatedAt >= chartStartUtc && t.CreatedAt < todayEndUtc)
+            .Select(t => new { t.Amount, t.CreatedAt })
             .ToListAsync(cancellationToken);
 
         var revenueTrend = new List<RevenueTrendItemDto>();
         for (int i = 0; i < request.ChartDays; i++)
         {
             var day = chartStartLocal.AddDays(i);
-            var dayRevenue = revenueRows
-                .Where(r => r.BookingDate.Date == day.Date)
-                .Sum(r => r.TotalAmount);
+            var dayStart = ToUtc(day, tz);
+            var dayEnd = ToUtc(day.AddDays(1), tz);
+            var dayRevenue = platformFeeRows
+                .Where(r => r.CreatedAt >= dayStart && r.CreatedAt < dayEnd)
+                .Sum(r => r.Amount);
 
             revenueTrend.Add(new RevenueTrendItemDto(day.ToString("yyyy-MM-dd"), Math.Max(0m, dayRevenue)));
         }
