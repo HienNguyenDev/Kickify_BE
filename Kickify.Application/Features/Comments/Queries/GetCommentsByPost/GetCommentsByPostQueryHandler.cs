@@ -47,6 +47,7 @@ public class GetCommentsByPostQueryHandler : IQueryHandler<GetCommentsByPostQuer
             UserId = c.UserId,
             UserFullName = c.User?.FullName ?? string.Empty,
             UserAvatarUrl = c.User?.AvatarUrl,
+            IsPremium = c.User?.IsPremium ?? false,
             Content = c.Content,
             TotalLikes = c.TotalLikes,
             TotalReplies = c.TotalReplies,
