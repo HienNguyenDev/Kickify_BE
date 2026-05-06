@@ -31,6 +31,12 @@ public class CreateHolidayCommandHandler : ICommandHandler<CreateHolidayCommand,
             return Result.Failure<CreateHolidayResponse>(HolidayErrors.InvalidDateRange(startDate, endDate));
         }
 
+        //Chống tạo ngày lễ quá dài (Ví dụ: Giới hạn tối đa 14 ngày)
+        if ((endDate - startDate).TotalDays > 14)
+        {
+            return Result.Failure<CreateHolidayResponse>(Error.Conflict("Holiday.TooLong", "Một dịp lễ không được vượt quá 14 ngày để đảm bảo an toàn dữ liệu."));
+        }
+
         var datesToCreate = new List<DateTime>();
         for (var date = startDate; date <= endDate; date = date.AddDays(1))
         {
