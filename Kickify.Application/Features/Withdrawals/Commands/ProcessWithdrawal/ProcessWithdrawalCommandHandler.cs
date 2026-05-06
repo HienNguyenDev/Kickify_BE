@@ -60,10 +60,14 @@ public class ProcessWithdrawalCommandHandler : ICommandHandler<ProcessWithdrawal
             if (wallet.Balance < withdrawal.Amount)
                 return Result.Failure<ProcessWithdrawalCommandResponse>(WalletErrors.InsufficientBalance);
 
-            // 1 % withdrawal fee, capped at 50,000 VND
-            fee = Math.Min(
-                Math.Round(withdrawal.Amount * PlatformConstants.WithdrawalFeeRate, 0),
-                PlatformConstants.WithdrawalFeeCap);
+            var shouldChargeWithdrawalFee = wallet.WalletType == WalletType.VenueOwner;
+
+            // Only venue owners pay the withdrawal fee.
+            fee = shouldChargeWithdrawalFee
+                ? Math.Min(
+                    Math.Round(withdrawal.Amount * PlatformConstants.WithdrawalFeeRate, 0),
+                    PlatformConstants.WithdrawalFeeCap)
+                : 0;
             payoutAmount = withdrawal.Amount - fee;
 
             wallet.Balance -= withdrawal.Amount;

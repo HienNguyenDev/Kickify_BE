@@ -1,7 +1,9 @@
 using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Repositories;
+using Kickify.Application.Common;
 using Kickify.Domain.Common;
+using Kickify.Domain.Enums;
 using Kickify.Domain.Errors;
 
 namespace Kickify.Application.Features.Withdrawals.Queries.GetMyWithdrawals;
@@ -49,7 +51,10 @@ public class GetMyWithdrawalsQueryHandler : IQueryHandler<GetMyWithdrawalsQuery,
             AdminNotes = w.AdminNotes,
             BankAccountNumber = w.Wallet.BankAccountNumber,
             BankName = w.Wallet.BankName,
-            AccountHolderName = w.Wallet.AccountHolderName
+            AccountHolderName = w.Wallet.AccountHolderName,
+            FeeRatePercent = GetFeeRatePercent(wallet.WalletType),
+            FeeAmount = GetFeeAmount(w.Amount, wallet.WalletType),
+            NetPayoutAmount = GetNetPayoutAmount(w.Amount, wallet.WalletType)
         }).ToList();
 
         return Result.Success(new GetMyWithdrawalsQueryResponse
@@ -60,5 +65,26 @@ public class GetMyWithdrawalsQueryHandler : IQueryHandler<GetMyWithdrawalsQuery,
             PageSize = request.PageSize,
             TotalPages = (int)Math.Ceiling(total / (double)request.PageSize)
         });
+    }
+
+    private static decimal? GetFeeRatePercent(WalletType walletType) =>
+        walletType == WalletType.VenueOwner
+            ? PlatformConstants.WithdrawalFeeRate * 100
+            : null;
+
+    private static decimal? GetFeeAmount(decimal amount, WalletType walletType)
+    {
+        if (walletType != WalletType.VenueOwner)
+            return null;
+
+        return Math.Min(
+            Math.Round(amount * PlatformConstants.WithdrawalFeeRate, 0),
+            PlatformConstants.WithdrawalFeeCap);
+    }
+
+    private static decimal? GetNetPayoutAmount(decimal amount, WalletType walletType)
+    {
+        var feeAmount = GetFeeAmount(amount, walletType);
+        return feeAmount.HasValue ? amount - feeAmount.Value : null;
     }
 }

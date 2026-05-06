@@ -42,7 +42,7 @@ public class ProcessWithdrawalCommandHandlerTests
         var command = new ProcessWithdrawalCommand { WithdrawalId = Guid.NewGuid(), IsApproved = true, AdminNotes = null };
         var walletId = Guid.NewGuid();
         var withdrawal = new WalletWithdrawal { WithdrawalId = command.WithdrawalId, WalletId = walletId, Status = WithdrawalStatus.Pending, Amount = 100 };
-        var wallet = new Wallet { WalletId = walletId, Balance = 150 };
+        var wallet = new Wallet { WalletId = walletId, Balance = 150, WalletType = WalletType.Player };
 
         _withdrawalRepositoryMock.Setup(repo => repo.GetByIdAsync(command.WithdrawalId))
             .ReturnsAsync(withdrawal);
@@ -56,6 +56,8 @@ public class ProcessWithdrawalCommandHandlerTests
         // Assert
         result.IsSuccess.Should().BeTrue();
         withdrawal.Status.Should().Be(WithdrawalStatus.Completed);
+        result.Value.WithdrawalFee.Should().Be(0);
+        result.Value.PayoutAmount.Should().Be(100);
         _transactionRepositoryMock.Verify(repo => repo.AddAsync(It.IsAny<WalletTransaction>()), Times.Once);
         _unitOfWorkMock.Verify(uow => uow.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -67,7 +69,7 @@ public class ProcessWithdrawalCommandHandlerTests
         var command = new ProcessWithdrawalCommand { WithdrawalId = Guid.NewGuid(), IsApproved = true, AdminNotes = null };
         var walletId = Guid.NewGuid();
         var withdrawal = new WalletWithdrawal { WithdrawalId = command.WithdrawalId, WalletId = walletId, Status = WithdrawalStatus.Processing, Amount = 100 };
-        var wallet = new Wallet { WalletId = walletId, Balance = 150 };
+        var wallet = new Wallet { WalletId = walletId, Balance = 150, WalletType = WalletType.Player };
 
         _withdrawalRepositoryMock.Setup(repo => repo.GetByIdAsync(command.WithdrawalId))
             .ReturnsAsync(withdrawal);
@@ -81,7 +83,35 @@ public class ProcessWithdrawalCommandHandlerTests
         // Assert
         result.IsSuccess.Should().BeTrue();
         withdrawal.Status.Should().Be(WithdrawalStatus.Completed);
+        result.Value.WithdrawalFee.Should().Be(0);
+        result.Value.PayoutAmount.Should().Be(100);
         _transactionRepositoryMock.Verify(repo => repo.AddAsync(It.IsAny<WalletTransaction>()), Times.Once);
+        _unitOfWorkMock.Verify(uow => uow.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_ApprovingVenueOwnerWithdrawal_ShouldChargeFee_UTCID40()
+    {
+        // Arrange
+        var command = new ProcessWithdrawalCommand { WithdrawalId = Guid.NewGuid(), IsApproved = true, AdminNotes = null };
+        var walletId = Guid.NewGuid();
+        var withdrawal = new WalletWithdrawal { WithdrawalId = command.WithdrawalId, WalletId = walletId, Status = WithdrawalStatus.Pending, Amount = 100_000m };
+        var wallet = new Wallet { WalletId = walletId, Balance = 200_000m, WalletType = WalletType.VenueOwner };
+
+        _withdrawalRepositoryMock.Setup(repo => repo.GetByIdAsync(command.WithdrawalId))
+            .ReturnsAsync(withdrawal);
+        _walletRepositoryMock.Setup(repo => repo.GetByIdAsync(walletId))
+            .ReturnsAsync(wallet);
+        _userContextMock.Setup(c => c.UserId).Returns(Guid.NewGuid());
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.WithdrawalFee.Should().Be(1_000m);
+        result.Value.PayoutAmount.Should().Be(99_000m);
+        _transactionRepositoryMock.Verify(repo => repo.AddAsync(It.IsAny<WalletTransaction>()), Times.Exactly(2));
         _unitOfWorkMock.Verify(uow => uow.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
