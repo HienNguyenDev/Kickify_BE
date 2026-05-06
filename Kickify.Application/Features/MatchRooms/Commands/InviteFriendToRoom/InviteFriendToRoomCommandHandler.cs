@@ -15,7 +15,6 @@ public class InviteFriendToRoomCommandHandler : ICommandHandler<InviteFriendToRo
 {
     private readonly IMatchRoomRepository _matchRoomRepository;
     private readonly IRoomInvitationRepository _roomInvitationRepository;
-    private readonly IFriendshipRepository _friendshipRepository;
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IUserContext _userContext;
@@ -24,7 +23,6 @@ public class InviteFriendToRoomCommandHandler : ICommandHandler<InviteFriendToRo
     public InviteFriendToRoomCommandHandler(
         IMatchRoomRepository matchRoomRepository,
         IRoomInvitationRepository roomInvitationRepository,
-        IFriendshipRepository friendshipRepository,
         IUserRepository userRepository,
         IUnitOfWork unitOfWork,
         IUserContext userContext,
@@ -32,7 +30,6 @@ public class InviteFriendToRoomCommandHandler : ICommandHandler<InviteFriendToRo
     {
         _matchRoomRepository = matchRoomRepository;
         _roomInvitationRepository = roomInvitationRepository;
-        _friendshipRepository = friendshipRepository;
         _userRepository = userRepository;
         _unitOfWork = unitOfWork;
         _userContext = userContext;
@@ -68,11 +65,6 @@ public class InviteFriendToRoomCommandHandler : ICommandHandler<InviteFriendToRo
         // Check room is not full
         if (room.FilledSlots >= room.TotalSlots)
             return Result.Failure<InviteFriendToRoomResponse>(MatchRoomErrors.RoomFull);
-
-        // Check friendship exists
-        var areFriends = await _friendshipRepository.AreFriendsAsync(userId, request.FriendUserId, cancellationToken);
-        if (!areFriends)
-            return Result.Failure<InviteFriendToRoomResponse>(MatchRoomErrors.NotFriend);
 
         // Check if there's already a pending invitation
         var existingInvitation = await _roomInvitationRepository.GetPendingInvitationAsync(request.RoomId, request.FriendUserId, cancellationToken);

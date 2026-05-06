@@ -363,13 +363,13 @@ namespace Kickify.Api.Controllers
         }
 
         /// <summary>
-        /// Invite a friend to join the room
+        /// Invite another user to join the room
         /// </summary>
         /// <param name="id">Room ID</param>
-        /// <param name="request">Friend invitation request</param>
+        /// <param name="request">Room invitation request</param>
         /// <remarks>
-        /// Invites a friend (must be already added as friend) to join the room.
-        /// The invited friend will receive a push notification with a deep link to the room.
+        /// Invites another user to join the room.
+        /// The invited user will receive a push notification with a deep link to the room.
         /// A notification history record is also created.
         /// </remarks>
         [HttpPost("{id}/invite-friend")]
