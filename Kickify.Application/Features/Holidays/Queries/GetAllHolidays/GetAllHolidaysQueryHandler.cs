@@ -15,14 +15,25 @@ public class GetAllHolidaysQueryHandler : IQueryHandler<GetAllHolidaysQuery, Get
 
     public async Task<Result<GetAllHolidaysResponse>> Handle(GetAllHolidaysQuery request, CancellationToken cancellationToken)
     {
-        var holidays = await _holidayRepository.GetAllAsync(cancellationToken);
+        var (items, totalCount) = await _holidayRepository.SearchHolidaysAsync(
+            request.Keyword,
+            request.Year,
+            request.Page,
+            request.PageSize,
+            cancellationToken);
+
+        var totalPages = (int)Math.Ceiling(totalCount / (double)request.PageSize);
 
         var response = new GetAllHolidaysResponse(
-            holidays.Select(h => new HolidayItemDto(
+            items.Select(h => new HolidayItemDto(
                 h.Id,
                 h.Name,
                 h.Date
-            )).ToList());
+            )).ToList(),
+            totalCount,
+            request.Page,
+            request.PageSize,
+            totalPages);
 
         return Result.Success(response);
     }
