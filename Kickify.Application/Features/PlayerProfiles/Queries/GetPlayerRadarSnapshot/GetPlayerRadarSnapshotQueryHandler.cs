@@ -41,7 +41,8 @@ public class GetPlayerRadarSnapshotQueryHandler : IQueryHandler<GetPlayerRadarSn
         var viewerId = _currentUserReader.TryGetUserId();
         var isOwner = viewerId.HasValue && viewerId.Value == request.UserId;
 
-        // Premium check: only the owner who has active Premium sees AI assessments + summary
+        // Premium check: only the owner who has active Premium sees AI assessments.
+        // Summary is available to the owner regardless of Premium status.
         var ownerIsPremium = false;
         if (isOwner && viewerId.HasValue)
         {
@@ -61,7 +62,7 @@ public class GetPlayerRadarSnapshotQueryHandler : IQueryHandler<GetPlayerRadarSn
         else
         {
             assessments = new List<RadarAssessmentItem>();
-            summary = string.Empty; // non-premium / non-owner: hide AI summary
+            summary = isOwner ? snapshot.Summary : string.Empty;
         }
 
         return Result.Success(new GetMyRadarSnapshotResponse(

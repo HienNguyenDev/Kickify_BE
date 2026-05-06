@@ -82,13 +82,13 @@ public class GetAdminDashboardQueryHandler
         var platformFeeTypes = new[] { TransactionType.BookingCommission, TransactionType.WithdrawalFee, TransactionType.PremiumPurchase };
 
         var revenue30d = await _db.WalletTransactions
-            .Where(t => platformFeeTypes.Contains(t.TransactionType) && t.Amount > 0
+            .Where(t => platformFeeTypes.Contains(t.TransactionType) && t.Amount < 0
                 && t.CreatedAt >= thirtyDaysAgoUtc && t.CreatedAt <= nowUtc)
-            .SumAsync(t => t.Amount, cancellationToken);
+            .SumAsync(t => -t.Amount, cancellationToken);
         var revenuePrev30d = await _db.WalletTransactions
-            .Where(t => platformFeeTypes.Contains(t.TransactionType) && t.Amount > 0
+            .Where(t => platformFeeTypes.Contains(t.TransactionType) && t.Amount < 0
                 && t.CreatedAt >= sixtyDaysAgoUtc && t.CreatedAt < thirtyDaysAgoUtc)
-            .SumAsync(t => t.Amount, cancellationToken);
+            .SumAsync(t => -t.Amount, cancellationToken);
         var revenue30dChangePct = CalcChangePct(revenue30d, revenuePrev30d);
 
         var kpi = new AdminKpiDto(
@@ -161,7 +161,7 @@ public class GetAdminDashboardQueryHandler
         var chartStartUtc = ToUtc(chartStartLocal, tz);
         var platformFeeRows = await _db.WalletTransactions
             .AsNoTracking()
-            .Where(t => platformFeeTypes.Contains(t.TransactionType) && t.Amount > 0
+            .Where(t => platformFeeTypes.Contains(t.TransactionType) && t.Amount < 0
                 && t.CreatedAt >= chartStartUtc && t.CreatedAt < todayEndUtc)
             .Select(t => new { t.Amount, t.CreatedAt })
             .ToListAsync(cancellationToken);
@@ -174,9 +174,9 @@ public class GetAdminDashboardQueryHandler
             var dayEnd = ToUtc(day.AddDays(1), tz);
             var dayRevenue = platformFeeRows
                 .Where(r => r.CreatedAt >= dayStart && r.CreatedAt < dayEnd)
-                .Sum(r => r.Amount);
+                .Sum(r => -r.Amount);
 
-            revenueTrend.Add(new RevenueTrendItemDto(day.ToString("yyyy-MM-dd"), Math.Max(0m, dayRevenue)));
+            revenueTrend.Add(new RevenueTrendItemDto(day.ToString("yyyy-MM-dd"), dayRevenue));
         }
 
         // ════════════════════════════════════════════

@@ -102,13 +102,13 @@ public class GetReportsAnalyticsQueryHandler
         var platformFeeTypes = new[] { TransactionType.BookingCommission, TransactionType.WithdrawalFee, TransactionType.PremiumPurchase };
 
         var monthlyRevenue = await _db.WalletTransactions
-            .Where(t => platformFeeTypes.Contains(t.TransactionType) && t.Amount > 0
+            .Where(t => platformFeeTypes.Contains(t.TransactionType) && t.Amount < 0
                 && t.CreatedAt >= currentMonthStartUtc && t.CreatedAt < currentMonthEndUtc)
-            .SumAsync(t => t.Amount, cancellationToken);
+            .SumAsync(t => -t.Amount, cancellationToken);
         var prevMonthlyRevenue = await _db.WalletTransactions
-            .Where(t => platformFeeTypes.Contains(t.TransactionType) && t.Amount > 0
+            .Where(t => platformFeeTypes.Contains(t.TransactionType) && t.Amount < 0
                 && t.CreatedAt >= prevMonthStartUtc && t.CreatedAt < currentMonthStartUtc)
-            .SumAsync(t => t.Amount, cancellationToken);
+            .SumAsync(t => -t.Amount, cancellationToken);
         var monthlyRevenueChangePct = CalcChangePct(monthlyRevenue, prevMonthlyRevenue);
 
         var summary = new ReportsAnalyticsSummaryDto(
@@ -196,7 +196,7 @@ public class GetReportsAnalyticsQueryHandler
         // ════════════════════════════════════════════
         var platformFeeRevenueRows = await _db.WalletTransactions
             .AsNoTracking()
-            .Where(t => platformFeeTypes.Contains(t.TransactionType) && t.Amount > 0
+            .Where(t => platformFeeTypes.Contains(t.TransactionType) && t.Amount < 0
                 && t.CreatedAt >= fromUtc && t.CreatedAt < toUtcExclusive)
             .Select(t => new { t.Amount, t.CreatedAt })
             .ToListAsync(cancellationToken);
@@ -219,7 +219,7 @@ public class GetReportsAnalyticsQueryHandler
 
             var revenueInMonth = platformFeeRevenueRows
                 .Where(x => x.CreatedAt >= mStart && x.CreatedAt < mEnd)
-                .Sum(x => x.Amount);
+                .Sum(x => -x.Amount);
             var bookingsInMonth = bookingDatesInPeriod
                 .Count(d => d >= mStart && d < mEnd);
 
