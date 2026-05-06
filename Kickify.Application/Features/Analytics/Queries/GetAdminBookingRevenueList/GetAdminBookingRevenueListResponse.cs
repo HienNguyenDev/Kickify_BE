@@ -1,24 +1,21 @@
-using Kickify.Domain.Enums;
-
 namespace Kickify.Application.Features.Analytics.Queries.GetAdminBookingRevenueList;
 
 public record GetAdminBookingRevenueListResponse(
-    IReadOnlyList<AdminBookingRevenueListItemDto> Items,
+    decimal TotalPlatformFee,
+    decimal BookingCommissionTotal,
+    decimal WithdrawalFeeTotal,
+    decimal PremiumPurchaseTotal,
+    IReadOnlyList<PlatformFeeTransactionDto> Items,
     int TotalCount,
     int Page,
     int PageSize
 );
 
-public record AdminBookingRevenueListItemDto(
-    Guid BookingId,
-    Guid RoomId,
-    Guid VenueId,
-    string VenueName,
-    string FieldName,
-    decimal TotalAmount,
-    decimal PlatformFee,
-    decimal VenueAmount,
-    DateTime CompletedAtUtc,
-    string BookingStatus,
-    string MatchRoomStatus
+public record PlatformFeeTransactionDto(
+    Guid TransactionId,
+    string FeeSource,
+    decimal Amount,
+    Guid? ReferenceId,
+    string? Description,
+    DateTime CreatedAtUtc
 );
