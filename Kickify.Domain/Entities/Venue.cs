@@ -15,7 +15,7 @@ public class Venue : BaseEntity
     public string? ContactEmail { get; set; }
     public string? Description { get; set; }
     public string? Amenities { get; set; } // JSON: parking, shower, etc.
-    public VenueStatus Status { get; set; } = VenueStatus.Pending;
+    public VenueStatus Status { get; set; } = VenueStatus.Draft;
     public string? AdminNotes { get; set; }
     public decimal AverageRating { get; set; } = 0;
     public int TotalReviews { get; set; } = 0;
@@ -26,4 +26,6 @@ public class Venue : BaseEntity
     public ICollection<VenueOperatingHour> VenueOperatingHours { get; set; } = new List<VenueOperatingHour>();
     public ICollection<Field> Fields { get; set; } = new List<Field>();
     public ICollection<VenueReview> VenueReviews { get; set; } = new List<VenueReview>();
+    public ICollection<VenueEvidence> VenueEvidences { get; set; } = new List<VenueEvidence>();
+    public ICollection<Holiday> IgnoredHolidays { get; set; } = new List<Holiday>();
 }

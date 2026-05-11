@@ -42,6 +42,7 @@ public class GetAllPostsQueryHandler : IQueryHandler<GetAllPostsQuery, GetAllPos
             UserId = p.UserId,
             UserFullName = p.User?.FullName ?? string.Empty,
             UserAvatarUrl = p.User?.AvatarUrl,
+            IsPremium = p.User?.IsPremium ?? false,
             Content = p.Content,
             TotalMedia = p.TotalMedia,
             TotalLikes = p.TotalLikes,

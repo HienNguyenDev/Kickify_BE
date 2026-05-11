@@ -1,5 +1,4 @@
-﻿using Kickify.Application.Abstractions.Authentication;
-using Kickify.Application.Abstractions.Jobs;
+using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
@@ -16,18 +15,14 @@ public class VoteMatchResultCommandHandler : ICommandHandler<VoteMatchResultComm
     private readonly IMatchRoomRepository _matchRoomRepository;
     private readonly IRoomParticipantRepository _roomParticipantRepository;
     private readonly IMatchResultVoteRepository _matchResultVoteRepository;
-    private readonly IMatchLifecycleService _matchLifecycleService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IUserContext _userContext;
     private readonly ILogger<VoteMatchResultCommandHandler> _logger;
-
-    private const double VoteThresholdPercentage = 0.6; // 60%
 
     public VoteMatchResultCommandHandler(
         IMatchRoomRepository matchRoomRepository,
         IRoomParticipantRepository roomParticipantRepository,
         IMatchResultVoteRepository matchResultVoteRepository,
-        IMatchLifecycleService matchLifecycleService,
         IUnitOfWork unitOfWork,
         IUserContext userContext,
         ILogger<VoteMatchResultCommandHandler> logger)
@@ -35,7 +30,6 @@ public class VoteMatchResultCommandHandler : ICommandHandler<VoteMatchResultComm
         _matchRoomRepository = matchRoomRepository;
         _roomParticipantRepository = roomParticipantRepository;
         _matchResultVoteRepository = matchResultVoteRepository;
-        _matchLifecycleService = matchLifecycleService;
         _unitOfWork = unitOfWork;
         _userContext = userContext;
         _logger = logger;
@@ -65,6 +59,11 @@ public class VoteMatchResultCommandHandler : ICommandHandler<VoteMatchResultComm
             return Result.Failure<VoteMatchResultResponse>(MatchRoomErrors.NotParticipant);
         }
 
+        if (userId != room.HostId)
+        {
+            return Result.Failure<VoteMatchResultResponse>(MatchRoomErrors.OnlyHostCanSubmitMatchResult);
+        }
+
         // Check if already voted
         var hasVoted = await _matchResultVoteRepository.HasUserVotedAsync(request.RoomId, userId, cancellationToken);
         if (hasVoted)
@@ -89,10 +88,10 @@ public class VoteMatchResultCommandHandler : ICommandHandler<VoteMatchResultComm
         var voteCount = await _matchResultVoteRepository.GetVoteCountByRoomAsync(request.RoomId, cancellationToken);
         var totalParticipants = room.FilledSlots;
 
-        _logger.LogInformation("User {UserId} voted {Vote} for room {RoomId}. Votes: {VoteCount}/{Total}",
-            userId, request.Vote, request.RoomId, voteCount, totalParticipants);
+        _logger.LogInformation("Host {UserId} submitted match result {Vote} for room {RoomId}. Reviewing continues until the scheduled 22h window ends.",
+            userId, request.Vote, request.RoomId);
 
-        var message = $"Vote ghi nhận thành công. Hiện tại {voteCount}/{totalParticipants} người đã vote.";
+        var message = "Đã ghi nhận kết quả từ host. Phòng vẫn ở Reviewing cho đến khi hết cửa sổ 22 giờ sau khi trận kết thúc, rồi mới chuyển Completed.";
 
         return Result.Success(new VoteMatchResultResponse(
             request.RoomId,

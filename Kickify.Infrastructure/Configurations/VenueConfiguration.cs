@@ -48,7 +48,7 @@ public class VenueConfiguration : IEntityTypeConfiguration<Venue>
 
         builder.Property(v => v.Status)
             .HasConversion<string>()
-            .HasDefaultValue(Domain.Enums.VenueStatus.Pending);
+            .HasDefaultValue(Domain.Enums.VenueStatus.Draft);
 
         builder.Property(v => v.AdminNotes)
             .HasColumnType("text");
@@ -84,5 +84,28 @@ public class VenueConfiguration : IEntityTypeConfiguration<Venue>
             .WithOne(vr => vr.Venue)
             .HasForeignKey(vr => vr.VenueId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(v => v.IgnoredHolidays)
+            .WithMany(h => h.IgnoredByVenues)
+            .UsingEntity<Dictionary<string, object>>(
+                "VenueIgnoredHolidays",
+                right => right
+                    .HasOne<Holiday>()
+                    .WithMany()
+                    .HasForeignKey("HolidayId")
+                    .HasConstraintName("FK_VenueIgnoredHolidays_Holidays_HolidayId")
+                    .OnDelete(DeleteBehavior.Cascade),
+                left => left
+                    .HasOne<Venue>()
+                    .WithMany()
+                    .HasForeignKey("VenueId")
+                    .HasConstraintName("FK_VenueIgnoredHolidays_Venues_VenueId")
+                    .OnDelete(DeleteBehavior.Cascade),
+                join =>
+                {
+                    join.ToTable("VenueIgnoredHolidays", Schemas.Venue);
+                    join.HasKey("VenueId", "HolidayId");
+                    join.HasIndex("HolidayId");
+                });
     }
 }

@@ -18,8 +18,12 @@ public class SystemLogConfiguration : IEntityTypeConfiguration<SystemLog>
 
         builder.Property(sl => sl.UserId);
 
+        builder.Property(sl => sl.UserName)
+            .HasMaxLength(255);
+
         builder.Property(sl => sl.Action)
-            .HasMaxLength(255)
+            .HasConversion<string>()
+            .HasMaxLength(20)
             .IsRequired();
 
         builder.Property(sl => sl.EntityType)
@@ -27,16 +31,13 @@ public class SystemLogConfiguration : IEntityTypeConfiguration<SystemLog>
 
         builder.Property(sl => sl.EntityId);
 
-        builder.Property(sl => sl.IpAddress)
-            .HasMaxLength(45);
+        builder.Property(sl => sl.UserAgent)
+            .HasMaxLength(20);
 
-        builder.Property(sl => sl.UserAgent);
-
-        builder.Property(sl => sl.RequestDetails)
-            .HasColumnType("text")
-            .HasComment("JSON");
-
-        builder.Property(sl => sl.ResponseStatus);
+        builder.Property(sl => sl.ResponseStatus)
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .IsRequired();
 
         builder.Property(sl => sl.ErrorMessage)
             .HasColumnType("text");

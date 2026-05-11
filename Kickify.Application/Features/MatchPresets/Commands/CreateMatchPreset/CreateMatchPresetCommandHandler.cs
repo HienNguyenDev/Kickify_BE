@@ -48,16 +48,19 @@ namespace Kickify.Application.Features.MatchPresets.Commands.CreateMatchPreset
                 return Result.Failure<CreateMatchPresetResponse>(MatchPresetErrors.InvalidFormat(request.MatchFormat));
             }
 
-            // Verify field exists if provided
-            string? fieldName = null;
-            if (request.FieldId.HasValue)
+            var field = await _fieldRepository.GetByIdAsync(request.FieldId);
+            if (field == null)
             {
-                var field = await _fieldRepository.GetByIdAsync(request.FieldId.Value);
-                if (field == null)
-                {
-                    return Result.Failure<CreateMatchPresetResponse>(FieldErrors.NotFound(request.FieldId.Value));
-                }
-                fieldName = field.FieldName;
+                return Result.Failure<CreateMatchPresetResponse>(FieldErrors.NotFound(request.FieldId));
+            }
+
+            var visibilityInput = string.IsNullOrWhiteSpace(request.Visibility)
+                ? Visibility.Public.ToString()
+                : request.Visibility;
+
+            if (!Enum.TryParse<Visibility>(visibilityInput, true, out var visibility))
+            {
+                return Result.Failure<CreateMatchPresetResponse>(MatchPresetErrors.InvalidVisibility(request.Visibility));
             }
 
             // Create preset
@@ -65,10 +68,15 @@ namespace Kickify.Application.Features.MatchPresets.Commands.CreateMatchPreset
             {
                 PresetId = Guid.NewGuid(),
                 UserId = userId,
-                PresetName = request.PresetName,
                 FieldId = request.FieldId,
-                CustomLocation = request.CustomLocation,
+                RoomName = request.RoomName,
                 MatchFormat = matchFormat,
+                Visibility = visibility,
+                Password = visibility == Visibility.Private
+                    ? (string.IsNullOrWhiteSpace(request.Password) ? null : request.Password)
+                    : null,
+                StartTime = request.StartTime,
+                Rules = request.Rules,
                 DurationMinutes = request.DurationMinutes,
                 Description = request.Description,
                 CreatedAt = DateTime.UtcNow
@@ -80,11 +88,13 @@ namespace Kickify.Application.Features.MatchPresets.Commands.CreateMatchPreset
             return Result.Success(new CreateMatchPresetResponse(
                 preset.PresetId,
                 preset.UserId,
-                preset.PresetName,
                 preset.FieldId,
-                fieldName,
-                preset.CustomLocation,
+                preset.RoomName,
                 preset.MatchFormat.ToString(),
+                preset.Visibility.ToString(),
+                preset.Password,
+                preset.StartTime,
+                preset.Rules,
                 preset.DurationMinutes,
                 preset.Description,
                 preset.CreatedAt

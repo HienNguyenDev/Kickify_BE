@@ -1,4 +1,4 @@
-﻿using BrewView.Infrastructure.Authentication;
+using BrewView.Infrastructure.Authentication;
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
 using Kickify.Application.Abstractions.Authentication;
@@ -61,6 +61,20 @@ namespace Kickify.Infrastructure
                         ValidAudience = configuration["Authentication:Audience"],
                         ClockSkew = TimeSpan.Zero
                     };
+
+                    o.Events = new JwtBearerEvents
+                    {
+                        OnMessageReceived = context =>
+                        {
+                            var accessToken = context.Request.Query["access_token"];
+                            var path = context.HttpContext.Request.Path;
+                            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                            {
+                                context.Token = accessToken;
+                            }
+                            return Task.CompletedTask;
+                        }
+                    };
                 });
 
             services.AddHttpContextAccessor();
@@ -95,6 +109,7 @@ namespace Kickify.Infrastructure
             services.AddScoped<IAuthenticationServices, AuthenticationServices>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<IUserContext, UserContext>();
+            services.AddScoped<ICurrentUserReader, CurrentUserReader>();
             services.AddScoped<IJwtProvider, JwtProvider>();
             services.AddScoped<IPasswordHasher, PasswordHasher>();
             services.AddScoped<EmailTemplateService>();
@@ -104,9 +119,22 @@ namespace Kickify.Infrastructure
             services.AddTransient<IResetPasswordGenerator, ResetPasswordGenerator>();
             services.AddScoped<IPushNotificationService, PushNotificationService>();
             services.AddSingleton<IQrCodeService, QrCodeService>();
+            services.AddScoped<ILeaderboardCacheService, LeaderboardCacheService>();
+            services.AddScoped<ITrustScoreService, TrustScoreService>();
+            services.AddSingleton<SystemLogQueue>();
+            services.AddSingleton<ISystemLogQueue>(sp => sp.GetRequiredService<SystemLogQueue>());
 
             // AI Sentiment Analysis Service
             services.AddHttpClient<ISentimentAnalysisService, SentimentAnalysisService>((sp, client) =>
+            {
+                var config = sp.GetRequiredService<IConfiguration>();
+                var baseUrl = config["SentimentAnalysis:BaseUrl"] ?? "http://localhost:8000";
+                client.BaseAddress = new Uri(baseUrl);
+                client.Timeout = TimeSpan.FromSeconds(30);
+            });
+
+            // AI Suggestion Service (shared base URL with sentiment analysis)
+            services.AddHttpClient<IAiSuggestionService, AiSuggestionService>((sp, client) =>
             {
                 var config = sp.GetRequiredService<IConfiguration>();
                 var baseUrl = config["SentimentAnalysis:BaseUrl"] ?? "http://localhost:8000";
@@ -128,6 +156,7 @@ namespace Kickify.Infrastructure
             services.AddScoped<IWalletTransactionRepository, WalletTransactionRepository>();
             services.AddScoped<IWalletWithdrawalRepository, WalletWithdrawalRepository>();
             services.AddScoped<IVenueRepository, VenueRepository>();
+            services.AddScoped<IHolidayRepository, HolidayRepository>();
             services.AddScoped<IVenuePhotoRepository, VenuePhotoRepository>();
             services.AddScoped<IVenueOperatingHourRepository, VenueOperatingHourRepository>();
             services.AddScoped<IFieldRepository, FieldRepository>();
@@ -149,6 +178,10 @@ namespace Kickify.Infrastructure
             services.AddScoped<IRoomInvitationRepository, RoomInvitationRepository>();
             services.AddScoped<IAchievementRepository, AchievementRepository>();
             services.AddScoped<IVenueReviewRepository, VenueReviewRepository>();
+            services.AddScoped<IPlayerReportRepository, PlayerReportRepository>();
+            services.AddScoped<IContentReportRepository, ContentReportRepository>();
+            services.AddScoped<IAnnouncementRepository, AnnouncementRepository>();
+            services.AddScoped<IVenueEvidenceRepository, VenueEvidenceRepository>();
             return services;
         }
         private static IServiceCollection AddFirebase(this IServiceCollection services)
@@ -242,6 +275,10 @@ namespace Kickify.Infrastructure
             services.AddScoped<IEmailJobService, EmailJobService>();
             services.AddScoped<IRoomAutoCloseService, RoomAutoCloseService>();
             services.AddScoped<IMatchLifecycleService, MatchLifecycleService>();
+            services.AddScoped<ILeaderboardUpdateService, LeaderboardUpdateService>();
+            services.AddScoped<ISystemLogCleanupService, SystemLogCleanupService>();
+            services.AddHostedService<JobSchedulerStartupService>();
+            services.AddHostedService<SystemLogBatchInsertService>();
 
             return services;
         }

@@ -1,4 +1,4 @@
-﻿using Kickify.Application.Abstractions.Authentication;
+using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.OTP;
 using Kickify.Application.Abstractions.Persistence;
@@ -82,6 +82,8 @@ public class RegisterPlayerCommandHandler : ICommandHandler<RegisterPlayerComman
             ProfileId = Guid.NewGuid(),
             UserId = user.UserId,
             CurrentElo = 1000,
+            CurrentRank = "Amateur",
+            IsLegend = false,
             TrustScore = 100,
             TotalMatches = 0,
             Wins = 0,
@@ -100,7 +102,8 @@ public class RegisterPlayerCommandHandler : ICommandHandler<RegisterPlayerComman
             UserId = user.UserId,
             MatchRoom = true,
             Friendship = true,
-            Post = true
+            Post = true,
+            Chat = true
         };
         await _notificationPreferenceRepository.AddAsync(notificationPreference);
 

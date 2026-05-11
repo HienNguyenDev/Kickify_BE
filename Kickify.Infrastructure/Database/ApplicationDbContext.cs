@@ -1,4 +1,4 @@
-﻿using Kickify.Application.Abstractions.Persistence;
+using Kickify.Application.Abstractions.Persistence;
 using Kickify.Domain.Common;
 using Kickify.Domain.Entities;
 using MediatR;
@@ -19,10 +19,13 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
 
     // Venue Schema
     public DbSet<Venue> Venues { get; set; }
+    public DbSet<Holiday> Holidays { get; set; }
     public DbSet<VenuePhoto> VenuePhotos { get; set; }
     public DbSet<VenueOperatingHour> VenueOperatingHours { get; set; }
     public DbSet<Field> Fields { get; set; }
+    public DbSet<FieldPeakHour> FieldPeakHours { get; set; }
     public DbSet<VenueReview> VenueReviews { get; set; }
+    public DbSet<VenueEvidence> VenueEvidences { get; set; }
 
     // Match Schema
     public DbSet<MatchRoom> MatchRooms { get; set; }
@@ -46,7 +49,9 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<MatchFeedback> MatchFeedbacks { get; set; }
     public DbSet<EloHistory> EloHistories { get; set; }
     public DbSet<EloConfiguration> EloConfigurations { get; set; }
+    public DbSet<PlayerRadarSnapshot> PlayerRadarSnapshots { get; set; }
     public DbSet<PlayerReport> PlayerReports { get; set; }
+    public DbSet<ContentReport> ContentReports { get; set; }
 
     // System Schema
     public DbSet<Notification> Notifications { get; set; }
@@ -191,6 +196,6 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             .HasQueryFilter(e => e.Venue.DeletedAt == null);
 
         modelBuilder.Entity<VenueReview>()
-            .HasQueryFilter(e => e.Venue.DeletedAt == null && e.User.DeletedAt == null && e.Booking.DeletedAt == null);
+            .HasQueryFilter(e => e.DeletedAt == null && e.Venue.DeletedAt == null && e.User.DeletedAt == null && e.Booking.DeletedAt == null);
     }
 }

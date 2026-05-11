@@ -6,6 +6,8 @@ using Kickify.Application.Abstractions.Services;
 using Kickify.Domain.Common;
 using Kickify.Domain.Enums;
 using Kickify.Domain.Errors;
+using Kickify.Domain.Event;
+using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace Kickify.Application.Features.MatchRooms.Commands.UpdateRoomPrivacy
@@ -16,6 +18,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.UpdateRoomPrivacy
         private readonly IMatchRoomHubService _matchRoomHubService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IUserContext _userContext;
+        private readonly IPublisher _publisher;
         private readonly ILogger<UpdateRoomPrivacyCommandHandler> _logger;
 
         public UpdateRoomPrivacyCommandHandler(
@@ -23,12 +26,14 @@ namespace Kickify.Application.Features.MatchRooms.Commands.UpdateRoomPrivacy
             IMatchRoomHubService matchRoomHubService,
             IUnitOfWork unitOfWork,
             IUserContext userContext,
+            IPublisher publisher,
             ILogger<UpdateRoomPrivacyCommandHandler> logger)
         {
             _matchRoomRepository = matchRoomRepository;
             _matchRoomHubService = matchRoomHubService;
             _unitOfWork = unitOfWork;
             _userContext = userContext;
+            _publisher = publisher;
             _logger = logger;
         }
 
@@ -75,6 +80,18 @@ namespace Kickify.Application.Features.MatchRooms.Commands.UpdateRoomPrivacy
 
             _logger.LogInformation("Room {RoomId} privacy updated from {PreviousVisibility} to {NewVisibility} by host {UserId}",
                 room.RoomId, previousVisibility, visibility, userId);
+
+            if (visibility == Visibility.Private && previousVisibility != Visibility.Private)
+            {
+                var roomWithParticipants = await _matchRoomRepository.GetRoomWithParticipantsAsync(request.RoomId, cancellationToken);
+                if (roomWithParticipants?.RoomParticipants is { Count: > 0 })
+                {
+                    var ids = roomWithParticipants.RoomParticipants.Select(p => p.UserId).Distinct().ToList();
+                    await _publisher.Publish(
+                        new MatchRoomBecamePrivateNotifyParticipantsDomainEvent(room.RoomId, room.RoomName, ids),
+                        cancellationToken);
+                }
+            }
 
             // Send real-time notification to all room participants
             await _matchRoomHubService.NotifyRoomPrivacyUpdatedAsync(

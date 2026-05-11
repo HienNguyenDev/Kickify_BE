@@ -10,16 +10,31 @@ public class CreateMatchFeedbackCommandValidator : AbstractValidator<CreateMatch
             .NotEmpty()
             .WithMessage("MatchId is required");
 
-        RuleFor(x => x.RevieweeId)
+        RuleFor(x => x.ReviewerId)
             .NotEmpty()
-            .WithMessage("RevieweeId is required");
+            .WithMessage("ReviewerId is required");
 
-        RuleFor(x => x.Rating)
-            .InclusiveBetween(1, 5)
-            .WithMessage("Rating must be between 1 and 5");
+        RuleFor(x => x.Feedbacks)
+            .NotEmpty()
+            .WithMessage("Feedbacks list must not be empty");
 
-        RuleFor(x => x.Comment)
-            .MaximumLength(1000)
-            .WithMessage("Comment must not exceed 1000 characters");
+        RuleFor(x => x.Feedbacks)
+            .Must(items => items.Select(f => f.RevieweeId).Distinct().Count() == items.Count)
+            .WithMessage("Each reviewee may only appear once in the feedbacks list");
+
+        RuleForEach(x => x.Feedbacks).ChildRules(feedback =>
+        {
+            feedback.RuleFor(f => f.RevieweeId)
+                .NotEmpty()
+                .WithMessage("RevieweeId is required");
+
+            feedback.RuleFor(f => f.Rating)
+                .InclusiveBetween(1, 5)
+                .WithMessage("Rating must be between 1 and 5");
+
+            feedback.RuleFor(f => f.Comment)
+                .MaximumLength(1000)
+                .WithMessage("Comment must not exceed 1000 characters");
+        });
     }
 }

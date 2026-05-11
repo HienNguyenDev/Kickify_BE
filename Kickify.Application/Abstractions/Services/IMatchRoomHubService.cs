@@ -28,6 +28,7 @@ public interface IMatchRoomHubService
         int totalSlots,
         bool isRoomDeleted,
         Guid? newHostId,
+        decimal totalDepositCollected,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -36,6 +37,16 @@ public interface IMatchRoomHubService
     Task NotifyRoomStatusChangedAsync(
         Guid roomId,
         string newStatus,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Notify room members about remaining time before dynamic auto-close.
+    /// </summary>
+    Task NotifyAutoCloseCountdownTickAsync(
+        Guid roomId,
+        int secondsRemaining,
+        DateTime closesAtUtc,
+        string reason,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -59,6 +70,7 @@ public interface IMatchRoomHubService
         string kickedUserName,
         int filledSlots,
         int totalSlots,
+        decimal totalDepositCollected,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -160,5 +172,28 @@ public interface IMatchRoomHubService
         Guid roomId,
         string finalResult,
         int voteCount,
+        CancellationToken cancellationToken = default);
+
+    Task NotifyRoomCancelledAsync(
+        Guid roomId,
+        string reason,
+        CancellationToken cancellationToken = default);
+
+    Task NotifyHostTransferRequestedAsync(
+        Guid roomId,
+        Guid targetUserId,
+        string hostName,
+        CancellationToken cancellationToken = default);
+
+    Task NotifyHostTransferRejectedAsync(
+        Guid roomId,
+        Guid oldHostId,
+        string targetUserName,
+        CancellationToken cancellationToken = default);
+
+    Task NotifyHostTransferredAsync(
+        Guid roomId,
+        Guid newHostId,
+        string newHostName,
         CancellationToken cancellationToken = default);
 }

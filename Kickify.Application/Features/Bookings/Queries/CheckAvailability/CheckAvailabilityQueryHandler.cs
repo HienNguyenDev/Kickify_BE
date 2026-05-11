@@ -28,6 +28,12 @@ namespace Kickify.Application.Features.Bookings.Queries.CheckAvailability
                 return Result.Failure<CheckAvailabilityResponse>(FieldErrors.NotFound(request.FieldId));
             }
 
+            // Check if venue is archived
+            if (field.Venue.Status == VenueStatus.Archived)
+            {
+                return Result.Failure<CheckAvailabilityResponse>(FieldErrors.VenueArchived);
+            }
+
             // Get day of week
             var dayOfWeek = (DayOfWeekEnum)request.Date.DayOfWeek;
 
@@ -80,10 +86,17 @@ namespace Kickify.Application.Features.Bookings.Queries.CheckAvailability
             var isPastDate = request.Date.Date < todayInVietnam;
 
             // ====================================================================================
+            // LOGIC M?I: KI?M TRA OVERLAP D?A TRÊN TH?I LÝ?NG T?I THI?U 60 PHÚT
+            // ====================================================================================
+            var minMatchDuration = TimeSpan.FromMinutes(60);
 
-            while (currentSlotTime < closeTime)
+            // V?ng l?p ch? ch?y khi slot hi?n t?i + 60p v?n n?m trong gi? m? c?a
+            while (currentSlotTime.Add(minMatchDuration) <= closeTime)
             {
                 bool isAvailable = true;
+
+                // Th?i ði?m k?t thúc gi? ð?nh n?u ð?t slot này
+                var expectedEndTime = currentSlotTime.Add(minMatchDuration);
 
                 if (isPastDate)
                 {
@@ -95,8 +108,9 @@ namespace Kickify.Application.Features.Bookings.Queries.CheckAvailability
                 }
                 else
                 {
+                    // Check ð?ng l?ch (Overlap) cho toàn b? kho?ng th?i gian 60 phút
                     isAvailable = !bookedSlots.Any(booked =>
-                        currentSlotTime >= booked.Item1 && currentSlotTime < booked.Item2);
+                        currentSlotTime < booked.Item2 && expectedEndTime > booked.Item1);
                 }
 
                 availableSlots.Add(new TimeSlotDto(
@@ -105,8 +119,10 @@ namespace Kickify.Application.Features.Bookings.Queries.CheckAvailability
                     field.HourlyRate
                 ));
 
+                // Chuy?n sang slot ti?p theo (cách 30 phút)
                 currentSlotTime = currentSlotTime.Add(TimeSpan.FromMinutes(30));
             }
+            // ====================================================================================
 
             return Result.Success(new CheckAvailabilityResponse(
                 field.FieldId,
@@ -118,55 +134,5 @@ namespace Kickify.Application.Features.Bookings.Queries.CheckAvailability
                 null
             ));
         }
-
-        //    // Get current server time for past slot validation
-        //    var now = DateTime.Now;
-        //    var today = now.Date;
-        //    var currentTimeOfDay = now.TimeOfDay;
-        //    var isToday = request.Date.Date == today;
-        //    var isPastDate = request.Date.Date < today;
-
-        //    while (currentSlotTime < closeTime)
-        //    {
-        //        bool isAvailable = true;
-
-        //        // If the entire date is in the past, all slots are unavailable
-        //        if (isPastDate)
-        //        {
-        //            isAvailable = false;
-        //        }
-        //        // If it's today, check if this slot time has already passed
-        //        else if (isToday && currentSlotTime < currentTimeOfDay)
-        //        {
-        //            isAvailable = false;
-        //        }
-        //        else
-        //        {
-        //            // Check if this 30-minute slot overlaps with any booked slot
-        //            // A slot is unavailable if it falls within any booked period
-        //            isAvailable = !bookedSlots.Any(booked =>
-        //                currentSlotTime >= booked.Item1 && currentSlotTime < booked.Item2);
-        //        }
-
-        //        availableSlots.Add(new TimeSlotDto(
-        //            currentSlotTime,
-        //            isAvailable,
-        //            field.HourlyRate
-        //        ));
-
-        //        // Move to next 30-minute slot
-        //        currentSlotTime = currentSlotTime.Add(TimeSpan.FromMinutes(30));
-        //    }
-
-        //    return Result.Success(new CheckAvailabilityResponse(
-        //        field.FieldId,
-        //        field.FieldName,
-        //        request.Date,
-        //        operatingHour.OpenTime,
-        //        operatingHour.CloseTime,
-        //        availableSlots,
-        //        null
-        //    ));
-        //}
     }
 }

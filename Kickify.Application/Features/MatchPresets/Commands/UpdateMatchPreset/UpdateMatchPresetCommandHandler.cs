@@ -45,19 +45,35 @@ namespace Kickify.Application.Features.MatchPresets.Commands.UpdateMatchPreset
             }
 
             // Update fields if provided (null = keep old value)
-            if (request.PresetName != null)
+            if (request.RoomName != null)
             {
-                preset.PresetName = request.PresetName;
+                preset.RoomName = request.RoomName;
             }
 
-            if (request.CustomLocation != null)
+            if (request.FieldId.HasValue)
             {
-                preset.CustomLocation = request.CustomLocation;
+                var field = await _fieldRepository.GetByIdAsync(request.FieldId.Value);
+                if (field == null)
+                {
+                    return Result.Failure<UpdateMatchPresetResponse>(FieldErrors.NotFound(request.FieldId.Value));
+                }
+
+                preset.FieldId = request.FieldId.Value;
             }
 
             if (request.Description != null)
             {
                 preset.Description = request.Description;
+            }
+
+            if (request.Rules != null)
+            {
+                preset.Rules = request.Rules;
+            }
+
+            if (request.StartTime.HasValue)
+            {
+                preset.StartTime = request.StartTime.Value;
             }
 
             if (request.DurationMinutes.HasValue)
@@ -74,23 +90,31 @@ namespace Kickify.Application.Features.MatchPresets.Commands.UpdateMatchPreset
                 preset.MatchFormat = matchFormat;
             }
 
-            // Handle FieldId update
-            string? fieldName = null;
-            if (request.FieldId.HasValue)
+            if (request.Visibility != null)
             {
-                var field = await _fieldRepository.GetByIdAsync(request.FieldId.Value);
-                if (field == null)
+                if (!Enum.TryParse<Visibility>(request.Visibility, true, out var visibility))
                 {
-                    return Result.Failure<UpdateMatchPresetResponse>(FieldErrors.NotFound(request.FieldId.Value));
+                    return Result.Failure<UpdateMatchPresetResponse>(MatchPresetErrors.InvalidVisibility(request.Visibility));
                 }
-                preset.FieldId = request.FieldId.Value;
-                fieldName = field.FieldName;
+
+                preset.Visibility = visibility;
+
+                if (visibility == Visibility.Public)
+                {
+                    preset.Password = null;
+                }
             }
-            else if (preset.FieldId.HasValue)
+
+            if (request.Password != null)
             {
-                // Get existing field name
-                var field = await _fieldRepository.GetByIdAsync(preset.FieldId.Value);
-                fieldName = field?.FieldName;
+                preset.Password = string.IsNullOrWhiteSpace(request.Password)
+                    ? null
+                    : request.Password;
+            }
+
+            if (preset.Visibility == Visibility.Public)
+            {
+                preset.Password = null;
             }
 
             _matchPresetRepository.Update(preset);
@@ -99,11 +123,13 @@ namespace Kickify.Application.Features.MatchPresets.Commands.UpdateMatchPreset
             return Result.Success(new UpdateMatchPresetResponse(
                 preset.PresetId,
                 preset.UserId,
-                preset.PresetName,
                 preset.FieldId,
-                fieldName,
-                preset.CustomLocation,
+                preset.RoomName,
                 preset.MatchFormat.ToString(),
+                preset.Visibility.ToString(),
+                preset.Password,
+                preset.StartTime,
+                preset.Rules,
                 preset.DurationMinutes,
                 preset.Description,
                 preset.CreatedAt

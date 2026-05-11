@@ -21,7 +21,11 @@ namespace Kickify.Application.Features.Users.Queries.GetAllUsers
         public UserRole Role { get; set; }
         public bool IsEmailVerified { get; set; }
         public bool IsActive { get; set; }
+        public DateTime? BannedUntil { get; set; }
+        public DateTime? DeletedAt { get; set; }
         public DateTime CreatedAt { get; set; }
+        public bool IsPremium { get; set; }
+        public DateTime? PremiumExpireAt { get; set; }
         
         // PlayerProfile information
         public PlayerProfileDto? PlayerProfile { get; set; }

@@ -1,4 +1,4 @@
-﻿using Kickify.Domain.Common;
+using Kickify.Domain.Common;
 
 namespace Kickify.Domain.Errors
 {
@@ -8,7 +8,33 @@ namespace Kickify.Domain.Errors
             "MatchRoom.NotFound",
             $"Room with ID {roomId} not found");
 
-        public static readonly Error NotOpen = Error.Problem(
+       
+
+        public static readonly Error InvalidCheckInMethod = Error.Conflict(
+            "MatchRoomErrors.InvalidCheckInMethod",
+            "Please provide either a Photo or valid GPS coordinates to check in.");
+
+        public static readonly Error VenueLocationMissing = Error.Conflict(
+            "MatchRoomErrors.VenueLocationMissing",
+            "The venue does not have its location coordinates registered, cannot check in via GPS.");
+
+        public static readonly Error RoomNotLockedForCheckIn = Error.Conflict(
+            "MatchRoomErrors.RoomNotLockedForCheckIn",
+            "You can only check into a room that is locked.");
+
+        public static  Error TooFarFromVenue(double distance) => Error.Conflict(
+            "MatchRoom.TooFar", 
+            $"Bạn đang cách sân {Math.Round(distance)}m (Vượt quá bán kính 200m). Vui lòng di chuyển lại gần sân hoặc sử dụng tính năng Chụp ảnh Check-in.");
+
+        public static  Error TooFarFromVenueGpsOnly(double distance) => Error.Conflict(
+            "MatchRoom.TooFar", 
+            $"Bạn đang cách sân {Math.Round(distance)}m (Vượt quá bán kính 300m cho phép). Vui lòng di chuyển lại gần sân để check-in.");
+
+        public static  Error WayTooFarEvenForPhoto(double distance) => Error.Conflict(
+            "MatchRoom.WayTooFar", 
+            $"Vị trí của bạn cách sân quá xa ({Math.Round(distance)}m). Vượt quá giới hạn cho phép (300m) nên không thể sử dụng tính năng chụp ảnh check-in.");
+
+        public static readonly Error NotOpen = Error.Conflict(
             "MatchRoom.NotOpen",
             "Room is not open for joining");
 
@@ -24,15 +50,15 @@ namespace Kickify.Domain.Errors
             "MatchRoom.NotParticipant",
             "User is not a participant of this room");
 
-        public static readonly Error InvalidTeamAssignment = Error.Problem(
+        public static readonly Error InvalidTeamAssignment = Error.Conflict(
             "MatchRoom.InvalidTeam",
             "Invalid team assignment");
 
-        public static Error InvalidTeam(string teamAssignment) => Error.Problem(
+        public static Error InvalidTeam(string teamAssignment) => Error.Conflict(
             "MatchRoom.InvalidTeam",
             $"Invalid team assignment: {teamAssignment}");
 
-        public static Error OutsideOperatingHours(TimeSpan startTime, TimeSpan endTime, TimeSpan openTime, TimeSpan closeTime) => Error.Problem(
+        public static Error OutsideOperatingHours(TimeSpan startTime, TimeSpan endTime, TimeSpan openTime, TimeSpan closeTime) => Error.Conflict(
             "MatchRoom.OutsideOperatingHours",
             $"Requested time ({startTime:hh\\:mm} - {endTime:hh\\:mm}) is outside operating hours ({openTime:hh\\:mm} - {closeTime:hh\\:mm})");
 
@@ -40,27 +66,31 @@ namespace Kickify.Domain.Errors
             "MatchRoom.SlotAlreadyBooked",
             $"The time slot from {startTime:hh\\:mm} to {endTime:hh\\:mm} is already booked");
 
-        public static Error VenueClosed(DateTime date) => Error.Problem(
+        public static Error VenueClosed(DateTime date) => Error.Conflict(
             "MatchRoom.VenueClosed",
             $"The venue is closed on {date:dddd}");
 
-        public static Error InvalidFormat(string matchFormat) => Error.Problem(
+        public static Error InvalidFormat(string matchFormat) => Error.Conflict(
             "MatchRoom.InvalidFormat",
             $"Invalid match format: {matchFormat}");
+
+        public static Error InvalidVisibility(string? visibility) => Error.Conflict(
+            "MatchRoom.InvalidVisibility",
+            $"Invalid visibility: {visibility}. Visibility must be Public or Private");
 
         public static readonly Error ConcurrencyConflict = Error.Conflict(
             "MatchRoom.ConcurrencyConflict",
             "Room was modified by another user. Please refresh and try again");
 
-        public static readonly Error CreateFailed = Error.Problem(
+        public static readonly Error CreateFailed = Error.Conflict(
             "MatchRoom.CreateFailed",
             "Failed to create match room");
 
-        public static readonly Error UpdateFailed = Error.Problem(
+        public static readonly Error UpdateFailed = Error.Conflict(
             "MatchRoom.UpdateFailed",
             "Failed to update participant");
 
-        public static readonly Error LeaveFailed = Error.Problem(
+        public static readonly Error LeaveFailed = Error.Conflict(
             "MatchRoom.LeaveFailed",
             "Failed to leave room");
 
@@ -69,11 +99,11 @@ namespace Kickify.Domain.Errors
             "MatchRoom.OnlyHostCanKick",
             "Only the host can kick players from the room");
 
-        public static readonly Error CannotKickSelf = Error.Problem(
+        public static readonly Error CannotKickSelf = Error.Conflict(
             "MatchRoom.CannotKickSelf",
             "Host cannot kick themselves. Use 'Leave Room' or 'Cancel Room' instead");
 
-        public static readonly Error RoomNotActive = Error.Problem(
+        public static readonly Error RoomNotActive = Error.Conflict(
             "MatchRoom.RoomNotActive",
             "Cannot kick players from a completed or cancelled room");
 
@@ -81,12 +111,12 @@ namespace Kickify.Domain.Errors
             "MatchRoom.PlayerNotInRoom",
             $"Player with ID {userId} is not in this room");
 
-        public static readonly Error KickFailed = Error.Problem(
+        public static readonly Error KickFailed = Error.Conflict(
             "MatchRoom.KickFailed",
             "Failed to kick player from room");
 
         // Private Room Errors
-        public static readonly Error PasswordRequiredForPrivateRoom = Error.Problem(
+        public static readonly Error PasswordRequiredForPrivateRoom = Error.Conflict(
             "MatchRoom.PasswordRequired",
             "Password is required for private rooms");
 
@@ -98,45 +128,49 @@ namespace Kickify.Domain.Errors
             "MatchRoom.OnlyHostCanUpdatePrivacy",
             "Only the host can update room privacy settings");
 
+        public static readonly Error OnlyHostCanUpdateRoomInfo = Error.Failure(
+            "MatchRoom.OnlyHostCanUpdateRoomInfo",
+            "Only the host can update room name, description, and rules");
+
         // Formation Errors
         public static readonly Error NotCaptain = Error.Failure(
             "MatchRoom.NotCaptain",
             "Only the team captain can assign formations");
 
-        public static Error InvalidFormation(string formationName, string matchFormat) => Error.Problem(
+        public static Error InvalidFormation(string formationName, string matchFormat) => Error.Conflict(
             "MatchRoom.InvalidFormation",
             $"Formation '{formationName}' is not valid for {matchFormat}");
 
-        public static Error InvalidSlotId(string slotId) => Error.Problem(
+        public static Error InvalidSlotId(string slotId) => Error.Conflict(
             "MatchRoom.InvalidSlotId",
             $"Slot ID '{slotId}' is not valid for the selected formation");
 
-        public static Error PlayerNotOnTeam(Guid playerId) => Error.Problem(
+        public static Error PlayerNotOnTeam(Guid playerId) => Error.Conflict(
             "MatchRoom.PlayerNotOnTeam",
             $"Player with ID {playerId} is not on your team");
 
-        public static Error DuplicateSlotAssignment(string slotId) => Error.Problem(
+        public static Error DuplicateSlotAssignment(string slotId) => Error.Conflict(
             "MatchRoom.DuplicateSlotAssignment",
             $"Slot '{slotId}' has already been assigned to another player");
 
-        public static Error DuplicatePlayerAssignment(Guid playerId) => Error.Problem(
+        public static Error DuplicatePlayerAssignment(Guid playerId) => Error.Conflict(
             "MatchRoom.DuplicatePlayerAssignment",
             $"Player with ID {playerId} has already been assigned to another slot");
 
-        public static readonly Error FormationUpdateFailed = Error.Problem(
+        public static readonly Error FormationUpdateFailed = Error.Conflict(
             "MatchRoom.FormationUpdateFailed",
             "Failed to update formation");
 
-        public static readonly Error InvalidTeamForFormation = Error.Problem(
+        public static readonly Error InvalidTeamForFormation = Error.Conflict(
             "MatchRoom.InvalidTeamForFormation",
             "Team must be either A or B to set formation");
 
         // Team Name Errors
-        public static readonly Error TeamNameTooLong = Error.Problem(
+        public static readonly Error TeamNameTooLong = Error.Conflict(
             "MatchRoom.TeamNameTooLong",
             "Team name must not exceed 50 characters");
 
-        public static readonly Error TeamNameUpdateFailed = Error.Problem(
+        public static readonly Error TeamNameUpdateFailed = Error.Conflict(
             "MatchRoom.TeamNameUpdateFailed",
             "Failed to update team name");
 
@@ -149,20 +183,20 @@ namespace Kickify.Domain.Errors
             "MatchRoom.AlreadyCheckedIn",
             "You have already checked in");
 
-        public static readonly Error CheckInNotAllowed = Error.Problem(
+        public static readonly Error CheckInNotAllowed = Error.Conflict(
             "MatchRoom.CheckInNotAllowed",
             "Check-in is only allowed for Open or Locked rooms");
 
-        public static readonly Error CheckInTooEarly = Error.Problem(
+        public static readonly Error CheckInTooEarly = Error.Conflict(
             "MatchRoom.CheckInTooEarly",
             "Check-in is only allowed within 30 minutes before match start time");
 
         // Room Invitation Errors
-        public static readonly Error CannotInviteSelf = Error.Problem(
+        public static readonly Error CannotInviteSelf = Error.Conflict(
             "MatchRoom.CannotInviteSelf",
             "You cannot invite yourself to the room");
 
-        public static readonly Error NotFriend = Error.Problem(
+        public static readonly Error NotFriend = Error.Conflict(
             "MatchRoom.NotFriend",
             "You can only invite friends to the room");
 
@@ -175,15 +209,61 @@ namespace Kickify.Domain.Errors
             "MatchRoom.AlreadyVoted",
             "You have already voted for this match result");
 
-        public static readonly Error VoteNotAllowed = Error.Problem(
+        public static readonly Error OnlyHostCanSubmitMatchResult = Error.Conflict(
+            "MatchRoom.OnlyHostCanSubmitMatchResult",
+            "Only the match room host can submit the match result");
+
+        public static readonly Error VoteNotAllowed = Error.Conflict(
             "MatchRoom.VoteNotAllowed",
             "Voting is only allowed during the reviewing phase");
 
-        public static readonly Error NotInReviewingPhase = Error.Problem(
-            "MatchRoom.NotInReviewingPhase",
-            "Match is not in reviewing phase");
         public static Error VotingPeriodClosed => Error.Conflict(
             "MatchRoom.VotingPeriodClosed",
             "Vote time has ended");
+
+        public static readonly Error VenueSuspended = Error.Conflict(
+            "MatchRoom.VenueSuspended",
+            "Cannot create a match room because the venue is currently suspended");
+        public static readonly Error VenueArchived = Error.Problem(
+            "MatchRoom.VenueArchived",
+            "Cannot create a match room because the venue is currently archived");
+
+        public static Error TimeConflict(string? roomName) => Error.Conflict(
+             "MatchRoom.TimeConflict",
+             $"You cannot join because you already have a scheduled match in '{roomName ?? "another room"}' that conflicts with this time slot.");
+
+        public static readonly Error OnlyHostCanCancel = Error.Conflict(
+            "MatchRoom.OnlyHostCanCancel",
+            "Only the room host can cancel the match room manually.");
+
+        public static readonly Error CannotCancelWithin4Hours = Error.Conflict(
+            "MatchRoom.CannotCancelWithin4Hours",
+            "Match rooms cannot be cancelled within 4 hours of the start time.");
+
+        public static readonly Error InvalidStateForCancel = Error.Conflict(
+            "MatchRoom.InvalidStateForCancel",
+            "Match room is not in a valid state to be cancelled. Only when it Open or Locked");
+
+        public static readonly Error LeaveNotAllowed = Error.Conflict(
+            "MatchRoom.LeaveNotAllowed",
+            "You cannot leave the room while the lineup is LOCKED or a match is in progress. Absence will result in losing your DEPOSIT and affecting your REPUTATION points.");
+
+        public static readonly Error RoomNotOpen = Error.Conflict("MatchRoom.RoomNotOpen", "This action is only allowed when the room status is Open.");
+        public static readonly Error TargetUserNotParticipant = Error.Conflict("MatchRoom.TargetUserNotParticipant", "The target user is not a participant in this room.");
+        public static readonly Error CurrentUserNotHost = Error.Conflict("MatchRoom.CurrentUserNotHost", "Only the room host can perform this action.");
+        public static readonly Error TargetUserIsAlreadyHost = Error.Conflict("MatchRoom.TargetUserIsAlreadyHost", "The target user is already the host of this room.");
+        public static readonly Error NotTargetTransferUser = Error.Conflict("MatchRoom.NotTargetTransferUser", "You are not the designated recipient of the host transfer request.");
+        public static readonly Error HostTransferRequestAlreadyPending = Error.Conflict("MatchRoom.HostTransferRequestAlreadyPending", "A host transfer request is already pending for another participant.");
+        public static readonly Error TargetUserNoLongerParticipant = Error.Conflict("MatchRoom.TargetUserNoLongerParticipant", "Cannot respond to host transfer because the target user is no longer a participant of this room.");
+
+        public static readonly Error InvalidTime = Error.Conflict("MatchRoomErrors.InvalidTime", "Match start time cannot be in the past.");
+        public static readonly Error TooCloseToStartTime = Error.Conflict("MatchRoomErrors.TooCloseToStartTime", "You must create the room at least 30 minutes before the match starts.");
+
+
+
     }
+
 }
+
+
+

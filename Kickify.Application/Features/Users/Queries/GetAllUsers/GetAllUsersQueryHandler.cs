@@ -24,6 +24,7 @@ namespace Kickify.Application.Features.Users.Queries.GetAllUsers
                 searchTerm: request.SearchTerm,
                 page: request.Page,
                 pageSize: request.PageSize,
+                includeDeleted: true,
                 cancellationToken: cancellationToken
             );
 
@@ -37,7 +38,11 @@ namespace Kickify.Application.Features.Users.Queries.GetAllUsers
                 Role = u.Role,
                 IsEmailVerified = u.IsEmailVerified,
                 IsActive = u.IsActive,
+                BannedUntil = u.BannedUntil,
+                DeletedAt = u.DeletedAt,
                 CreatedAt = u.CreatedAt,
+                IsPremium = u.IsPremium,
+                PremiumExpireAt = u.PremiumExpireAt,
                 PlayerProfile = u.PlayerProfile != null ? new PlayerProfileDto
                 {
                     ProfileId = u.PlayerProfile.ProfileId,

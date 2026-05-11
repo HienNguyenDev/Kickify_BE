@@ -2,6 +2,7 @@ using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Application.Features.MatchRooms.Services;
 using Kickify.Domain.Common;
+using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
 using Kickify.Domain.Errors;
 
@@ -9,15 +10,20 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById
 {
     public class GetMatchRoomByIdQueryHandler : IQueryHandler<GetMatchRoomByIdQuery, GetMatchRoomByIdResponse>
     {
+        private const decimal SkillImbalanceEloThreshold = 100m;
+
         private readonly IMatchRoomRepository _matchRoomRepository;
         private readonly IMatchFormationRepository _matchFormationRepository;
+        private readonly IMatchFeedbackRepository _matchFeedbackRepository;
 
         public GetMatchRoomByIdQueryHandler(
             IMatchRoomRepository matchRoomRepository,
-            IMatchFormationRepository matchFormationRepository)
+            IMatchFormationRepository matchFormationRepository,
+            IMatchFeedbackRepository matchFeedbackRepository)
         {
             _matchRoomRepository = matchRoomRepository;
             _matchFormationRepository = matchFormationRepository;
+            _matchFeedbackRepository = matchFeedbackRepository;
         }
 
         public async Task<Result<GetMatchRoomByIdResponse>> Handle(GetMatchRoomByIdQuery request, CancellationToken cancellationToken)
@@ -59,6 +65,10 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById
                 );
             }
 
+            // Fetch feedback state
+            var roomFeedbacks = await _matchFeedbackRepository.GetFeedbacksByMatchAsync(request.RoomId, cancellationToken);
+            var usersWhoLeftFeedback = roomFeedbacks.Select(f => f.ReviewerId).ToHashSet();
+
             // Map Participants and group by TeamAssignment
             var allParticipants = room.RoomParticipants.Select(p => new RoomParticipantDto(
                 p.ParticipantId,
@@ -71,7 +81,12 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById
                 p.CheckedIn,
                 p.CheckInTime,
                 p.IsCaptain,
-                p.JoinDate
+                p.JoinDate,
+                usersWhoLeftFeedback.Contains(p.UserId),
+                p.CheckInLatitude,
+                p.CheckInLongitude,
+                p.CheckInMethod,
+                p.DistanceFromVenueMeters
             )).ToList();
 
             // RULE: Calculate totalDepositCollected from participants with depositPaid = true
@@ -130,6 +145,14 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById
                 formationsDto = new RoomFormationsDto(teamADto, teamBDto);
             }
 
+            var teamAPlayers = room.RoomParticipants.Where(p => p.TeamAssignment == TeamAssignment.A).ToList();
+            var teamBPlayers = room.RoomParticipants.Where(p => p.TeamAssignment == TeamAssignment.B).ToList();
+            var teamAAverageElo = ComputeTeamAverageElo(teamAPlayers);
+            var teamBAverageElo = ComputeTeamAverageElo(teamBPlayers);
+            var isSkillImbalanced = teamAPlayers.Count > 0
+                && teamBPlayers.Count > 0
+                && decimal.Abs(teamAAverageElo - teamBAverageElo) > SkillImbalanceEloThreshold;
+
             var response = new GetMatchRoomByIdResponse(
                 room.RoomId,
                 room.HostId,
@@ -154,10 +177,30 @@ namespace Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById
                 room.Status.ToString(),
                 participantsDto,
                 formationsDto,
+                teamAAverageElo,
+                teamBAverageElo,
+                isSkillImbalanced,
                 room.CreatedAt
             );
 
             return Result.Success(response);
+        }
+
+        /// <summary>Mean CurrentElo for assigned team members; empty team returns 0; missing profile uses default 1000.</summary>
+        private static decimal ComputeTeamAverageElo(IReadOnlyList<RoomParticipant> membersOnTeam)
+        {
+            if (membersOnTeam.Count == 0)
+            {
+                return 0m;
+            }
+
+            decimal sum = 0;
+            foreach (var p in membersOnTeam)
+            {
+                sum += p.User.PlayerProfile?.CurrentElo ?? 1000;
+            }
+
+            return Math.Round(sum / membersOnTeam.Count, 1, MidpointRounding.AwayFromZero);
         }
     }
 }

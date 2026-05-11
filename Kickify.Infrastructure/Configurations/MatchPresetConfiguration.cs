@@ -19,18 +19,32 @@ public class MatchPresetConfiguration : IEntityTypeConfiguration<MatchPreset>
         builder.Property(mp => mp.UserId)
             .IsRequired();
 
-        builder.Property(mp => mp.PresetName)
+        builder.Property(mp => mp.RoomName)
+            .HasColumnName("PresetName")
             .HasMaxLength(100)
             .IsRequired();
 
         builder.Property(mp => mp.FieldId);
 
-        builder.Property(mp => mp.CustomLocation)
-            .HasColumnType("text");
-
         builder.Property(mp => mp.MatchFormat)
             .HasConversion<string>()
             .IsRequired();
+
+        builder.Property(mp => mp.Visibility)
+            .HasConversion<string>()
+            .HasDefaultValue(Domain.Enums.Visibility.Public)
+            .IsRequired();
+
+        builder.Property(mp => mp.Password)
+            .HasColumnName("RoomPassword")
+            .HasColumnType("text");
+
+        builder.Property(mp => mp.StartTime)
+            .HasColumnType("time")
+            .IsRequired();
+
+        builder.Property(mp => mp.Rules)
+            .HasColumnType("text");
 
         builder.Property(mp => mp.DurationMinutes)
             .IsRequired();
@@ -40,5 +54,6 @@ public class MatchPresetConfiguration : IEntityTypeConfiguration<MatchPreset>
 
         // Indexes
         builder.HasIndex(mp => mp.UserId);
+        builder.HasIndex(mp => mp.FieldId);
     }
 }

@@ -48,7 +48,7 @@ public class BookingConfiguration : IEntityTypeConfiguration<Booking>
 
         builder.Property(b => b.Status)
             .HasConversion<string>()
-            .HasDefaultValue(Domain.Enums.BookingStatus.Confirmed);
+            .HasDefaultValue(Domain.Enums.BookingStatus.Pending);
 
         builder.Property(b => b.PaymentMethod)
             .HasMaxLength(50);

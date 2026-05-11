@@ -33,6 +33,10 @@ public class UpdateNotificationPreferenceCommandHandler : ICommandHandler<Update
         preference.MatchRoom = request.MatchRoom;
         preference.Friendship = request.Friendship;
         preference.Post = request.Post;
+        if (request.Chat.HasValue)
+        {
+            preference.Chat = request.Chat.Value;
+        }
 
         _notificationPreferenceRepository.Update(preference);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -44,6 +48,7 @@ public class UpdateNotificationPreferenceCommandHandler : ICommandHandler<Update
             MatchRoom = preference.MatchRoom,
             Friendship = preference.Friendship,
             Post = preference.Post,
+            Chat = preference.Chat,
             UpdatedAt = preference.UpdatedAt
         };
 

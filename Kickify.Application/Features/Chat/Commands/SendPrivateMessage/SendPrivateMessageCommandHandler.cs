@@ -8,17 +8,22 @@ using Kickify.Domain.Common;
 using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
 using Kickify.Domain.Errors;
+using Kickify.Domain.Event;
+using MediatR;
 
 namespace Kickify.Application.Features.Chat.Commands.SendPrivateMessage;
 
 public class SendPrivateMessageCommandHandler : ICommandHandler<SendPrivateMessageCommand, SendPrivateMessageCommandResponse>
 {
+    private const int MessagePreviewMaxLength = 200;
+
     private readonly IChatMessageRepository _chatMessageRepository;
     private readonly IUserRepository _userRepository;
     private readonly IFriendshipRepository _friendshipRepository;
     private readonly IChatHubService _chatHubService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IUserContext _userContext;
+    private readonly IPublisher _publisher;
 
     public SendPrivateMessageCommandHandler(
         IChatMessageRepository chatMessageRepository,
@@ -26,7 +31,8 @@ public class SendPrivateMessageCommandHandler : ICommandHandler<SendPrivateMessa
         IFriendshipRepository friendshipRepository,
         IChatHubService chatHubService,
         IUnitOfWork unitOfWork,
-        IUserContext userContext)
+        IUserContext userContext,
+        IPublisher publisher)
     {
         _chatMessageRepository = chatMessageRepository;
         _userRepository = userRepository;
@@ -34,6 +40,7 @@ public class SendPrivateMessageCommandHandler : ICommandHandler<SendPrivateMessa
         _chatHubService = chatHubService;
         _unitOfWork = unitOfWork;
         _userContext = userContext;
+        _publisher = publisher;
     }
 
     public async Task<Result<SendPrivateMessageCommandResponse>> Handle(SendPrivateMessageCommand request, CancellationToken cancellationToken)
@@ -73,6 +80,17 @@ public class SendPrivateMessageCommandHandler : ICommandHandler<SendPrivateMessa
         await _chatMessageRepository.AddAsync(message);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        var senderDisplayName = sender?.FullName ?? sender?.Email ?? "Người dùng";
+        var preview = BuildMessagePreview(request.MessageText);
+        await _publisher.Publish(
+            new PrivateChatMessageSentDomainEvent(
+                message.MessageId,
+                request.ReceiverId,
+                senderId,
+                senderDisplayName,
+                preview),
+            cancellationToken);
+
         var messageDto = new ChatMessageDto
         {
             MessageId = message.MessageId,
@@ -100,5 +118,18 @@ public class SendPrivateMessageCommandHandler : ICommandHandler<SendPrivateMessa
         };
 
         return Result.Success(response);
+    }
+
+    private static string BuildMessagePreview(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return string.Empty;
+        }
+
+        var trimmed = text.Trim();
+        return trimmed.Length <= MessagePreviewMaxLength
+            ? trimmed
+            : trimmed[..MessagePreviewMaxLength];
     }
 }

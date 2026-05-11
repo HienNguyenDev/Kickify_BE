@@ -68,7 +68,9 @@ namespace Kickify.Application.Features.Auth.Commands.Login
             var response = new LoginWithRefreshTokenCommandResponse
             {
                 AccessToken = accessToken,
-                RefreshToken = newRefreshTokenString
+                RefreshToken = newRefreshTokenString,
+                IsPremium = refreshToken.User.IsPremium,
+                PremiumExpireAt = refreshToken.User.PremiumExpireAt
             };
             return Result.Success(response);
         }
@@ -82,5 +84,7 @@ namespace Kickify.Application.Features.Auth.Commands.Login
     {
         public string AccessToken { get; set; } = string.Empty;
         public string RefreshToken { get; set; } = string.Empty;
+        public bool IsPremium { get; set; }
+        public DateTime? PremiumExpireAt { get; set; }
     }
 }

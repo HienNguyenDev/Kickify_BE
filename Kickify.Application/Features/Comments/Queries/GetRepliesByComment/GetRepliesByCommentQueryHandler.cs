@@ -44,6 +44,7 @@ public class GetRepliesByCommentQueryHandler : IQueryHandler<GetRepliesByComment
             UserId = r.UserId,
             UserFullName = r.User?.FullName ?? string.Empty,
             UserAvatarUrl = r.User?.AvatarUrl,
+            IsPremium = r.User?.IsPremium ?? false,
             Content = r.Content,
             TotalLikes = r.TotalLikes,
             IsEdited = r.IsEdited,

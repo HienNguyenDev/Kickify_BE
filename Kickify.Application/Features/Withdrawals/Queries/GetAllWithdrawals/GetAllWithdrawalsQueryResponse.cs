@@ -26,4 +26,7 @@ public class AdminWithdrawalDto
     public string? BankAccountNumber { get; set; }
     public string? BankName { get; set; }
     public string? AccountHolderName { get; set; }
+    public decimal? FeeRatePercent { get; set; }
+    public decimal? FeeAmount { get; set; }
+    public decimal? NetPayoutAmount { get; set; }
 }

@@ -42,10 +42,21 @@ namespace Kickify.Application.Features.Fields.Queries.GetFieldById
                 field.FieldType.ToString(),
                 field.SurfaceType,
                 field.HourlyRate,
-                field.PeakHourSurcharge,
+                field.WeekendSurcharge,
+                field.HolidaySurcharge,
                 field.IsActive,
                 operatingHours,
-                field.CreatedAt
+                field.CreatedAt,
+                field.PeakHours.Select(ph => new FieldPeakHourResponseDto(
+                    ph.Id,
+                    ph.StartTime,
+                    ph.EndTime,
+                    ph.SurchargeAmount,
+                    ph.IsPercentage,
+                    ph.ApplicableDays
+                )).ToList(),
+                field.IsWeekendSurchargePercentage,
+                field.IsHolidaySurchargePercentage
             );
 
             return Result.Success(response);

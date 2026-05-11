@@ -1,6 +1,8 @@
 using Kickify.Api.Extensions;
 using Kickify.Api.Requests;
 using Kickify.Application.Abstractions.Services;
+using Kickify.Application.Features.Users.Commands.BanUnbanUser;
+using Kickify.Application.Features.Users.Commands.BanUser;
 using Kickify.Application.Features.Users.Commands.CreateUser;
 using Kickify.Application.Features.Users.Commands.DeleteUser;
 using Kickify.Application.Features.Users.Commands.UpdateFcmToken;
@@ -130,23 +132,73 @@ public class UsersController : ControllerBase
     }
 
     /// <summary>
+    /// [Admin] Ban user with specific duration (1, 3, 7, 30 days or permanent)
+    /// </summary>
+    [Authorize(Roles = "Admin")]
+    [HttpPost("{userId:guid}/ban")]
+    public async Task<IResult> BanUser(
+        Guid userId,
+        [FromBody] BanUserRequest request,
+        CancellationToken cancellationToken)
+    {
+        var command = new BanUserCommand(userId, request.Duration, request.Reason);
+        var result = await _mediator.Send(command, cancellationToken);
+        return result.MatchOk();
+    }
+
+    /// <summary>
+    /// [Admin] Unban user
+    /// </summary>
+    [Authorize(Roles = "Admin")]
+    [HttpDelete("{userId:guid}/ban")]
+    public async Task<IResult> UnbanUser(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        var command = new BanUnbanUserCommand(userId, IsActive: true);
+        var result = await _mediator.Send(command, cancellationToken);
+        return result.MatchOk();
+    }
+
+    /// <summary>
+    /// Get all banned users — Admin only
+    /// </summary>
+    [Authorize(Roles = "Admin")]
+    [HttpGet("banned")]
+    public async Task<IResult> GetBannedUsers(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string? searchTerm = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = new GetAllUsersQuery
+        {
+            Page = page,
+            PageSize = pageSize,
+            IsActive = false,
+            SearchTerm = searchTerm
+        };
+        Result<GetAllUsersQueryResponse> result = await _mediator.Send(query, cancellationToken);
+        return result.MatchOk();
+    }
+
+    /// <summary>
     /// Upload user avatar
     /// </summary>
     [HttpPost("avatar")]
     [Authorize]
     [Consumes("multipart/form-data")]
-    public async Task<IResult> UploadAvatar(
-        IFormFile file,
-        CancellationToken cancellationToken)
+    public async Task<IResult> UploadAvatar(IFormFile file, CancellationToken cancellationToken)
     {
-        var fileUploadRequest = new FileUploadRequest(file.OpenReadStream(), file.FileName, file.ContentType, file.Length);
+        var fileUploadRequest = new FileUploadRequest(
+            file.OpenReadStream(), file.FileName, file.ContentType, file.Length);
         var command = new UploadUserAvatarCommand { File = fileUploadRequest };
         Result<UploadUserAvatarCommandResponse> result = await _mediator.Send(command, cancellationToken);
         return result.MatchOk();
     }
 
     /// <summary>
-    /// C?p nh?t FCM token cho push notification
+    /// Cập nhật FCM token cho push notification
     /// </summary>
     [HttpPut("fcm-token")]
     [Authorize]

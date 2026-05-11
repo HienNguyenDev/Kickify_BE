@@ -18,6 +18,7 @@ namespace Kickify.Application.Abstractions.Repositories
             VenueStatus? status = null,
             int page = 1,
             int pageSize = 10,
+            bool excludeArchived = false,
             CancellationToken cancellationToken = default);
 
         /// <summary>
@@ -25,6 +26,11 @@ namespace Kickify.Application.Abstractions.Repositories
         /// </summary>
         Task<Venue?> GetVenueForUpdateAsync(
             Guid venueId,
+            CancellationToken cancellationToken = default);
+
+        Task SyncIgnoredHolidaysAsync(
+            Venue venue,
+            IReadOnlyCollection<Holiday> holidays,
             CancellationToken cancellationToken = default);
 
         /// <summary>

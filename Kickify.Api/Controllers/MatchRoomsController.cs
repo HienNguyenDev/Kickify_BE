@@ -10,11 +10,15 @@ using Kickify.Application.Features.MatchRooms.Commands.LeaveRoom;
 using Kickify.Application.Features.MatchRooms.Commands.RenameTeam;
 using Kickify.Application.Features.MatchRooms.Commands.UpdateFormation;
 using Kickify.Application.Features.MatchRooms.Commands.UpdateParticipant;
+using Kickify.Application.Features.MatchRooms.Commands.UpdateRoomInfo;
 using Kickify.Application.Features.MatchRooms.Commands.UpdateRoomPrivacy;
 using Kickify.Application.Features.MatchRooms.Commands.VoteMatchResult;
 using Kickify.Application.Features.MatchRooms.Queries.GetMatchRoomById;
 using Kickify.Application.Features.MatchRooms.Queries.GetMatchRooms;
 using Kickify.Application.Features.MatchRooms.Queries.GetMyMatchRooms;
+using Kickify.Application.Features.MatchRooms.Queries.GetPlayerMatchHistory;
+using Kickify.Application.Features.MatchRooms.Queries.GetRecommendedMatchRooms;
+using Kickify.Application.Features.MatchRooms.Queries.GetVenueMatchRooms;
 using Kickify.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -64,7 +68,7 @@ namespace Kickify.Api.Controllers
         }
 
         /// <summary>
-        /// Get room detail by ID
+        /// Get room detail by ID (participants, formations, team average Elo, skill imbalance when both teams differ by &gt; 200 Elo).
         /// </summary>
         [HttpGet("{id}")]
         public async Task<IResult> GetRoomById(Guid id, CancellationToken cancellationToken)
@@ -77,15 +81,17 @@ namespace Kickify.Api.Controllers
         }
 
         /// <summary>
-        /// Get all match rooms for current user (as participant or host)
+        /// Get all match rooms for current user (as participant or host). Each item includes myMatchOutcome (Win, Loss, Draw) when the room has a final result and the user is assigned to a team.
         /// </summary>
+        /// <param name="availableOnly">When true, returns every status except Cancelled. When false, returns only Cancelled. When omitted, no status filter.</param>
         [HttpGet("mine")]
         public async Task<IResult> GetMyRooms(
+            [FromQuery] bool? availableOnly,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10,
             CancellationToken cancellationToken = default)
         {
-            var query = new GetMyMatchRoomsQuery(page, pageSize);
+            var query = new GetMyMatchRoomsQuery(availableOnly, page, pageSize);
 
             var result = await _sender.Send(query, cancellationToken);
 
@@ -97,19 +103,51 @@ namespace Kickify.Api.Controllers
         /// </summary>
         [HttpGet]
         public async Task<IResult> GetRooms(
-            [FromQuery] DateTime? date,
+            [FromQuery] List<DateTime>? dates,
             [FromQuery] string? matchFormat,
             [FromQuery] bool? availableOnly,
+            [FromQuery] decimal? latitude,
+            [FromQuery] decimal? longitude,
+            [FromQuery] double? radiusKm,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10,
             CancellationToken cancellationToken = default)
         {
-            var query = new GetMatchRoomsQuery(date, matchFormat, availableOnly, page, pageSize);
+            var query = new GetMatchRoomsQuery(dates, matchFormat, availableOnly, latitude, longitude, radiusKm, page, pageSize);
 
             var result = await _sender.Send(query, cancellationToken);
 
             return result.MatchOk();
         }
+
+        /// <summary>
+        /// Get recommended match rooms (from friends, with Open status)
+        /// </summary>
+        [HttpGet("recommended")]
+        public async Task<IResult> GetRecommendedMatchRooms(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
+            CancellationToken cancellationToken = default)
+        {
+            var query = new GetRecommendedMatchRoomsQuery(page, pageSize);
+            var result = await _sender.Send(query, cancellationToken);
+
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Suggest match rooms by natural-language query using AI parser.
+        /// </summary>
+        // [HttpGet("ai-suggest")]
+        // public async Task<IResult> GetAiSuggestedRooms(
+        //     [FromQuery] string query,
+        //     CancellationToken cancellationToken = default)
+        // {
+        //     var aiQuery = new GetAiSuggestedRoomsQuery(query);
+        //     var result = await _sender.Send(aiQuery, cancellationToken);
+
+        //     return result.MatchOk();
+        // }
 
         /// <summary>
         /// Join a room
@@ -201,6 +239,29 @@ namespace Kickify.Api.Controllers
         }
 
         /// <summary>
+        /// Update room basic information (Host only)
+        /// </summary>
+        /// <param name="id">Room ID</param>
+        /// <param name="request">Room info to update</param>
+        [HttpPatch("{id}/info")]
+        public async Task<IResult> UpdateRoomInfo(
+            Guid id,
+            [FromBody] UpdateRoomInfoRequest request,
+            CancellationToken cancellationToken)
+        {
+            var command = new UpdateRoomInfoCommand(
+                id,
+                request.RoomName,
+                request.Description,
+                request.Rules
+            );
+
+            var result = await _sender.Send(command, cancellationToken);
+
+            return result.MatchOk();
+        }
+
+        /// <summary>
         /// Update team formation (Captain only)
         /// </summary>
         /// <param name="id">Room ID</param>
@@ -260,12 +321,12 @@ namespace Kickify.Api.Controllers
         }
 
         /// <summary>
-        /// Vote for match result
+        /// Submit match result (host only)
         /// </summary>
         /// <remarks>
-        /// Voting is only allowed during the Reviewing phase (after match ends).
-        /// When 60% of participants have voted, the result will be finalized immediately.
-        /// Otherwise, the result will be finalized after 12 hours based on majority vote.
+        /// Only the room host may call this during the Reviewing phase (after match ends).
+        /// The vote is stored for final tally; the room stays in Reviewing until the scheduled end of the reviewing window (22 hours after match end), then becomes Completed.
+        /// At that time, the host&apos;s vote takes precedence when present; otherwise majority of stored votes applies for legacy data.
         /// </remarks>
         [HttpPost("{id}/vote-result")]
         public async Task<IResult> VoteMatchResult(
@@ -302,13 +363,13 @@ namespace Kickify.Api.Controllers
         }
 
         /// <summary>
-        /// Invite a friend to join the room
+        /// Invite another user to join the room
         /// </summary>
         /// <param name="id">Room ID</param>
-        /// <param name="request">Friend invitation request</param>
+        /// <param name="request">Room invitation request</param>
         /// <remarks>
-        /// Invites a friend (must be already added as friend) to join the room.
-        /// The invited friend will receive a push notification with a deep link to the room.
+        /// Invites another user to join the room.
+        /// The invited user will receive a push notification with a deep link to the room.
         /// A notification history record is also created.
         /// </remarks>
         [HttpPost("{id}/invite-friend")]
@@ -321,6 +382,133 @@ namespace Kickify.Api.Controllers
 
             var result = await _sender.Send(command, cancellationToken);
 
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Get public match history of another player (Reviewing and Completed statuses only)
+        /// </summary>
+        [HttpGet("player/{userId}")]
+        public async Task<IResult> GetPlayerMatchHistory(
+            Guid userId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
+            CancellationToken cancellationToken = default)
+        {
+            var query = new GetPlayerMatchHistoryQuery(userId, page, pageSize);
+
+            var result = await _sender.Send(query, cancellationToken);
+
+            return result.MatchOk();
+        }
+        /// <summary>
+        /// Cancel a match room manually as the host. Follows the < 4h, 4-24h penalty rules.
+        /// </summary>
+        [HttpDelete("{id}/cancel")]
+        public async Task<IResult> CancelMatchRoom(
+            Guid id,
+            [FromQuery] string reason,
+            CancellationToken cancellationToken)
+        {
+            var command = new Kickify.Application.Features.MatchRooms.Commands.CancelMatchRoom.CancelMatchRoomCommand(
+                id,
+                reason);
+
+            var result = await _sender.Send(command, cancellationToken);
+            return result.MatchOk();
+        }
+    
+        [HttpPost("{id}/transfer-host")]
+        public async Task<IResult> RequestTransferHost(
+            Guid id,
+            [FromBody] Kickify.Api.Requests.RequestTransferHostRequest request,
+            CancellationToken cancellationToken)
+        {
+            var command = new Kickify.Application.Features.MatchRooms.Commands.RequestTransferHost.RequestTransferHostCommand(
+                id,
+                request.TargetUserId);
+
+            var result = await _sender.Send(command, cancellationToken);
+            return result.MatchOk();
+        }
+
+        [HttpPost("{id}/transfer-host/respond")]
+        public async Task<IResult> RespondTransferHost(
+            Guid id,
+            [FromBody] Kickify.Api.Requests.RespondTransferHostRequest request,
+            CancellationToken cancellationToken)
+        {
+            var command = new Kickify.Application.Features.MatchRooms.Commands.RespondTransferHost.RespondTransferHostCommand(
+                id,
+                request.IsAccepted);
+
+            var result = await _sender.Send(command, cancellationToken);
+            return result.MatchOk();
+        }
+
+        // /// <summary>
+        // /// Check-in to a match room (via GPS or Photo)
+        // /// </summary>
+        // [HttpPost("{id}/check-in-legacy")]
+        // [Consumes("multipart/form-data")]
+        // public async Task<IResult> CheckInLegacy(
+        //     [FromRoute] Guid id,
+        //     [FromForm] CheckInMatchRoomRequest request,
+        //     CancellationToken cancellationToken)
+        // {
+        //     var command = new Kickify.Application.Features.MatchRooms.Commands.CheckIn.CheckInMatchRoomCommand
+        //     {
+        //         RoomId = id,
+        //         Latitude = request.Latitude,
+        //         Longitude = request.Longitude,
+        //         Photo = request.Photo != null ? new Kickify.Application.Abstractions.Services.FileUploadRequest(
+        //             request.Photo.OpenReadStream(),
+        //             request.Photo.FileName,
+        //             request.Photo.ContentType,
+        //             request.Photo.Length) : null
+        //     };
+        //
+        //     var result = await _sender.Send(command, cancellationToken);
+        //     return result.MatchOk();
+        // }
+
+        /// <summary>
+        /// Check-in to a match room (via GPS only)
+        /// </summary>
+        [HttpPost("{id}/check-in")]
+        public async Task<IResult> CheckIn(
+            [FromRoute] Guid id,
+            [FromForm] Kickify.Api.Requests.CheckInMatchRoomGpsRequest request,
+            CancellationToken cancellationToken)
+        {
+            var command = new Kickify.Application.Features.MatchRooms.Commands.CheckIn.CheckInMatchRoomGpsCommand
+            {
+                RoomId = id,
+                Latitude = request.Latitude,
+                Longitude = request.Longitude
+            };
+
+            var result = await _sender.Send(command, cancellationToken);
+            return result.MatchOk();
+        }
+
+        /// <summary>
+        /// Get match rooms played on fields owned by the current venue owner.
+        /// Supports optional filters: venueId, fieldId, date, status.
+        /// </summary>
+        [HttpGet("venue")]
+        [Authorize(Roles = "VenueOwner")]
+        public async Task<IResult> GetVenueMatchRooms(
+            [FromQuery] Guid? venueId,
+            [FromQuery] Guid? fieldId,
+            [FromQuery] DateTime? date,
+            [FromQuery] string? status,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
+            CancellationToken cancellationToken = default)
+        {
+            var query = new GetVenueMatchRoomsQuery(venueId, fieldId, date, status, page, pageSize);
+            var result = await _sender.Send(query, cancellationToken);
             return result.MatchOk();
         }
     }

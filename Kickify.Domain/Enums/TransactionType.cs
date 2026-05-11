@@ -1,4 +1,4 @@
-namespace Kickify.Domain.Enums;
+﻿namespace Kickify.Domain.Enums;
 
 public enum TransactionType
 {
@@ -7,5 +7,10 @@ public enum TransactionType
     Deposit,
     CheckInFee,
     Refund,
-    Withdrawal
+    Withdrawal,
+    Penalty,
+    Compensation,
+    WithdrawalFee,
+    PremiumPurchase,
+    BookingCommission
 }

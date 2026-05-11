@@ -12,6 +12,7 @@ namespace Kickify.Application.Features.Venues.Commands.UpdateVenue
         string? ContactEmail,
         string? Description,
         string? Amenities,
+        List<Guid>? IgnoredHolidayIds,
         List<UpdateVenueOperatingHourItemDto>? OperatingHours
     ) : ICommand<UpdateVenueResponse>;
 

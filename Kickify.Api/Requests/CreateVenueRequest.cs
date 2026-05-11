@@ -11,6 +11,7 @@ namespace Kickify.Api.Requests
         public string? ContactEmail { get; init; }
         public string? Description { get; init; }
         public string? Amenities { get; init; }
+        public List<Guid> IgnoredHolidayIds { get; init; } = new();
         public List<CreateVenueFieldRequest> Fields { get; init; } = new();
         public List<CreateVenueOperatingHoursRequest> OperatingHours { get; init; } = new();
     }
@@ -21,13 +22,18 @@ namespace Kickify.Api.Requests
         public string FieldType { get; init; } = string.Empty;
         public string? SurfaceType { get; init; }
         public decimal HourlyRate { get; init; }
-        public decimal PeakHourSurcharge { get; init; }
-     }
+        public decimal WeekendSurcharge { get; init; }
+        public decimal HolidaySurcharge { get; init; }
+        public List<FieldPeakHourDto>? PeakHours { get; init; }
+        public bool? IsWeekendSurchargePercentage { get; init; }
+        public bool? IsHolidaySurchargePercentage { get; init; }
+    }
 
     public record CreateVenueOperatingHoursRequest
     {
         public int DayOfWeek { get; init; }
-        public TimeSpan OpenTime { get; init; }
-        public TimeSpan CloseTime { get; init; }
+        public TimeSpan? OpenTime { get; init; }
+        public TimeSpan? CloseTime { get; init; }
+        public bool IsClosed { get; init; }
     }
 }

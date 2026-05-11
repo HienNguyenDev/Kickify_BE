@@ -1,6 +1,7 @@
 using Kickify.Api.Extensions;
 using Kickify.Api.Requests;
 using Kickify.Application.Features.NotificationPreferences.Commands.UpdateNotificationPreference;
+using Kickify.Application.Features.NotificationPreferences.Queries.GetMyNotificationPreferences;
 using Kickify.Domain.Common;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -20,6 +21,20 @@ public class NotificationPreferencesController : ControllerBase
         _mediator = mediator;
     }
 
+    /// <summary>
+    /// Get notification preferences of current user
+    /// </summary>
+    [HttpGet]
+    public async Task<IResult> GetMyNotificationPreferences(CancellationToken cancellationToken)
+    {
+        var query = new GetMyNotificationPreferencesQuery();
+        Result<GetMyNotificationPreferencesResponse> result = await _mediator.Send(query, cancellationToken);
+        return result.MatchOk();
+    }
+
+    /// <summary>
+    /// Update notification preferences of current user
+    /// </summary>
     [HttpPut]
     public async Task<IResult> UpdateNotificationPreference(
         [FromBody] UpdateNotificationPreferenceRequest request,
@@ -29,7 +44,8 @@ public class NotificationPreferencesController : ControllerBase
         {
             MatchRoom = request.MatchRoom,
             Friendship = request.Friendship,
-            Post = request.Post
+            Post = request.Post,
+            Chat = request.Chat
         };
 
         Result<UpdateNotificationPreferenceCommandResponse> result = await _mediator.Send(command, cancellationToken);

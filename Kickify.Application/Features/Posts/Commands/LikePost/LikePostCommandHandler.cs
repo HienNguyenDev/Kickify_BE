@@ -5,6 +5,8 @@ using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Common;
 using Kickify.Domain.Entities;
 using Kickify.Domain.Errors;
+using Kickify.Domain.Event;
+using MediatR;
 
 namespace Kickify.Application.Features.Posts.Commands.LikePost;
 
@@ -12,19 +14,25 @@ public class LikePostCommandHandler : ICommandHandler<LikePostCommand, LikePostC
 {
     private readonly IPostRepository _postRepository;
     private readonly IPostLikeRepository _postLikeRepository;
+    private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IUserContext _userContext;
+    private readonly IPublisher _publisher;
 
     public LikePostCommandHandler(
         IPostRepository postRepository,
         IPostLikeRepository postLikeRepository,
+        IUserRepository userRepository,
         IUnitOfWork unitOfWork,
-        IUserContext userContext)
+        IUserContext userContext,
+        IPublisher publisher)
     {
         _postRepository = postRepository;
         _postLikeRepository = postLikeRepository;
+        _userRepository = userRepository;
         _unitOfWork = unitOfWork;
         _userContext = userContext;
+        _publisher = publisher;
     }
 
     public async Task<Result<LikePostCommandResponse>> Handle(LikePostCommand request, CancellationToken cancellationToken)
@@ -62,6 +70,21 @@ public class LikePostCommandHandler : ICommandHandler<LikePostCommand, LikePostC
 
         _postRepository.Update(post);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        if (isLiked && post.UserId != _userContext.UserId)
+        {
+            var actor = await _userRepository.GetByIdAsync(_userContext.UserId);
+            if (actor is not null)
+            {
+                await _publisher.Publish(
+                    new PostLikedDomainEvent(
+                        request.PostId,
+                        post.UserId,
+                        _userContext.UserId,
+                        actor.FullName ?? actor.Email),
+                    cancellationToken);
+            }
+        }
 
         var response = new LikePostCommandResponse
         {

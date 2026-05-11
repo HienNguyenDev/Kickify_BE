@@ -27,8 +27,16 @@ namespace Kickify.Infrastructure.Services
             "video/mp4", "video/webm", "video/quicktime", "video/mpeg"
         };
 
-        private const long MaxImageSize = 10 * 1024 * 1024;      
-        private const long MaxVideoSize = 100 * 1024 * 1024;     
+        private static readonly HashSet<string> AllowedDocumentTypes = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "application/pdf",
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        };
+
+        private const long MaxImageSize = 10 * 1024 * 1024;
+        private const long MaxVideoSize = 100 * 1024 * 1024;
+        private const long MaxDocumentSize = 20 * 1024 * 1024;
 
         public MinioStorageService(IMinioClient minioClient, IOptions<MinioSettings> settings)
         {
@@ -136,7 +144,9 @@ namespace Kickify.Infrastructure.Services
         private static string GenerateObjectName(string fileName, string contentType)
         {
             var extension = Path.GetExtension(fileName).ToLowerInvariant();
-            var folder = contentType.StartsWith("video/") ? "videos" : "images";
+            var folder = contentType.StartsWith("video/") ? "videos"
+                : AllowedDocumentTypes.Contains(contentType) ? "documents"
+                : "images";
             var datePath = DateTime.UtcNow.ToString("yyyy/MM/dd");
             var uniqueId = Guid.NewGuid().ToString("N")[..12];
 
@@ -148,26 +158,26 @@ namespace Kickify.Infrastructure.Services
             // Check content type
             bool isImage = AllowedImageTypes.Contains(contentType);
             bool isVideo = AllowedVideoTypes.Contains(contentType);
+            bool isDocument = AllowedDocumentTypes.Contains(contentType);
 
-            if (!isImage && !isVideo)
+            if (!isImage && !isVideo && !isDocument)
             {
                 return $"File type '{contentType}' is not allowed";
             }
 
             // Check size
             if (isImage && fileSize > MaxImageSize)
-            {
                 return $"Image size exceeds limit of {MaxImageSize / 1024 / 1024}MB";
-            }
 
             if (isVideo && fileSize > MaxVideoSize)
-            {
                 return $"Video size exceeds limit of {MaxVideoSize / 1024 / 1024}MB";
-            }
+
+            if (isDocument && fileSize > MaxDocumentSize)
+                return $"Document size exceeds limit of {MaxDocumentSize / 1024 / 1024}MB";
 
             // Check extension
             var extension = Path.GetExtension(fileName).ToLowerInvariant();
-            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".mp4", ".webm", ".mov" };
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".mp4", ".webm", ".mov", ".pdf", ".doc", ".docx" };
 
             if (!allowedExtensions.Contains(extension))
             {

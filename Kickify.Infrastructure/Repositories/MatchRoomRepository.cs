@@ -1,5 +1,6 @@
 using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Entities;
+using Kickify.Domain.Enums;
 using Kickify.Infrastructure.Database;
 using Kickify.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -26,6 +27,8 @@ namespace Kickify.Infrastructure.Repositories
         public async Task<MatchRoom?> GetRoomWithParticipantsForUpdateAsync(Guid roomId, CancellationToken cancellationToken = default)
         {
             return await _dbSet
+                .Include(r => r.Field)
+                    .ThenInclude(f => f.Venue)
                 .Include(r => r.RoomParticipants)
                 .FirstOrDefaultAsync(r => r.RoomId == roomId, cancellationToken);
         }
@@ -39,13 +42,17 @@ namespace Kickify.Infrastructure.Repositories
                     .ThenInclude(f => f!.Venue)
                 .Include(r => r.RoomParticipants)
                     .ThenInclude(p => p.User)
+                        .ThenInclude(u => u!.PlayerProfile)
                 .FirstOrDefaultAsync(r => r.RoomId == roomId, cancellationToken);
         }
 
         public async Task<(IEnumerable<MatchRoom> Rooms, int Total)> SearchRoomsAsync(
-            DateTime? date,
+            List<DateTime>? dates,
             string? matchFormat,
             bool? availableOnly,
+            decimal? latitude,
+            decimal? longitude,
+            double? radiusKm,
             int page,
             int pageSize,
             CancellationToken cancellationToken = default)
@@ -57,10 +64,11 @@ namespace Kickify.Infrastructure.Repositories
                     .ThenInclude(f => f!.Venue)
                 .AsQueryable();
 
-            // Filter by date
-            if (date.HasValue)
+            // Filter by specific dates list (any match on a listed day)
+            if (dates is { Count: > 0 })
             {
-                query = query.Where(r => r.MatchDate.Date == date.Value.Date);
+                var dateDates = dates.Select(d => d.Date).ToList();
+                query = query.Where(r => dateDates.Contains(r.MatchDate.Date));
             }
 
             // Filter by match format
@@ -76,6 +84,20 @@ namespace Kickify.Infrastructure.Repositories
             if (availableOnly.HasValue && availableOnly.Value)
             {
                 query = query.Where(r => r.FilledSlots < r.TotalSlots && r.Status == Domain.Enums.RoomStatus.Open);
+            }
+
+            // Filter by location (bounding box)
+            if (latitude.HasValue && longitude.HasValue && radiusKm.HasValue)
+            {
+                var latOffset = (decimal)(radiusKm.Value / 111.0);
+                var lonOffset = (decimal)(radiusKm.Value / (111.0 * Math.Cos(Convert.ToDouble(latitude.Value) * Math.PI / 180.0)));
+
+                query = query.Where(r =>
+                    r.Field != null && r.Field.Venue != null &&
+                    r.Field.Venue.Latitude >= latitude.Value - latOffset &&
+                    r.Field.Venue.Latitude <= latitude.Value + latOffset &&
+                    r.Field.Venue.Longitude >= longitude.Value - lonOffset &&
+                    r.Field.Venue.Longitude <= longitude.Value + lonOffset);
             }
 
             var total = await query.CountAsync(cancellationToken);
@@ -116,8 +138,37 @@ namespace Kickify.Infrastructure.Repositories
             return room.RoomParticipants.Where(p => p.DepositPaid).Sum(p => p.DepositAmount ?? 0);
         }
 
+        public async Task<(IEnumerable<MatchRoom> Rooms, int Total)> GetMatchHistoryByUserAsync(
+            Guid userId,
+            int page,
+            int pageSize,
+            CancellationToken cancellationToken = default)
+        {
+            var query = _dbSet
+                .AsNoTracking()
+                .Include(r => r.Host)
+                .Include(r => r.Field)
+                    .ThenInclude(f => f!.Venue)
+                .Include(r => r.RoomParticipants)
+                .Where(r => r.RoomParticipants.Any(p => p.UserId == userId))
+                .Where(r => r.Status == Kickify.Domain.Enums.RoomStatus.Reviewing || r.Status == Kickify.Domain.Enums.RoomStatus.Completed);
+                //.Where(r => r.Visibility == Kickify.Domain.Enums.Visibility.Public);
+
+            var total = await query.CountAsync(cancellationToken);
+
+            var rooms = await query
+                .OrderByDescending(r => r.MatchDate)
+                .ThenByDescending(r => r.StartTime)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+
+            return (rooms, total);
+        }
+
         public async Task<(IEnumerable<MatchRoom> Rooms, int Total)> GetRoomsByUserAsync(
             Guid userId,
+            bool? availableOnly,
             int page,
             int pageSize,
             CancellationToken cancellationToken = default)
@@ -130,6 +181,65 @@ namespace Kickify.Infrastructure.Repositories
                     .ThenInclude(f => f!.Venue)
                 .Include(r => r.RoomParticipants)
                 .Where(r => r.RoomParticipants.Any(p => p.UserId == userId));
+
+            // Filter based on availableOnly flag
+            if (availableOnly.HasValue)
+            {
+                if (availableOnly.Value)
+                {
+                    query = query.Where(r => 
+                        r.Status == Kickify.Domain.Enums.RoomStatus.Open ||
+                        r.Status == Kickify.Domain.Enums.RoomStatus.Locked ||
+                        r.Status == Kickify.Domain.Enums.RoomStatus.InProgress ||
+                        r.Status == Kickify.Domain.Enums.RoomStatus.Reviewing);
+                }
+                else
+                {
+                    query = query.Where(r => 
+                        r.Status == Kickify.Domain.Enums.RoomStatus.Completed ||
+                        r.Status == Kickify.Domain.Enums.RoomStatus.Cancelled);
+                }
+            }
+
+            var total = await query.CountAsync(cancellationToken);
+
+            var rooms = await query
+                .OrderByDescending(r => r.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+
+            return (rooms, total);
+        }
+
+        public async Task<List<MatchRoom>> GetActiveRoomsForUserByDateAsync(Guid userId, DateTime matchDate, CancellationToken cancellationToken)
+        {
+            return await _dbSet
+                .AsNoTracking()
+                .Where(r => r.MatchDate == matchDate
+                         && (r.Status == RoomStatus.Open || r.Status == RoomStatus.Locked || r.Status == RoomStatus.InProgress)
+                         && r.RoomParticipants.Any(p => p.UserId == userId))
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<(IEnumerable<MatchRoom> Rooms, int Total)> GetRecommendedRoomsAsync(
+            Guid userId,
+            List<Guid> friendIds,
+            int page,
+            int pageSize,
+            CancellationToken cancellationToken = default)
+        {
+            var query = _dbSet
+                .AsNoTracking()
+                .Include(r => r.Host)
+                .Include(r => r.Field)
+                    .ThenInclude(f => f!.Venue)
+                .Include(r => r.RoomParticipants)
+                .Where(r => r.Status == RoomStatus.Open && r.FilledSlots < r.TotalSlots)
+                // Phải có bạn bè tham gia
+                .Where(r => r.RoomParticipants.Any(p => friendIds.Contains(p.UserId)))
+                // Không nằm trong danh sách các match room mà User hiện tại đã là người tham gia
+                .Where(r => !r.RoomParticipants.Any(p => p.UserId == userId));
 
             var total = await query.CountAsync(cancellationToken);
 

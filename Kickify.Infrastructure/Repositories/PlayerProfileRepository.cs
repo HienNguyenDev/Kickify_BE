@@ -31,6 +31,9 @@ namespace Kickify.Infrastructure.Repositories
             int? maxElo = null,
             decimal? minTrustScore = null,
             string? searchTerm = null,
+            List<string>? positions = null,
+            string? preferredFoot = null,
+            bool highFormOnly = false,
             int page = 1,
             int pageSize = 10,
             CancellationToken cancellationToken = default)
@@ -68,6 +71,29 @@ namespace Kickify.Infrastructure.Repositories
                 );
             }
 
+            // Filter by preferred positions (User.PreferredPositions is a comma-separated string e.g. "FW,MF")
+            if (positions is { Count: > 0 })
+            {
+                query = query.Where(p =>
+                    p.User.PreferredPositions != null &&
+                    positions.Any(pos => p.User.PreferredPositions.Contains(pos)));
+            }
+
+            // Filter by preferred foot (exact match, case-insensitive)
+            if (!string.IsNullOrWhiteSpace(preferredFoot))
+            {
+                var lowerFoot = preferredFoot.ToLower();
+                query = query.Where(p =>
+                    p.User.PreferredFoot != null &&
+                    p.User.PreferredFoot.ToLower() == lowerFoot);
+            }
+
+            // High form only: players with current win streak >= 2
+            if (highFormOnly)
+            {
+                query = query.Where(p => p.WinStreak >= 2);
+            }
+
             var total = await query.CountAsync(cancellationToken);
 
             var profiles = await query
@@ -78,6 +104,70 @@ namespace Kickify.Infrastructure.Repositories
                 .ToListAsync(cancellationToken);
 
             return (profiles, total);
+        }
+
+        public async Task<List<(PlayerProfile Profile, int LatestEloChange)>> GetTopPlayersByEloWithChangeAsync(int count, CancellationToken cancellationToken = default)
+        {
+            var topProfiles = await _dbSet
+                .AsNoTracking()
+                .Include(p => p.User)
+                .OrderByDescending(p => p.CurrentElo)
+                .ThenBy(p => p.UpdatedAt)
+                .ThenBy(p => p.UserId)
+                .Take(count)
+                .ToListAsync(cancellationToken);
+
+            var result = new List<(PlayerProfile, int)>();
+
+            foreach (var profile in topProfiles)
+            {
+                var latestEloChange = await GetLatestEloChangeAsync(profile.UserId, cancellationToken);
+                result.Add((profile, latestEloChange));
+            }
+
+            return result;
+        }
+
+        public async Task<int> GetPlayerRankByEloAsync(Guid userId, CancellationToken cancellationToken = default)
+        {
+            var myProfile = await _dbSet
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.UserId == userId, cancellationToken);
+
+            if (myProfile == null)
+            {
+                return 0;
+            }
+
+            // Count how many players are ranked higher using deterministic tie-breakers:
+            // ELO DESC, UpdatedAt ASC, UserId ASC.
+            var rank = await _dbSet
+                .AsNoTracking()
+                .CountAsync(p =>
+                    p.CurrentElo > myProfile.CurrentElo ||
+                    (p.CurrentElo == myProfile.CurrentElo && p.UpdatedAt < myProfile.UpdatedAt) ||
+                    (p.CurrentElo == myProfile.CurrentElo && p.UpdatedAt == myProfile.UpdatedAt && p.UserId.CompareTo(myProfile.UserId) < 0),
+                    cancellationToken);
+
+            return rank + 1; // +1 because rank starts from 1
+        }
+
+        public async Task<int> GetTotalPlayersCountAsync(CancellationToken cancellationToken = default)
+        {
+            return await _dbSet
+                .AsNoTracking()
+                .CountAsync(cancellationToken);
+        }
+
+        public async Task<int> GetLatestEloChangeAsync(Guid userId, CancellationToken cancellationToken = default)
+        {
+            var latestEloHistory = await _context.Set<EloHistory>()
+                .AsNoTracking()
+                .Where(eh => eh.UserId == userId)
+                .OrderByDescending(eh => eh.CreatedAt)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            return latestEloHistory?.EloChange ?? 0;
         }
     }
 }

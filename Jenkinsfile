@@ -96,6 +96,42 @@ pipeline {
                 '''
             }
         }
+
+        stage('Update Nginx Upstream') {
+            steps {
+                echo 'Updating Nginx upstream for current container IP...'
+                sh '''
+                    set -eu
+
+                    echo "Jenkins runtime info:"
+                    whoami
+                    hostname
+
+                    API_IP=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${CONTAINER_NAME})
+                    if [ -z "$API_IP" ]; then
+                        echo "ERROR: Could not resolve container IP for ${CONTAINER_NAME}"
+                        exit 1
+                    fi
+
+                    if ! (sudo -n /usr/bin/tee --version >/dev/null 2>&1 && sudo -n /usr/sbin/nginx -t >/dev/null 2>&1 && sudo -n /usr/bin/systemctl status nginx --no-pager >/dev/null 2>&1); then
+                        echo "ERROR: Jenkins user lacks required NOPASSWD sudo rights."
+                        echo "Required: /usr/bin/tee, /usr/sbin/nginx, /usr/bin/systemctl"
+                        exit 1
+                    fi
+
+                    sudo -n tee /etc/nginx/conf.d/upstream-kickify.conf > /dev/null <<EOF
+upstream kickify_api {
+    server ${API_IP}:8080 max_fails=2 fail_timeout=5s;
+    keepalive 64;
+}
+EOF
+
+                    sudo -n nginx -t
+                    sudo -n systemctl reload nginx
+                    echo "Nginx upstream updated to ${API_IP}:8080"
+                '''
+            }
+        }
         
         stage('Verify Deployment') {
             steps {
@@ -115,7 +151,7 @@ pipeline {
                     fi
                     
                     echo "Testing API endpoint..."
-                    curl -f http://localhost:5000/health || echo "Warning: Health endpoint not available"
+                    curl -f https://api.kickify.site/health || echo "Warning: Health endpoint not available"
                     
                     echo "Deployment verified successfully"
                 '''

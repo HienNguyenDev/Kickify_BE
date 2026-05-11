@@ -17,8 +17,21 @@ namespace Kickify.Application.Features.Fields.Queries.GetAllFields
         string FieldType,
         string? SurfaceType,
         decimal HourlyRate,
-        decimal PeakHourSurcharge,
+        decimal WeekendSurcharge,
+        decimal HolidaySurcharge,
         bool IsActive,
-        DateTime CreatedAt
+        DateTime CreatedAt,
+        List<FieldPeakHourResponseDto> PeakHours,
+        bool IsWeekendSurchargePercentage,
+        bool IsHolidaySurchargePercentage
+    );
+
+    public record FieldPeakHourResponseDto(
+        Guid Id,
+        TimeSpan StartTime,
+        TimeSpan EndTime,
+        decimal SurchargeAmount,
+        bool IsPercentage,
+        List<Kickify.Domain.Enums.DayOfWeekEnum> ApplicableDays
     );
 }

@@ -34,6 +34,9 @@ namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
                 }
             }
 
+            // When no status filter is provided, exclude Archived venues from public listing
+            bool excludeArchived = !venueStatus.HasValue;
+
             var (venues, total) = await _venueRepository.SearchVenuesAsync(
                 request.Latitude,
                 request.Longitude,
@@ -44,6 +47,7 @@ namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
                 venueStatus,
                 request.Page,
                 request.PageSize,
+                excludeArchived,
                 cancellationToken
             );
 
@@ -85,7 +89,18 @@ namespace Kickify.Application.Features.Venues.Queries.GetAllVenues
                     f.FieldType.ToString(),
                     f.SurfaceType,
                     f.HourlyRate,
-                    f.PeakHourSurcharge,
+                    f.PeakHours.Select(ph => new FieldPeakHourResponseDto(
+                        ph.Id,
+                        ph.StartTime,
+                        ph.EndTime,
+                        ph.SurchargeAmount,
+                        ph.IsPercentage,
+                        ph.ApplicableDays
+                    )).ToList(),
+                    f.WeekendSurcharge,
+                    f.HolidaySurcharge,
+                    f.IsWeekendSurchargePercentage,
+                    f.IsHolidaySurchargePercentage,
                     f.IsActive,
                     f.CreatedAt,
                     f.UpdatedAt

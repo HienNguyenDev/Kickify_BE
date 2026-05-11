@@ -1,4 +1,4 @@
-﻿using FirebaseAdmin.Auth;
+using FirebaseAdmin.Auth;
 using FluentValidation;
 using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
@@ -22,7 +22,12 @@ namespace Kickify.Application.Features.Auth.Commands.Login
         private readonly IRefreshTokenRepository _refreshTokenRepository;
         private readonly IWalletRepository _walletRepository;
         private readonly IUnitOfWork _unitOfWork;
-        public LoginWithFirebaseForVenueOwner(IJwtProvider jwtProvider, IUserRepository userRepository, IRefreshTokenRepository refreshTokenRepository, IWalletRepository walletRepository, IUnitOfWork unitOfWork)
+    public LoginWithFirebaseForVenueOwner(
+        IJwtProvider jwtProvider,
+        IUserRepository userRepository,
+        IRefreshTokenRepository refreshTokenRepository,
+        IWalletRepository walletRepository,
+        IUnitOfWork unitOfWork)
         {
             _jwtProvider = jwtProvider;
             _userRepository = userRepository;
@@ -93,6 +98,8 @@ namespace Kickify.Application.Features.Auth.Commands.Login
                 AvatarUrl = user.AvatarUrl,
                 IsEmailVerified = user.IsEmailVerified,
                 IsActive = user.IsActive,
+                IsPremium = user.IsPremium,
+                PremiumExpireAt = user.PremiumExpireAt,
                 CreatedAt = user.CreatedAt
             };
             return Result.Success(response);
@@ -116,6 +123,8 @@ namespace Kickify.Application.Features.Auth.Commands.Login
         public string? RefreshToken { get; set; }
         public bool IsEmailVerified { get; set; }
         public bool IsActive { get; set; }
+        public bool IsPremium { get; set; }
+        public DateTime? PremiumExpireAt { get; set; }
     }
 
     public class LoginWithFirebaseForVenueOwnerCommandValidator : AbstractValidator<LoginWithFirebaseForVenueOwnerCommand>

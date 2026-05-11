@@ -71,7 +71,18 @@ namespace Kickify.Application.Features.Venues.Queries.GetVenuesByOwner
                     f.FieldType.ToString(),
                     f.SurfaceType,
                     f.HourlyRate,
-                    f.PeakHourSurcharge,
+                    f.PeakHours.Select(ph => new OwnerVenueFieldPeakHourResponseDto(
+                        ph.Id,
+                        ph.StartTime,
+                        ph.EndTime,
+                        ph.SurchargeAmount,
+                        ph.IsPercentage,
+                        ph.ApplicableDays
+                    )).ToList(),
+                    f.WeekendSurcharge,
+                    f.HolidaySurcharge,
+                    f.IsWeekendSurchargePercentage,
+                    f.IsHolidaySurchargePercentage,
                     f.IsActive,
                     f.CreatedAt,
                     f.UpdatedAt

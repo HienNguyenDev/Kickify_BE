@@ -1,4 +1,5 @@
 using Kickify.Application.Abstractions.Authentication;
+using Kickify.Application.Common;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
 using Kickify.Application.Abstractions.Repositories;
@@ -37,36 +38,42 @@ public class ProcessWithdrawalCommandHandler : ICommandHandler<ProcessWithdrawal
     {
         var withdrawal = await _withdrawalRepository.GetByIdAsync(request.WithdrawalId);
         if (withdrawal is null)
-        {
             return Result.Failure<ProcessWithdrawalCommandResponse>(WalletErrors.WithdrawalNotFound);
-        }
 
         if (withdrawal.Status != WithdrawalStatus.Pending && withdrawal.Status != WithdrawalStatus.Processing)
-        {
             return Result.Failure<ProcessWithdrawalCommandResponse>(WalletErrors.WithdrawalNotPending);
-        }
 
         var wallet = await _walletRepository.GetByIdAsync(withdrawal.WalletId);
         if (wallet is null)
-        {
             return Result.Failure<ProcessWithdrawalCommandResponse>(WalletErrors.WalletNotFound);
-        }
 
         withdrawal.ProcessedDate = DateTime.UtcNow;
         withdrawal.ProcessedByAdminId = _userContext.UserId;
         withdrawal.AdminNotes = request.AdminNotes;
 
+        // Declare at method scope so they are accessible in the return statement
+        decimal fee = 0;
+        decimal payoutAmount = 0;
+
         if (request.IsApproved)
         {
             if (wallet.Balance < withdrawal.Amount)
-            {
                 return Result.Failure<ProcessWithdrawalCommandResponse>(WalletErrors.InsufficientBalance);
-            }
+
+            var shouldChargeWithdrawalFee = wallet.WalletType == WalletType.VenueOwner;
+
+            // Only venue owners pay the withdrawal fee.
+            fee = shouldChargeWithdrawalFee
+                ? Math.Min(
+                    Math.Round(withdrawal.Amount * PlatformConstants.WithdrawalFeeRate, 0),
+                    PlatformConstants.WithdrawalFeeCap)
+                : 0;
+            payoutAmount = withdrawal.Amount - fee;
 
             wallet.Balance -= withdrawal.Amount;
             withdrawal.Status = WithdrawalStatus.Completed;
 
-            var transaction = new WalletTransaction
+            var withdrawalTx = new WalletTransaction
             {
                 TransactionId = Guid.NewGuid(),
                 WalletId = wallet.WalletId,
@@ -74,11 +81,27 @@ public class ProcessWithdrawalCommandHandler : ICommandHandler<ProcessWithdrawal
                 Amount = -withdrawal.Amount,
                 BalanceAfter = wallet.Balance,
                 ReferenceId = withdrawal.WithdrawalId,
-                Description = $"Withdrawal approved - {wallet.BankName} - {wallet.BankAccountNumber}",
+                Description = $"Withdrawal approved - payout {payoutAmount:N0} VND (fee {fee:N0} VND) - {wallet.BankName} - {wallet.BankAccountNumber}",
                 CreatedAt = DateTime.UtcNow
             };
+            await _transactionRepository.AddAsync(withdrawalTx);
 
-            await _transactionRepository.AddAsync(transaction);
+            if (fee > 0)
+            {
+                var feeTx = new WalletTransaction
+                {
+                    TransactionId = Guid.NewGuid(),
+                    WalletId = wallet.WalletId,
+                    TransactionType = TransactionType.WithdrawalFee,
+                    Amount = -fee,
+                    BalanceAfter = wallet.Balance,
+                    ReferenceId = withdrawal.WithdrawalId,
+                    Description = "Withdrawal fee 1% (max 50,000 VND)",
+                    CreatedAt = DateTime.UtcNow
+                };
+                await _transactionRepository.AddAsync(feeTx);
+            }
+
             _walletRepository.Update(wallet);
         }
         else
@@ -93,10 +116,12 @@ public class ProcessWithdrawalCommandHandler : ICommandHandler<ProcessWithdrawal
         {
             WithdrawalId = withdrawal.WithdrawalId,
             Status = withdrawal.Status.ToString(),
-            Message = request.IsApproved 
-                ? "Withdrawal approved and processed successfully" 
+            Message = request.IsApproved
+                ? "Withdrawal approved and processed successfully"
                 : "Withdrawal rejected",
-            NewBalance = request.IsApproved ? wallet.Balance : null
+            NewBalance = request.IsApproved ? wallet.Balance : null,
+            WithdrawalFee = request.IsApproved ? fee : null,
+            PayoutAmount = request.IsApproved ? payoutAmount : null
         });
     }
 }

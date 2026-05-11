@@ -22,6 +22,9 @@ namespace Kickify.Application.Features.PlayerProfiles.Queries.GetAllPlayerProfil
                 maxElo: request.MaxElo,
                 minTrustScore: request.MinTrustScore,
                 searchTerm: request.SearchTerm,
+                positions: request.Positions,
+                preferredFoot: request.PreferredFoot,
+                highFormOnly: request.HighFormOnly,
                 page: request.Page,
                 pageSize: request.PageSize,
                 cancellationToken: cancellationToken
@@ -35,6 +38,8 @@ namespace Kickify.Application.Features.PlayerProfiles.Queries.GetAllPlayerProfil
                 UserEmail = p.User?.Email ?? string.Empty,
                 UserAvatarUrl = p.User?.AvatarUrl,
                 CurrentElo = p.CurrentElo,
+                CurrentRank = p.CurrentRank,
+                IsLegend = p.IsLegend,
                 TrustScore = p.TrustScore,
                 TotalMatches = p.TotalMatches,
                 Wins = p.Wins,
@@ -43,6 +48,8 @@ namespace Kickify.Application.Features.PlayerProfiles.Queries.GetAllPlayerProfil
                 MvpCount = p.MvpCount,
                 WinStreak = p.WinStreak,
                 MaxWinStreak = p.MaxWinStreak,
+                PreferredPositions = p.User?.PreferredPositions,
+                PreferredFoot = p.User?.PreferredFoot,
                 CreatedAt = p.CreatedAt
             }).ToList();
 

@@ -46,6 +46,11 @@ public class UserRepository : GenericRepository<User>, IUserRepository
     {
         IQueryable<User> query = _dbSet.AsNoTracking();
 
+        if (includeDeleted)
+        {
+            query = query.IgnoreQueryFilters();
+        }
+
         if (role.HasValue)
         {
             query = query.Where(u => u.Role == role.Value);
@@ -53,7 +58,7 @@ public class UserRepository : GenericRepository<User>, IUserRepository
 
         if (isActive.HasValue)
         {
-            query = query.IgnoreQueryFilters().Where(u => u.IsActive == isActive.Value);
+            query = query.Where(u => u.IsActive == isActive.Value);
         }
 
         if (!string.IsNullOrWhiteSpace(searchTerm))
@@ -78,12 +83,23 @@ public class UserRepository : GenericRepository<User>, IUserRepository
         return (users, total);
     }
 
-    public async Task<User?> GetUserWithDetailsAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<User?> GetUserWithDetailsAsync(
+        Guid userId,
+        bool includeDeleted = false,
+        CancellationToken cancellationToken = default)
     {
-        return await _dbSet
-            .AsNoTracking()
+        IQueryable<User> query = _dbSet.AsNoTracking();
+
+        if (includeDeleted)
+        {
+            query = query.IgnoreQueryFilters();
+        }
+
+        return await query
             .Include(u => u.PlayerProfile)
             .Include(u => u.NotificationPreference)
+            .Include(u => u.PlayerAchievements)
+                .ThenInclude(pa => pa.Achievement)
             .FirstOrDefaultAsync(u => u.UserId == userId, cancellationToken);
     }
 

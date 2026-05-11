@@ -1,0 +1,296 @@
+using Kickify.Application.Abstractions.Messaging;
+using Kickify.Application.Abstractions.Persistence;
+using Kickify.Application.Features.Analytics;
+using Kickify.Domain.Common;
+using Kickify.Domain.Enums;
+using Microsoft.EntityFrameworkCore;
+
+namespace Kickify.Application.Features.Analytics.Queries.GetAdminDashboard;
+
+public class GetAdminDashboardQueryHandler
+    : IQueryHandler<GetAdminDashboardQuery, GetAdminDashboardResponse>
+{
+    private readonly IApplicationDbContext _db;
+    private const string DefaultTimezone = "Asia/Ho_Chi_Minh";
+
+    public GetAdminDashboardQueryHandler(IApplicationDbContext db)
+    {
+        _db = db;
+    }
+
+    public async Task<Result<GetAdminDashboardResponse>> Handle(
+        GetAdminDashboardQuery request, CancellationToken cancellationToken)
+    {
+        var tz = ResolveTimezone(request.Timezone);
+        var nowUtc = DateTime.UtcNow;
+        var todayLocal = TimeZoneInfo.ConvertTimeFromUtc(nowUtc, tz).Date;
+        var yesterdayLocal = todayLocal.AddDays(-1);
+
+        var todayStartUtc = ToUtc(todayLocal, tz);
+        var todayEndUtc = ToUtc(todayLocal.AddDays(1), tz);
+        var yesterdayStartUtc = ToUtc(yesterdayLocal, tz);
+
+        // MatchDate / BookingDate are PostgreSQL "date" columns. Comparing them to timestamptz
+        // boundaries can miscount the current calendar day; use same-calendar-day midnight values
+        // (Unspecified) like GetVenueDashboard does for BookingDate.
+        var tomorrowLocalExclusive = todayLocal.AddDays(1);
+
+        // ════════════════════════════════════════════
+        // KPI: Active Users Today
+        // ════════════════════════════════════════════
+        // Active = has SystemLog entry (login/business action) on that day
+        var activeUsersToday = await CountActiveUsers(todayStartUtc, todayEndUtc, cancellationToken);
+        var activeUsersYesterday = await CountActiveUsers(yesterdayStartUtc, todayStartUtc, cancellationToken);
+        var activeUsersTodayChangePct = CalcChangePct(activeUsersToday, activeUsersYesterday);
+
+        // ════════════════════════════════════════════
+        // KPI: Matches Today
+        // ════════════════════════════════════════════
+        var matchesToday = await _db.MatchRooms
+            .CountAsync(m => m.MatchDate >= todayLocal && m.MatchDate < tomorrowLocalExclusive,
+                cancellationToken);
+        var matchesYesterday = await _db.MatchRooms
+            .CountAsync(m => m.MatchDate >= yesterdayLocal && m.MatchDate < todayLocal,
+                cancellationToken);
+        var matchesTodayChangePct = CalcChangePct(matchesToday, matchesYesterday);
+
+        // ════════════════════════════════════════════
+        // KPI: Pending Reports (player + content)
+        // ════════════════════════════════════════════
+        var pendingPlayerReports = await _db.PlayerReports
+            .CountAsync(r => r.Status == ReportStatus.Pending, cancellationToken);
+        var pendingContentReports = await _db.ContentReports
+            .CountAsync(r => r.Status == ReportStatus.Pending, cancellationToken);
+        var pendingReports = pendingPlayerReports + pendingContentReports;
+
+        // Previous snapshot: reports that were pending as of yesterday
+        // We approximate by counting reports created before today that are still pending
+        var pendingReportsYesterday = await _db.PlayerReports
+            .CountAsync(r => r.Status == ReportStatus.Pending && r.CreatedAt < todayStartUtc,
+                cancellationToken)
+            + await _db.ContentReports
+            .CountAsync(r => r.Status == ReportStatus.Pending && r.CreatedAt < todayStartUtc,
+                cancellationToken);
+        var pendingReportsChangeAbs = pendingReports - pendingReportsYesterday;
+
+        // ════════════════════════════════════════════
+        // KPI: Platform Fee Revenue 30d
+        // ════════════════════════════════════════════
+        var thirtyDaysAgoUtc = nowUtc.AddDays(-30);
+        var sixtyDaysAgoUtc = nowUtc.AddDays(-60);
+
+        var platformFeeTypes = new[] { TransactionType.BookingCommission, TransactionType.WithdrawalFee, TransactionType.PremiumPurchase };
+
+        var revenue30d = await _db.WalletTransactions
+            .Where(t => platformFeeTypes.Contains(t.TransactionType) && t.Amount < 0
+                && t.CreatedAt >= thirtyDaysAgoUtc && t.CreatedAt <= nowUtc)
+            .SumAsync(t => -t.Amount, cancellationToken);
+        var revenuePrev30d = await _db.WalletTransactions
+            .Where(t => platformFeeTypes.Contains(t.TransactionType) && t.Amount < 0
+                && t.CreatedAt >= sixtyDaysAgoUtc && t.CreatedAt < thirtyDaysAgoUtc)
+            .SumAsync(t => -t.Amount, cancellationToken);
+        var revenue30dChangePct = CalcChangePct(revenue30d, revenuePrev30d);
+
+        var kpi = new AdminKpiDto(
+            activeUsersToday, activeUsersTodayChangePct,
+            matchesToday, matchesTodayChangePct,
+            pendingReports, pendingReportsChangeAbs,
+            revenue30d, revenue30dChangePct);
+
+        // ════════════════════════════════════════════
+        // Chart: User Growth (newly registered users by day, with previous period mirror)
+        // ════════════════════════════════════════════
+        var chartStartLocal = todayLocal.AddDays(-(request.ChartDays - 1));
+        var prevChartStartLocal = chartStartLocal.AddDays(-request.ChartDays);
+
+        var prevChartStartUtc = ToUtc(prevChartStartLocal, tz);
+
+        // Use Users.CreatedAt as the stable source for growth.
+        var allUsers = await _db.Users
+            .Where(u => u.CreatedAt >= prevChartStartUtc && u.CreatedAt < todayEndUtc)
+            .Select(u => new { u.UserId, u.CreatedAt })
+            .ToListAsync(cancellationToken);
+
+        var userGrowth = new List<UserGrowthItemDto>();
+        for (int i = 0; i < request.ChartDays; i++)
+        {
+            var day = chartStartLocal.AddDays(i);
+            var dayStart = ToUtc(day, tz);
+            var dayEnd = ToUtc(day.AddDays(1), tz);
+
+            var users = allUsers
+                .Where(l => l.CreatedAt >= dayStart && l.CreatedAt < dayEnd)
+                .Select(l => (Guid?)l.UserId)
+                .Distinct()
+                .Count();
+
+            // Mirror day from previous period
+            var prevDay = day.AddDays(-request.ChartDays);
+            var prevDayStart = ToUtc(prevDay, tz);
+            var prevDayEnd = ToUtc(prevDay.AddDays(1), tz);
+
+            var prev = allUsers
+                .Where(l => l.CreatedAt >= prevDayStart && l.CreatedAt < prevDayEnd)
+                .Select(l => (Guid?)l.UserId)
+                .Distinct()
+                .Count();
+
+            userGrowth.Add(new UserGrowthItemDto(day.ToString("yyyy-MM-dd"), users, prev));
+        }
+
+        // ════════════════════════════════════════════
+        // Chart: Matches by Day
+        // ════════════════════════════════════════════
+        var matchRooms = await _db.MatchRooms
+            .Where(m => m.MatchDate >= chartStartLocal && m.MatchDate < tomorrowLocalExclusive)
+            .Select(m => m.MatchDate)
+            .ToListAsync(cancellationToken);
+
+        var matchesByDay = new List<MatchesByDayItemDto>();
+        for (int i = 0; i < request.ChartDays; i++)
+        {
+            var day = chartStartLocal.AddDays(i);
+
+            var count = matchRooms.Count(d => d.Date == day.Date);
+            matchesByDay.Add(new MatchesByDayItemDto(day.ToString("yyyy-MM-dd"), count));
+        }
+
+        // ════════════════════════════════════════════
+        // Chart: Platform Fee Revenue Trend (by day)
+        // ════════════════════════════════════════════
+        var chartStartUtc = ToUtc(chartStartLocal, tz);
+        var platformFeeRows = await _db.WalletTransactions
+            .AsNoTracking()
+            .Where(t => platformFeeTypes.Contains(t.TransactionType) && t.Amount < 0
+                && t.CreatedAt >= chartStartUtc && t.CreatedAt < todayEndUtc)
+            .Select(t => new { t.Amount, t.CreatedAt })
+            .ToListAsync(cancellationToken);
+
+        var revenueTrend = new List<RevenueTrendItemDto>();
+        for (int i = 0; i < request.ChartDays; i++)
+        {
+            var day = chartStartLocal.AddDays(i);
+            var dayStart = ToUtc(day, tz);
+            var dayEnd = ToUtc(day.AddDays(1), tz);
+            var dayRevenue = platformFeeRows
+                .Where(r => r.CreatedAt >= dayStart && r.CreatedAt < dayEnd)
+                .Sum(r => -r.Amount);
+
+            revenueTrend.Add(new RevenueTrendItemDto(day.ToString("yyyy-MM-dd"), dayRevenue));
+        }
+
+        // ════════════════════════════════════════════
+        // System Alerts (from Announcements)
+        // ════════════════════════════════════════════
+        var announcementEntities = await _db.Announcements
+            .Where(a => a.IsActive)
+            .OrderByDescending(a => a.CreatedAt)
+            .Take(request.SystemAlertsPageSize)
+            .ToListAsync(cancellationToken);
+
+        var systemAlerts = announcementEntities.Select(a => new SystemAlertDto(
+            a.AnnouncementId,
+            MapSeverity(a.Priority),
+            a.Content,
+            a.CreatedAt
+        )).ToList();
+
+        // ════════════════════════════════════════════
+        // Today Matches
+        // ════════════════════════════════════════════
+        var todayMatchEntities = await _db.MatchRooms
+            .Include(m => m.Field)
+                .ThenInclude(f => f!.Venue)
+            .Where(m => m.MatchDate >= todayLocal && m.MatchDate < tomorrowLocalExclusive)
+            .OrderBy(m => m.StartTime)
+            .Take(request.TodayMatchesPageSize)
+            .ToListAsync(cancellationToken);
+
+        var todayMatches = todayMatchEntities.Select(m => new TodayMatchDto(
+            m.RoomId,
+            (m.TeamAName ?? "Team A") + " vs " + (m.TeamBName ?? "Team B"),
+            m.Field != null ? m.Field.Venue.VenueName : m.CustomLocation,
+            m.MatchDate.Date.Add(m.StartTime),
+            m.Status.ToString()
+        )).ToList();
+
+        return Result.Success(new GetAdminDashboardResponse(
+            kpi, userGrowth, matchesByDay, revenueTrend, systemAlerts, todayMatches));
+    }
+
+    // ── Helpers ──
+
+    private async Task<int> CountActiveUsers(
+        DateTime fromUtc, DateTime toUtcExclusive, CancellationToken ct)
+    {
+        var logUsers = _db.SystemLogs
+            .Where(l => l.CreatedAt >= fromUtc && l.CreatedAt < toUtcExclusive && l.UserId != null)
+            .Select(l => l.UserId);
+
+        var newUsers = _db.Users
+            .Where(u => u.CreatedAt >= fromUtc && u.CreatedAt < toUtcExclusive)
+            .Select(u => (Guid?)u.UserId);
+
+        var feedbackReviewerUsers = _db.MatchFeedbacks
+            .Where(f => f.CreatedAt >= fromUtc && f.CreatedAt < toUtcExclusive)
+            .Select(f => (Guid?)f.ReviewerId);
+
+        var feedbackRevieweeUsers = _db.MatchFeedbacks
+            .Where(f => f.CreatedAt >= fromUtc && f.CreatedAt < toUtcExclusive)
+            .Select(f => (Guid?)f.RevieweeId);
+
+        var joinedRoomUsers = _db.RoomParticipants
+            .Where(p => p.JoinDate >= fromUtc && p.JoinDate < toUtcExclusive)
+            .Select(p => (Guid?)p.UserId);
+
+        return await logUsers
+            .Concat(newUsers)
+            .Concat(feedbackReviewerUsers)
+            .Concat(feedbackRevieweeUsers)
+            .Concat(joinedRoomUsers)
+            .Distinct()
+            .CountAsync(ct);
+    }
+
+    private static double? CalcChangePct(decimal current, decimal previous)
+    {
+        if (previous == 0 && current == 0) return 0;
+        if (previous == 0) return null;
+        return Math.Round((double)((current - previous) / previous * 100), 1);
+    }
+
+    private static double? CalcChangePct(int current, int previous)
+        => CalcChangePct((decimal)current, (decimal)previous);
+
+    private static string MapSeverity(Priority priority) => priority switch
+    {
+        Priority.Low => "info",
+        Priority.Medium => "warning",
+        Priority.High => "danger",
+        _ => "info"
+    };
+
+    private static DateTime ToUtc(DateTime localDate, TimeZoneInfo tz)
+    {
+        return TimeZoneInfo.ConvertTimeToUtc(
+            DateTime.SpecifyKind(localDate, DateTimeKind.Unspecified), tz);
+    }
+
+    private static TimeZoneInfo ResolveTimezone(string? timezone)
+    {
+        if (string.IsNullOrWhiteSpace(timezone))
+            return TimeZoneInfo.FindSystemTimeZoneById(DefaultTimezone);
+        try
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById(timezone);
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById(DefaultTimezone);
+        }
+        catch (InvalidTimeZoneException)
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById(DefaultTimezone);
+        }
+    }
+}

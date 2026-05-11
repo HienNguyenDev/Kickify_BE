@@ -15,6 +15,7 @@ public class CommentDto
     public Guid UserId { get; set; }
     public string UserFullName { get; set; } = string.Empty;
     public string? UserAvatarUrl { get; set; }
+    public bool IsPremium { get; set; }
     public string Content { get; set; } = string.Empty;
     public int TotalLikes { get; set; }
     public int TotalReplies { get; set; }

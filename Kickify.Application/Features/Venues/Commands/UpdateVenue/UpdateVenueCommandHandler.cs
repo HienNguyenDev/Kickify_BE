@@ -1,4 +1,4 @@
-using AutoMapper;
+﻿using AutoMapper;
 using Kickify.Application.Abstractions.Authentication;
 using Kickify.Application.Abstractions.Messaging;
 using Kickify.Application.Abstractions.Persistence;
@@ -13,6 +13,7 @@ namespace Kickify.Application.Features.Venues.Commands.UpdateVenue
     public class UpdateVenueCommandHandler : ICommandHandler<UpdateVenueCommand, UpdateVenueResponse>
     {
         private readonly IVenueRepository _venueRepository;
+        private readonly IHolidayRepository _holidayRepository;
         private readonly IVenueOperatingHourRepository _operatingHourRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
@@ -20,12 +21,14 @@ namespace Kickify.Application.Features.Venues.Commands.UpdateVenue
 
         public UpdateVenueCommandHandler(
             IVenueRepository venueRepository,
+            IHolidayRepository holidayRepository,
             IVenueOperatingHourRepository operatingHourRepository,
             IUnitOfWork unitOfWork,
             IMapper mapper,
             IUserContext userContext)
         {
             _venueRepository = venueRepository;
+            _holidayRepository = holidayRepository;
             _operatingHourRepository = operatingHourRepository;
             _unitOfWork = unitOfWork;
             _mapper = mapper;
@@ -54,6 +57,20 @@ namespace Kickify.Application.Features.Venues.Commands.UpdateVenue
             // Rule: null = keep old value, non-null (including empty string) = update
             _mapper.Map(request, venue);
 
+            if (request.IgnoredHolidayIds != null)
+            {
+                var ignoredHolidayIds = request.IgnoredHolidayIds.Distinct().ToList();
+                var holidays = await _holidayRepository.GetByIdsAsync(ignoredHolidayIds, cancellationToken);
+
+                if (holidays.Count != ignoredHolidayIds.Count)
+                {
+                    var missingHolidayIds = ignoredHolidayIds.Except(holidays.Select(h => h.Id)).ToList();
+                    return Result.Failure<UpdateVenueResponse>(HolidayErrors.InvalidIds(missingHolidayIds));
+                }
+
+                await _venueRepository.SyncIgnoredHolidaysAsync(venue, holidays, cancellationToken);
+            }
+
             venue.UpdatedAt = DateTime.UtcNow;
 
             _venueRepository.Update(venue);
@@ -63,6 +80,75 @@ namespace Kickify.Application.Features.Venues.Commands.UpdateVenue
             if (request.OperatingHours != null && request.OperatingHours.Count > 0)
             {
                 resultHours = await UpdateOperatingHoursAsync(request.VenueId, request.OperatingHours, cancellationToken);
+
+                // Merge with all existing hours from DB so we have a complete picture of ALL days,
+                // not just the days the frontend sent. This prevents accidentally removing peak hours
+                // for days that weren't part of this update request.
+                var allExistingHours = await _operatingHourRepository.GetByVenueIdAsync(request.VenueId, cancellationToken);
+                var coveredDays = resultHours.Select(h => h.DayOfWeek).ToHashSet();
+                foreach (var existingHour in allExistingHours)
+                {
+                    if (!coveredDays.Contains(existingHour.DayOfWeek))
+                    {
+                        resultHours.Add(existingHour);
+                    }
+                }
+
+                // TASK 3: Clean up orphaned peak hours for closed days AND shrunk operating hours
+                foreach (var childField in venue.Fields)
+                {
+                    var peakHoursToRemove = new List<FieldPeakHour>();
+                    var isFieldUpdated = false;
+
+                    foreach (var peakHour in childField.PeakHours)
+                    {
+                        var daysToRemove = new List<DayOfWeekEnum>();
+
+                        foreach (var day in peakHour.ApplicableDays)
+                        {
+                            var operatingHour = resultHours.FirstOrDefault(h => h.DayOfWeek == day);
+
+                            if (operatingHour == null || operatingHour.IsClosed)
+                            {
+                                daysToRemove.Add(day);
+                            }
+                            else if (operatingHour.OpenTime == null || operatingHour.CloseTime == null)
+                            {
+                                daysToRemove.Add(day);
+                            }
+                            else if (peakHour.StartTime < operatingHour.OpenTime.Value ||
+                                     peakHour.EndTime > operatingHour.CloseTime.Value)
+                            {
+                                daysToRemove.Add(day);
+                            }
+                        }
+
+                        if (daysToRemove.Count > 0)
+                        {
+                            // Reassign with a NEW list instance to ensure EF Core's ValueComparer
+                            // detects the change on the PostgreSQL integer[] column.
+                            peakHour.ApplicableDays = peakHour.ApplicableDays
+                                .Where(d => !daysToRemove.Contains(d))
+                                .ToList();
+                            isFieldUpdated = true;
+
+                            if (peakHour.ApplicableDays.Count == 0)
+                            {
+                                peakHoursToRemove.Add(peakHour);
+                            }
+                        }
+                    }
+
+                    foreach (var peakHour in peakHoursToRemove)
+                    {
+                        childField.PeakHours.Remove(peakHour);
+                    }
+
+                    if (isFieldUpdated)
+                    {
+                        childField.UpdatedAt = DateTime.UtcNow;
+                    }
+                }
             }
             else
             {

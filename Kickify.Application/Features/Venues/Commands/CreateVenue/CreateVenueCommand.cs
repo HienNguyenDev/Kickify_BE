@@ -11,6 +11,7 @@ namespace Kickify.Application.Features.Venues.Commands.CreateVenue
         string? ContactEmail,
         string? Description,
         string? Amenities,
+        List<Guid> IgnoredHolidayIds,
         List<CreateVenueFieldDto> Fields,
         List<CreateVenueOperatingHoursDto> OperatingHours
     ) : ICommand<CreateVenueResponse>;
@@ -20,12 +21,25 @@ namespace Kickify.Application.Features.Venues.Commands.CreateVenue
         string FieldType,
         string? SurfaceType,
         decimal HourlyRate,
-        decimal PeakHourSurcharge
-     );
+        decimal WeekendSurcharge,
+        decimal HolidaySurcharge,
+        List<CreateFieldPeakHourDto>? PeakHours,
+        bool? IsWeekendSurchargePercentage,
+        bool? IsHolidaySurchargePercentage
+    );
+
+    public record CreateFieldPeakHourDto(
+        string StartTime,
+        string EndTime,
+        decimal SurchargeAmount,
+        bool IsPercentage,
+        List<string> ApplicableDays
+    );
 
     public record CreateVenueOperatingHoursDto(
         int DayOfWeek,
-        TimeSpan OpenTime,
-        TimeSpan CloseTime
+        TimeSpan? OpenTime,
+        TimeSpan? CloseTime,
+        bool IsClosed
     );
 }

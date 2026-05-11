@@ -17,19 +17,25 @@ namespace Kickify.Api.Extensions
             operation.RequestBody = new OpenApiRequestBody
             {
                 Content =
-            {
-                ["multipart/form-data"] = new OpenApiMediaType
                 {
-                    Schema = new OpenApiSchema
+                    ["multipart/form-data"] = new OpenApiMediaType
                     {
-                        Type       = "object",
-                        Properties = fileParams.ToDictionary(
-                            p => p.Name,
-                            p => new OpenApiSchema { Type = "string", Format = "binary" }
-                        )
+                        Schema = new OpenApiSchema
+                        {
+                            Type = "object",
+                            Properties = fileParams.ToDictionary(
+                                p => p.Name,
+                                p => p.ParameterType == typeof(List<IFormFile>)
+                                    ? new OpenApiSchema
+                                    {
+                                        Type = "array",
+                                        Items = new OpenApiSchema { Type = "string", Format = "binary" }
+                                    }
+                                    : new OpenApiSchema { Type = "string", Format = "binary" }
+                            )
+                        }
                     }
                 }
-            }
             };
         }
     }

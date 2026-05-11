@@ -16,6 +16,11 @@ public class RoomParticipant
     public decimal? DepositAmount { get; set; }
     public bool CheckedIn { get; set; } = false;
     public DateTime? CheckInTime { get; set; }
+    public decimal? CheckInLatitude { get; set; }
+    public decimal? CheckInLongitude { get; set; }
+    public string? CheckInMethod { get; set; } // "GPS" or "Photo"
+    public string? CheckInPhotoUrl { get; set; }
+    public double? DistanceFromVenueMeters { get; set; }
     public string? RemovalReason { get; set; }
 
     // Navigation properties

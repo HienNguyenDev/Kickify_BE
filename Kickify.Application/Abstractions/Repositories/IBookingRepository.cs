@@ -48,5 +48,19 @@ namespace Kickify.Application.Abstractions.Repositories
             int page = 1,
             int pageSize = 10,
             CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Get paged bookings for all venues owned by a specific venue owner
+        /// </summary>
+        Task<(IEnumerable<Booking> Bookings, int Total)> GetBookingsByVenueOwnerPagedAsync(
+            Guid ownerId,
+            Guid? fieldId = null,
+            DateTime? date = null,
+            string? status = null,
+            int page = 1,
+            int pageSize = 10,
+            CancellationToken cancellationToken = default);
+
+        Task<Booking?> GetEligibleBookingForVenueReviewAsync(Guid venueId, Guid userId, CancellationToken cancellationToken = default);
     }
 }

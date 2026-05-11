@@ -78,4 +78,20 @@ public class AchievementRepository : GenericRepository<Achievement>, IAchievemen
 
         return result.Select(x => (x.Achievement, x.EarnedAt)).ToList();
     }
+
+    public async Task<bool> HasUserClaimedAsync(
+        Guid userId,
+        Guid achievementId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.PlayerAchievements
+            .AnyAsync(pa => pa.UserId == userId && pa.AchievementId == achievementId, cancellationToken);
+    }
+
+    public async Task AddPlayerAchievementAsync(
+        PlayerAchievement playerAchievement,
+        CancellationToken cancellationToken = default)
+    {
+        await _context.PlayerAchievements.AddAsync(playerAchievement, cancellationToken);
+    }
 }

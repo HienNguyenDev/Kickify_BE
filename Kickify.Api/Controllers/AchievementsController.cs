@@ -1,6 +1,7 @@
 using Kickify.Api.Extensions;
 using Kickify.Api.Requests;
 using Kickify.Application.Abstractions.Services;
+using Kickify.Application.Features.Achievements.Commands.ClaimMyAchievement;
 using Kickify.Application.Features.Achievements.Commands.CreateAchievement;
 using Kickify.Application.Features.Achievements.Commands.DeleteAchievement;
 using Kickify.Application.Features.Achievements.Commands.UpdateAchievement;
@@ -34,6 +35,17 @@ public class AchievementsController : ControllerBase
     {
         var query = new GetMyAchievementsQuery();
         Result<GetMyAchievementsResponse> result = await _mediator.Send(query, cancellationToken);
+        return result.MatchOk();
+    }
+
+    /// <summary>
+    /// Claim an achievement for current user when conditions are met
+    /// </summary>
+    [HttpPost("me/claim/{achievementId:guid}")]
+    public async Task<IResult> ClaimMyAchievement(Guid achievementId, CancellationToken cancellationToken)
+    {
+        var command = new ClaimMyAchievementCommand(achievementId);
+        Result<ClaimMyAchievementResponse> result = await _mediator.Send(command, cancellationToken);
         return result.MatchOk();
     }
 

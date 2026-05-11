@@ -1,5 +1,6 @@
-using Kickify.Application.Abstractions.Repositories;
+﻿using Kickify.Application.Abstractions.Repositories;
 using Kickify.Domain.Entities;
+using Kickify.Domain.Enums;
 using Kickify.Infrastructure.Database;
 using Kickify.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -40,7 +41,7 @@ namespace Kickify.Infrastructure.Repositories
         {
             return await _dbSet
                 .AsNoTracking()
-                .Where(b => b.FieldId == fieldId && b.BookingDate == date)
+                .Where(b => b.FieldId == fieldId && b.BookingDate == date && b.Status != Domain.Enums.BookingStatus.Cancelled)
                 .Select(b => new ValueTuple<TimeSpan, TimeSpan>(b.StartTime, b.EndTime))
                 .ToListAsync(cancellationToken);
         }
@@ -58,11 +59,13 @@ namespace Kickify.Infrastructure.Repositories
         {
             // Check for any overlapping bookings
             // Two time slots overlap if: startTime1 < endTime2 AND endTime1 > startTime2
+            // Exclude Cancelled bookings
             var hasOverlap = await _dbSet
                 .AsNoTracking()
-                .AnyAsync(b => 
-                    b.FieldId == fieldId && 
+                .AnyAsync(b =>
+                    b.FieldId == fieldId &&
                     b.BookingDate == date &&
+                    b.Status != Domain.Enums.BookingStatus.Cancelled &&
                     b.StartTime < endTime &&
                     b.EndTime > startTime,
                     cancellationToken);
@@ -128,6 +131,66 @@ namespace Kickify.Infrastructure.Repositories
                 .ToListAsync(cancellationToken);
 
             return (bookings, total);
+        }
+
+        public async Task<(IEnumerable<Booking> Bookings, int Total)> GetBookingsByVenueOwnerPagedAsync(
+            Guid ownerId,
+            Guid? fieldId = null,
+            DateTime? date = null,
+            string? status = null,
+            int page = 1,
+            int pageSize = 10,
+            CancellationToken cancellationToken = default)
+        {
+            var query = _dbSet
+                .AsNoTracking()
+                .Include(b => b.Field)
+                    .ThenInclude(f => f.Venue)
+                .Where(b => b.Field.Venue.OwnerId == ownerId);
+
+            if (fieldId.HasValue)
+            {
+                query = query.Where(b => b.FieldId == fieldId.Value);
+            }
+
+            if (date.HasValue)
+            {
+                query = query.Where(b => b.BookingDate == date.Value);
+            }
+
+            if (!string.IsNullOrEmpty(status) && Enum.TryParse<Domain.Enums.BookingStatus>(status, true, out var bookingStatus))
+            {
+                query = query.Where(b => b.Status == bookingStatus);
+            }
+
+            var total = await query.CountAsync(cancellationToken);
+
+            var bookings = await query
+                .OrderByDescending(b => b.BookingDate)
+                .ThenByDescending(b => b.StartTime)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+
+            return (bookings, total);
+        }
+
+        public async Task<Booking?> GetEligibleBookingForVenueReviewAsync(Guid venueId, Guid userId, CancellationToken cancellationToken = default)
+        {
+            var now = DateTime.UtcNow;
+
+            return await _dbSet
+                .Include(b => b.Field)
+                    .ThenInclude(f => f.Venue)
+                .Where(b => b.Field.VenueId == venueId) // 1. Thuộc Venue này
+                .Where(b => b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.Completed) // 2. Trạng thái hợp lệ
+                //.Where(b => b.BookingDate.Date + b.EndTime <= now) // 3. Đã đá xong
+                .Where(b => b.MatchRoom.RoomParticipants.Any(rp => rp.UserId == userId)) // 4. User có tham gia phòng này
+                //.Where(b => b.MatchRoom.Status == RoomStatus.Reviewing) // 4.1 Phòng đã kết thúc
+                .Where(b => !_context.Set<VenueReview>().Any(vr => vr.BookingId == b.BookingId && vr.UserId == userId)) // 5. Chưa từng review trận này
+                .OrderByDescending(b => b.BookingDate) // Ưu tiên lấy trận gần nhất
+                .ThenByDescending(b => b.EndTime)
+                .FirstOrDefaultAsync(cancellationToken);
         }
     }
 }

@@ -35,9 +35,19 @@ public class FieldConfiguration : IEntityTypeConfiguration<Field>
             .HasColumnType("decimal(10,2)")
             .IsRequired();
 
-        builder.Property(f => f.PeakHourSurcharge)
+        builder.Property(f => f.WeekendSurcharge)
             .HasColumnType("decimal(10,2)")
             .HasDefaultValue(0);
+
+        builder.Property(f => f.HolidaySurcharge)
+            .HasColumnType("decimal(10,2)")
+            .HasDefaultValue(0);
+
+        builder.Property(f => f.IsWeekendSurchargePercentage)
+            .HasDefaultValue(false);
+
+        builder.Property(f => f.IsHolidaySurchargePercentage)
+            .HasDefaultValue(false);
 
         builder.Property(f => f.IsActive)
             .HasDefaultValue(true);
@@ -60,5 +70,10 @@ public class FieldConfiguration : IEntityTypeConfiguration<Field>
             .WithOne(b => b.Field)
             .HasForeignKey(b => b.FieldId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasMany(f => f.PeakHours)
+            .WithOne(ph => ph.Field)
+            .HasForeignKey(ph => ph.FieldId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

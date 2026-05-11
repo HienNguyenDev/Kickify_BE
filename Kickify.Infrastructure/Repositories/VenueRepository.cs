@@ -18,7 +18,9 @@ namespace Kickify.Infrastructure.Repositories
             return await _dbSet
                 .AsNoTracking()
                 .Include(v => v.Owner)
+                .Include(v => v.IgnoredHolidays)
                 .Include(v => v.Fields)
+                    .ThenInclude(f => f.PeakHours)
                 .Include(v => v.VenueOperatingHours)
                 .Include(v => v.VenuePhotos.OrderByDescending(p => p.DisplayOrder).Take(5))
                 .Include(v => v.VenueReviews.OrderByDescending(r => r.CreatedAt))
@@ -42,6 +44,7 @@ namespace Kickify.Infrastructure.Repositories
             VenueStatus? status = null,
             int page = 1,
             int pageSize = 10,
+            bool excludeArchived = false,
             CancellationToken cancellationToken = default)
         {
             var query = _dbSet
@@ -62,6 +65,10 @@ namespace Kickify.Infrastructure.Repositories
             if (status.HasValue)
             {
                 query = query.Where(v => v.Status == status.Value);
+            }
+            else if (excludeArchived)
+            {
+                query = query.Where(v => v.Status == VenueStatus.Approved);
             }
 
             // Filter by location (simplified - in production use PostGIS)
@@ -84,11 +91,13 @@ namespace Kickify.Infrastructure.Repositories
             {
                 query = query.Where(v => v.Fields.Any(f => f.FieldType == fieldType.Value && f.IsActive));
 
-                query = query.Include(v => v.Fields.Where(f => f.FieldType == fieldType.Value && f.IsActive));
+                query = query.Include(v => v.Fields.Where(f => f.FieldType == fieldType.Value && f.IsActive))
+                    .ThenInclude(f => f.PeakHours);
             }
             else
             {
-                query = query.Include(v => v.Fields.Where(f => f.IsActive));
+                query = query.Include(v => v.Fields.Where(f => f.IsActive))
+                    .ThenInclude(f => f.PeakHours);
             }
 
             // Filter by availability on specific date (if provided)
@@ -128,7 +137,25 @@ namespace Kickify.Infrastructure.Repositories
             CancellationToken cancellationToken = default)
         {
             return await _dbSet
+                .Include(v => v.IgnoredHolidays)
+                .Include(v => v.Fields)
+                    .ThenInclude(f => f.PeakHours)
                 .FirstOrDefaultAsync(v => v.VenueId == venueId, cancellationToken);
+        }
+
+        public Task SyncIgnoredHolidaysAsync(
+            Venue venue,
+            IReadOnlyCollection<Holiday> holidays,
+            CancellationToken cancellationToken = default)
+        {
+            venue.IgnoredHolidays.Clear();
+
+            foreach (var holiday in holidays)
+            {
+                venue.IgnoredHolidays.Add(holiday);
+            }
+
+            return Task.CompletedTask;
         }
 
         public async Task<(IEnumerable<Venue> Venues, int Total)> GetVenuesByOwnerPagedAsync(
@@ -142,6 +169,7 @@ namespace Kickify.Infrastructure.Repositories
             var query = _dbSet
                 .AsNoTracking()
                 .Include(v => v.Fields)
+                    .ThenInclude(f => f.PeakHours)
                 .Include(v => v.VenueOperatingHours)
                 .Include(v => v.VenuePhotos)
                 .Where(v => v.OwnerId == ownerId);

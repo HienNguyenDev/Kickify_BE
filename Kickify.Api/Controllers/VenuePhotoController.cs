@@ -1,4 +1,5 @@
-﻿using Kickify.Api.Extensions;
+using Kickify.Api.Extensions;
+using Kickify.Api.Requests;
 using Kickify.Application.Abstractions.Services;
 using Kickify.Application.Features.VenuePhotos.Commands.DeleteVenuePhoto;
 using Kickify.Application.Features.VenuePhotos.Commands.UpdateVenuePhoto;
@@ -109,8 +110,4 @@ namespace Kickify.Api.Controllers
         }
     }
 
-    public class UpdateVenuePhotoRequest
-    {
-        public int? DisplayOrder { get; set; }
-    }
 }

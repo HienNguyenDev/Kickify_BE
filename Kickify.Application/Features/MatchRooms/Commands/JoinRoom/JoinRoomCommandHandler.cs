@@ -8,6 +8,7 @@ using Kickify.Domain.Entities;
 using Kickify.Domain.Enums;
 using Kickify.Domain.Errors;
 using Kickify.Domain.Event;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -21,6 +22,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.JoinRoom
         private readonly IMatchRoomHubService _matchRoomHubService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IUserContext _userContext;
+        private readonly IPublisher _publisher;
         private readonly ILogger<JoinRoomCommandHandler> _logger;
 
         public JoinRoomCommandHandler(
@@ -30,6 +32,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.JoinRoom
             IMatchRoomHubService matchRoomHubService,
             IUnitOfWork unitOfWork,
             IUserContext userContext,
+            IPublisher publisher,
             ILogger<JoinRoomCommandHandler> logger)
         {
             _matchRoomRepository = matchRoomRepository;
@@ -38,6 +41,7 @@ namespace Kickify.Application.Features.MatchRooms.Commands.JoinRoom
             _matchRoomHubService = matchRoomHubService;
             _unitOfWork = unitOfWork;
             _userContext = userContext;
+            _publisher = publisher;
             _logger = logger;
         }
 
@@ -89,6 +93,30 @@ namespace Kickify.Application.Features.MatchRooms.Commands.JoinRoom
                 return Result.Failure<JoinRoomResponse>(MatchRoomErrors.NotOpen);
             }
 
+            var targetEndTime = room.StartTime.Add(TimeSpan.FromMinutes(room.DurationMinutes));
+
+            // This query: Get all MatchRoomParticipent of User (Participant) + came along with MatchDate + Status is Open/Locked/InProgress
+            var userActiveRooms = await _matchRoomRepository.GetActiveRoomsForUserByDateAsync(userId, room.MatchDate, cancellationToken);
+
+            foreach (var activeRoom in userActiveRooms)
+            {
+                // Bo qua chinh c�i phong dang dinh join (phong ho case logic bi lap)
+                if (activeRoom.RoomId == room.RoomId) continue;
+
+                var activeEndTime = activeRoom.StartTime.Add(TimeSpan.FromMinutes(activeRoom.DurationMinutes));
+
+                // Thuat toan kiem tra 2 khoang thoi gian co giao nhau khong (Overlapping)
+                bool isOverlapping = room.StartTime < activeEndTime && targetEndTime > activeRoom.StartTime;
+
+                if (isOverlapping)
+                {
+                    _logger.LogWarning("User {UserId} attempted to join room {RoomId} but has a time conflict with room {ActiveRoomId}",
+                        userId, room.RoomId, activeRoom.RoomId);
+
+                    return Result.Failure<JoinRoomResponse>(MatchRoomErrors.TimeConflict(activeRoom.RoomName));
+                }
+            }
+
             // RULE: Validate password for private rooms
             if (room.Visibility == Visibility.Private)
             {
@@ -129,15 +157,26 @@ namespace Kickify.Application.Features.MatchRooms.Commands.JoinRoom
                 // Add participant via repository
                 await _roomParticipantRepository.AddAsync(participant);
 
-            var oldJobId = room.AutoCloseJobId;
+            // var oldJobId = room.AutoCloseJobId;
                 room.FilledSlots++;
-            room.Raise(new ParticipantJoinedRoomDomainEvent(room.RoomId, oldJobId));
+            // room.Raise(new ParticipantJoinedRoomDomainEvent(room.RoomId, oldJobId)); // Disabled legacy business rule: +20m auto-close extension
                 _matchRoomRepository.Update(room);
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 _logger.LogInformation("User {UserId} joined room {RoomId}. Filled: {FilledSlots}/{TotalSlots}",
                     userId, request.RoomId, room.FilledSlots, room.TotalSlots);
+
+                if (userId != room.HostId)
+                {
+                    await _publisher.Publish(
+                        new MatchRoomPlayerJoinedHostNotifyDomainEvent(
+                            room.RoomId,
+                            room.HostId,
+                            user.FullName ?? user.Email,
+                            room.RoomName),
+                        cancellationToken);
+                }
 
                 // Send real-time notification to all room participants
                 await _matchRoomHubService.NotifyUserJoinedAsync(

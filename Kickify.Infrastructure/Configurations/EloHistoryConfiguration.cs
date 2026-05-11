@@ -31,22 +31,19 @@ public class EloHistoryConfiguration : IEntityTypeConfiguration<EloHistory>
         builder.Property(eh => eh.EloChange)
             .IsRequired();
 
-        builder.Property(eh => eh.WinLossComponent)
+        builder.Property(eh => eh.K1MatchResultComponent)
             .HasColumnType("decimal(6,2)");
 
-        builder.Property(eh => eh.PerformanceComponent)
+        builder.Property(eh => eh.K2FeedbackSentimentComponent)
             .HasColumnType("decimal(6,2)");
 
-        builder.Property(eh => eh.FeedbackComponent)
+        builder.Property(eh => eh.K3WinStreakComponent)
             .HasColumnType("decimal(6,2)");
 
-        builder.Property(eh => eh.SentimentComponent)
+        builder.Property(eh => eh.K4ContributionComponent)
             .HasColumnType("decimal(6,2)");
 
-        builder.Property(eh => eh.TrustComponent)
-            .HasColumnType("decimal(6,2)");
-
-        builder.Property(eh => eh.RoleComponent)
+        builder.Property(eh => eh.K5TrustComponent)
             .HasColumnType("decimal(6,2)");
 
         builder.Property(eh => eh.CalculationDetails)
